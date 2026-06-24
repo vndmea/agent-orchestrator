@@ -1,0 +1,59 @@
+import type { AgentRole, ModelConfig } from "@agent-orchestrator/core";
+
+import { AiSdkProvider } from "../providers/ai-sdk-provider.js";
+import { LiteLlmProvider } from "../providers/litellm-provider.js";
+import { MockModelProvider } from "../providers/mock-provider.js";
+import type { ModelProvider } from "../types/model-provider.js";
+
+export interface RoutedModel {
+  config: ModelConfig;
+  provider: ModelProvider;
+  role: AgentRole;
+}
+
+export class ModelRouter {
+  private readonly providers: Map<string, ModelProvider>;
+
+  public constructor(
+    private readonly leaderModel: ModelConfig,
+    private readonly workerModel: ModelConfig
+  ) {
+    this.providers = new Map<string, ModelProvider>([
+      ["mock", new MockModelProvider()],
+      ["openai", new AiSdkProvider()],
+      ["openai-compatible", new AiSdkProvider()],
+      ["litellm", new LiteLlmProvider()]
+    ]);
+  }
+
+  public listModels() {
+    return [
+      {
+        role: "leader",
+        provider: this.leaderModel.provider,
+        model: this.leaderModel.model
+      },
+      {
+        role: "worker",
+        provider: this.workerModel.provider,
+        model: this.workerModel.model
+      }
+    ];
+  }
+
+  public route(role: AgentRole): RoutedModel {
+    const config = role === "leader" || role === "reviewer"
+      ? this.leaderModel
+      : this.workerModel;
+    const provider =
+      this.providers.get(config.provider) ??
+      this.providers.get("mock") ??
+      new MockModelProvider();
+
+    return {
+      config,
+      provider,
+      role
+    };
+  }
+}

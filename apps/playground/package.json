@@ -1,0 +1,13 @@
+{
+  "name": "@agent-orchestrator/playground",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@agent-orchestrator/graph": "workspace:*"
+  }
+}

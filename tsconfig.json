@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "noEmit": true,
+    "paths": {
+      "@agent-orchestrator/cli": ["packages/cli/src/index.ts"],
+      "@agent-orchestrator/core": ["packages/core/src/index.ts"],
+      "@agent-orchestrator/graph": ["packages/graph/src/index.ts"],
+      "@agent-orchestrator/mcp-server": ["packages/mcp-server/src/index.ts"],
+      "@agent-orchestrator/models": ["packages/models/src/index.ts"],
+      "@agent-orchestrator/tools": ["packages/tools/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/**/*.ts",
+    "apps/**/*.ts",
+    "examples/**/*.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts"
+  ]
+}

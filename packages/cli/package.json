@@ -1,0 +1,25 @@
+{
+  "name": "@agent-orchestrator/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ao": "./dist/main.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/main.ts --format esm --dts --clean"
+  },
+  "dependencies": {
+    "@agent-orchestrator/core": "workspace:*",
+    "@agent-orchestrator/graph": "workspace:*",
+    "@agent-orchestrator/mcp-server": "workspace:*",
+    "@agent-orchestrator/models": "workspace:*",
+    "@agent-orchestrator/tools": "workspace:*",
+    "@commander-js/extra-typings": "^15.0.0",
+    "commander": "^15.0.0"
+  }
+}

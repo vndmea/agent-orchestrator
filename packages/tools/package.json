@@ -1,0 +1,17 @@
+{
+  "name": "@agent-orchestrator/tools",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean"
+  },
+  "dependencies": {
+    "@agent-orchestrator/core": "workspace:*",
+    "zod": "^4.1.12"
+  }
+}

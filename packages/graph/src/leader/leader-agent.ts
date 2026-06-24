@@ -1,0 +1,189 @@
+import type {
+  AgentResult,
+  AgentTask,
+  ExecutionContext,
+  LeaderDecision,
+  ReviewSummary,
+  TaskPlan,
+  ToolExecutionResult,
+  WorkflowState
+} from "@agent-orchestrator/core";
+import { AgentTaskSchema, LeaderDecisionSchema } from "@agent-orchestrator/core";
+import { ModelRouter } from "@agent-orchestrator/models";
+
+import { LEADER_SYSTEM_PROMPT, REVIEW_SYSTEM_PROMPT } from "./leader-prompts.js";
+
+const createDefaultPlan = (task: AgentTask): TaskPlan => ({
+  summary: `Coordinate leader and worker agents to achieve: ${task.goal}`,
+  steps: [
+    {
+      id: "plan",
+      title: "Plan the work",
+      description: "Leader decomposes the goal into safe, reviewable steps.",
+      assignedRole: "leader",
+      validation: ["Ensure risks and validation strategy are explicit."]
+    },
+    {
+      id: "execute",
+      title: "Execute subtasks",
+      description: "Workers produce drafts, summaries, and test ideas.",
+      assignedRole: "worker",
+      validation: ["Capture risks and artifacts from each worker."]
+    },
+    {
+      id: "validate",
+      title: "Validate outputs",
+      description: "Deterministic tools review candidate outputs before acceptance.",
+      assignedRole: "tool",
+      validation: ["Run lint, tests, typecheck, or structured checks when relevant."]
+    },
+    {
+      id: "review",
+      title: "Review final result",
+      description: "Leader reviews worker output and validation signals.",
+      assignedRole: "reviewer",
+      validation: ["Escalate to human review when confidence is low or writes are risky."]
+    }
+  ],
+  workerAssignmentProposal: [
+    "summarize-worker for context compression",
+    "codegen-worker for candidate implementation ideas",
+    "test-worker for validation coverage"
+  ],
+  risks: [
+    "Worker outputs may be incomplete or overconfident.",
+    "Repository writes must remain in dry-run mode unless explicitly allowed."
+  ],
+  validationStrategy: [
+    "Prefer deterministic checks before accepting model output.",
+    "Require leader review of worker-generated artifacts."
+  ]
+});
+
+const createReviewSummary = (
+  task: AgentTask,
+  workerResults: AgentResult[],
+  toolResults: ToolExecutionResult[]
+): ReviewSummary => {
+  const risks = workerResults.flatMap((result) => result.risks);
+  const failedTooling = toolResults.filter((result) => result.status === "failure");
+
+  return {
+    summary: `Reviewed ${workerResults.length} worker result(s) for goal: ${task.goal}`,
+    architectureImpact:
+      "Initial scaffold establishes package boundaries, workflow contracts, and tool guardrails.",
+    mustFixItems: failedTooling.map(
+      (result) => `${result.toolName}: validation failed`
+    ),
+    shouldFixItems: risks.length > 0 ? risks : ["Increase deterministic validations as workflows expand."],
+    missingTests: failedTooling.length > 0 ? ["Add focused regression coverage for failing validation paths."] : [],
+    riskLevel: failedTooling.length > 0 || risks.length > 2 ? "high" : "medium"
+  };
+};
+
+export class LeaderAgent {
+  private readonly router: ModelRouter;
+
+  public constructor(private readonly context: ExecutionContext) {
+    this.router = new ModelRouter(context.leaderModel, context.workerModel);
+  }
+
+  public async createPlan(task: AgentTask): Promise<TaskPlan> {
+    AgentTaskSchema.parse(task);
+
+    const routed = this.router.route("leader");
+    const plan = createDefaultPlan(task);
+
+    await routed.provider.invoke(routed.config, {
+      systemPrompt: LEADER_SYSTEM_PROMPT,
+      prompt: `Create a plan for: ${task.goal}`,
+      responseFormat: "json",
+      mockResponse: plan,
+      metadata: {
+        taskId: task.id
+      }
+    });
+
+    return plan;
+  }
+
+  public async review(
+    task: AgentTask,
+    workerResults: AgentResult[],
+    toolResults: ToolExecutionResult[]
+  ): Promise<LeaderDecision> {
+    const routed = this.router.route("reviewer");
+    const requiresHumanReview =
+      workerResults.some((result) => result.status === "needs_review") ||
+      toolResults.some((result) => result.status === "failure") ||
+      !this.context.allowWrite;
+
+    const decision: LeaderDecision = {
+      taskId: task.id,
+      decision: requiresHumanReview ? "human-review" : "approve",
+      reason: requiresHumanReview
+        ? "Dry-run mode or validation concerns require explicit human confirmation."
+        : "Worker outputs passed initial validation.",
+      nextActions: requiresHumanReview
+        ? [
+            "Inspect candidate artifacts.",
+            "Approve writes only after deterministic checks are satisfactory."
+          ]
+        : ["Proceed with accepted workflow result."],
+      requiresHumanReview
+    };
+
+    await routed.provider.invoke(routed.config, {
+      systemPrompt: REVIEW_SYSTEM_PROMPT,
+      prompt: `Review ${workerResults.length} worker result(s) and ${toolResults.length} tool result(s).`,
+      responseFormat: "json",
+      mockResponse: decision,
+      metadata: {
+        taskId: task.id
+      }
+    });
+
+    return LeaderDecisionSchema.parse(decision);
+  }
+
+  public async finalize(state: WorkflowState): Promise<AgentResult> {
+    const review = state.review ?? createReviewSummary(state.task, state.workerResults, state.toolResults);
+    const decision = await this.review(
+      state.task,
+      state.workerResults,
+      state.toolResults
+    );
+
+    return {
+      taskId: state.task.id,
+      agentId: "leader.finalizer",
+      role: "leader",
+      status: decision.requiresHumanReview ? "needs_review" : "success",
+      output: {
+        plan: state.plan,
+        review,
+        decision
+      },
+      confidence: decision.requiresHumanReview ? 0.66 : 0.84,
+      risks: review.shouldFixItems,
+      artifacts: [
+        {
+          name: "leader-decision.json",
+          type: "application/json",
+          content: decision
+        }
+      ],
+      metadata: {
+        workflow: "leader-worker-workflow"
+      }
+    };
+  }
+
+  public buildReviewSummary(
+    task: AgentTask,
+    workerResults: AgentResult[],
+    toolResults: ToolExecutionResult[]
+  ): ReviewSummary {
+    return createReviewSummary(task, workerResults, toolResults);
+  }
+}
