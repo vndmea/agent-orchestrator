@@ -10,6 +10,9 @@ ao run leader-worker-basic --goal "Generate tests for schema parser"
 ao review --diff main...HEAD
 ao fix --error ./tmp/tsc-error.log --scope packages/schema-codegen
 ao models list
+ao worker interview --provider litellm --model qwen3-coder
+ao worker list
+ao worker profile litellm:qwen3-coder
 ao mcp serve
 ao mcp list-tools
 ```

@@ -27,6 +27,10 @@ export const aoListWorkflowsTool: AoToolDefinition<
     {
       name: "fix-error-workflow",
       description: "Analyze an error log and return a safe candidate fix plan."
+    },
+    {
+      name: "worker-interview-workflow",
+      description: "Evaluate worker capability before allowing production task routing."
     }
   ]
 };

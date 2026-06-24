@@ -15,6 +15,7 @@ const capability: WorkerCapability = {
     brief: z.string(),
     focusAreas: z.array(z.string())
   }),
+  supportedTaskTypes: ["summarization", "log-analysis", "json-extraction"],
   preferredModel: "worker",
   costTier: "low"
 };
@@ -37,7 +38,9 @@ export class SummarizeWorker extends WorkerAgent {
         ]
       },
       [],
-      0.86
+      0.86,
+      [],
+      input.workerProfile
     );
   }
 }

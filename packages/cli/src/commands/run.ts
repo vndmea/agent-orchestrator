@@ -5,7 +5,8 @@ import {
   runFixErrorWorkflow,
   runLeaderWorkerWorkflow,
   runPlanningWorkflow,
-  runReviewWorkflow
+  runReviewWorkflow,
+  runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
@@ -70,6 +71,13 @@ export const registerRunCommand = (program: Command, io: CliIo): void => {
               context,
               errorLog: options.errorLog ?? "",
               scope: options.scope
+            });
+            break;
+          case "worker-interview-workflow":
+            result = await runWorkerInterviewWorkflow({
+              context,
+              workerId: options.scope,
+              modelConfig: context.workerModel
             });
             break;
           default:

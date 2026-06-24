@@ -1,4 +1,5 @@
 import type { AgentResult } from "./result.js";
+import type { WorkerCapabilityProfile } from "./agent.js";
 import type { AgentTask } from "./task.js";
 
 export interface TaskPlanStep {
@@ -49,6 +50,8 @@ export interface WorkflowState {
   toolResults: ToolExecutionResult[];
   review: ReviewSummary | null;
   finalResult: AgentResult | null;
+  workerCapabilityProfile: WorkerCapabilityProfile | null;
+  warnings: string[];
   errors: string[];
 }
 

@@ -13,6 +13,7 @@ const capability: WorkerCapability = {
   outputSchema: z.object({
     findings: z.array(z.string())
   }),
+  supportedTaskTypes: ["review-lite"],
   preferredModel: "worker",
   costTier: "low"
 };
@@ -33,7 +34,9 @@ export class ReviewWorker extends WorkerAgent {
         ]
       },
       [],
-      0.77
+      0.77,
+      [],
+      input.workerProfile
     );
   }
 }

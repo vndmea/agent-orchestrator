@@ -162,15 +162,22 @@ export class LeaderAgent {
       output: {
         plan: state.plan,
         review,
-        decision
+        decision,
+        workerCapabilityProfile: state.workerCapabilityProfile,
+        warnings: state.warnings
       },
       confidence: decision.requiresHumanReview ? 0.66 : 0.84,
-      risks: review.shouldFixItems,
+      risks: [...review.shouldFixItems, ...state.warnings],
       artifacts: [
         {
           name: "leader-decision.json",
           type: "application/json",
           content: decision
+        },
+        {
+          name: "worker-capability-profile.json",
+          type: "application/json",
+          content: state.workerCapabilityProfile
         }
       ],
       metadata: {

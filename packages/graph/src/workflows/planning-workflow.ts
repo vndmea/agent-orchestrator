@@ -33,6 +33,8 @@ const PlanningState = Annotation.Root({
   toolResults: Annotation<WorkflowState["toolResults"]>(),
   review: Annotation<WorkflowState["review"]>(),
   finalResult: Annotation<WorkflowState["finalResult"]>(),
+  workerCapabilityProfile: Annotation<WorkflowState["workerCapabilityProfile"]>(),
+  warnings: Annotation<WorkflowState["warnings"]>(),
   errors: Annotation<WorkflowState["errors"]>()
 });
 

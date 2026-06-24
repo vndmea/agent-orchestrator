@@ -7,6 +7,7 @@ export * from "./schemas/agent-result.schema.js";
 export * from "./schemas/agent-task.schema.js";
 export * from "./schemas/leader-decision.schema.js";
 export * from "./schemas/model-config.schema.js";
+export * from "./schemas/worker-capability.schema.js";
 export * from "./schemas/workflow-state.schema.js";
 export * from "./types/agent.js";
 export * from "./types/result.js";

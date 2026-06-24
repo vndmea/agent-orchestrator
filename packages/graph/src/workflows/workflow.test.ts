@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
 import {
   runLeaderWorkerWorkflow,
-  runPlanningWorkflow
+  runPlanningWorkflow,
+  runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
 
 describe("planning workflow", () => {
@@ -34,7 +35,22 @@ describe("leader-worker workflow", () => {
 
     expect(result.state.plan).not.toBeNull();
     expect(result.state.workerResults).toHaveLength(4);
+    expect(result.state.workerCapabilityProfile?.status).toBe("active");
     expect(result.state.toolResults.length).toBeGreaterThan(0);
     expect(result.finalResult?.status).toBe("needs_review");
+  });
+});
+
+describe("worker interview workflow", () => {
+  it("returns a capability profile and task results", async () => {
+    const result = await runWorkerInterviewWorkflow({
+      context: createExecutionContextFromEnv(undefined, {
+        dryRun: true,
+        allowWrite: false
+      })
+    });
+
+    expect(result.profile.workerId).toContain("mock");
+    expect(result.taskResults.length).toBeGreaterThan(0);
   });
 });

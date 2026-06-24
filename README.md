@@ -75,6 +75,34 @@ ao mcp serve
 ao mcp list-tools
 ```
 
+## Worker onboarding
+
+Workers are not treated as automatically qualified just because a model endpoint exists.
+
+Use onboarding evaluation before assigning real work:
+
+```bash
+ao worker interview --provider litellm --model qwen3-coder
+ao worker interview --provider litellm --model qwen3-coder --save
+ao worker list
+ao worker profile litellm:qwen3-coder
+```
+
+The interview workflow evaluates:
+
+- instruction following
+- structured JSON output
+- summarization
+- code understanding
+- simple TypeScript code generation
+- confidence calibration
+
+Interview results produce a `WorkerCapabilityProfile` that affects routing:
+
+- `active`: worker can receive the task types it qualified for
+- `limited`: worker is restricted to low-risk tasks and requires leader review
+- `blocked`: worker is excluded from production workflows and emits warnings
+
 ## MCP server usage
 
 Start the stdio server:
@@ -116,6 +144,7 @@ See [.env.example](https://github.com/vndmea/agent-orchestrator/blob/master/.env
 - `leader-worker-workflow`: coordinates leader planning, worker execution, tool validation, and final review
 - `review-workflow`: summarizes diff impact, risks, missing tests, and follow-up items
 - `fix-error-workflow`: analyzes error logs and proposes safe validation-oriented fix steps
+- `worker-interview-workflow`: evaluates a worker model before production routing and generates a capability profile
 
 ## How to run the basic example
 
@@ -127,8 +156,10 @@ pnpm example:leader-worker-basic
 
 1. Add a worker class under `packages/graph/src/workers`.
 2. Give it a clear `WorkerCapability` with Zod-backed schemas.
-3. Route it from a workflow and keep its output reviewable.
-4. Add tests for the workflow path it affects.
+3. Declare the worker's supported task types so routing can enforce capability limits.
+4. Route it from a workflow and keep its output reviewable.
+5. Make sure onboarding interview results can constrain how it is assigned.
+6. Add tests for the workflow path it affects.
 
 ## How to add a new workflow
 
@@ -159,6 +190,8 @@ If you want different endpoints for leader and worker traffic, use the model-spe
 - File writes require explicit policy allowance.
 - Shell execution is allowlisted.
 - Worker outputs are not final until leader review completes.
+- Workers must pass onboarding evaluation before they should receive production tasks.
+- Workers that fail structured output or reliability checks are limited or blocked.
 - Secrets are expected from environment variables and should never be logged.
 
 ## Roadmap

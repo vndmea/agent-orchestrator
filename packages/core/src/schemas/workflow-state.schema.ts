@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { AgentResultSchema } from "./agent-result.schema.js";
 import { AgentTaskSchema, AgentRoleSchema } from "./agent-task.schema.js";
+import { WorkerCapabilityProfileSchema } from "./worker-capability.schema.js";
 
 export const TaskPlanStepSchema = z.object({
   id: z.string().min(1),
@@ -42,5 +43,7 @@ export const WorkflowStateSchema = z.object({
   toolResults: z.array(ToolExecutionResultSchema),
   review: ReviewSummarySchema.nullable(),
   finalResult: AgentResultSchema.nullable(),
+  workerCapabilityProfile: WorkerCapabilityProfileSchema.nullable(),
+  warnings: z.array(z.string()),
   errors: z.array(z.string())
 });

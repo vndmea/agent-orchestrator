@@ -11,5 +11,8 @@ The MCP server is a first-class interface for `agent-orchestrator`.
 - `ao_list_models`
 - `ao_list_workflows`
 - `ao_list_tools`
+- `ao_interview_worker`
+- `ao_list_workers`
+- `ao_get_worker_profile`
 
 The MCP layer is intentionally thin. It delegates to the same workflow functions used by the CLI.

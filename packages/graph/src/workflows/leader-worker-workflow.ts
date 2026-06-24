@@ -4,10 +4,12 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type {
   AgentTask,
   ExecutionContext,
+  WorkerCapabilityProfile,
   ToolExecutionResult,
   WorkflowState
 } from "@agent-orchestrator/core";
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { assessWorkerTaskEligibility } from "@agent-orchestrator/models";
 
 import { LeaderAgent } from "../leader/leader-agent.js";
 import { createInitialWorkflowState } from "../leader/leader-state.js";
@@ -15,11 +17,13 @@ import { CodegenWorker } from "../workers/codegen-worker.js";
 import { ReviewWorker } from "../workers/review-worker.js";
 import { SummarizeWorker } from "../workers/summarize-worker.js";
 import { TestWorker } from "../workers/test-worker.js";
+import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 
 export interface LeaderWorkerWorkflowInput {
   context?: ExecutionContext;
   goal: string;
   scope?: string;
+  workerCapabilityProfile?: WorkerCapabilityProfile | null;
 }
 
 export interface LeaderWorkerWorkflowOutput {
@@ -34,13 +38,31 @@ const LeaderWorkerState = Annotation.Root({
   toolResults: Annotation<WorkflowState["toolResults"]>(),
   review: Annotation<WorkflowState["review"]>(),
   finalResult: Annotation<WorkflowState["finalResult"]>(),
+  workerCapabilityProfile: Annotation<WorkflowState["workerCapabilityProfile"]>(),
+  warnings: Annotation<WorkflowState["warnings"]>(),
   errors: Annotation<WorkflowState["errors"]>()
 });
 
 const buildToolResults = (
   context: ExecutionContext,
-  state: WorkflowState
+  state: WorkflowState,
+  profile: WorkerCapabilityProfile | null
 ): ToolExecutionResult[] => [
+  {
+    toolName: "worker-capability-interview",
+    status:
+      profile === null
+        ? "failure"
+        : profile.status === "blocked"
+          ? "failure"
+          : profile.status === "limited"
+            ? "dry-run"
+            : "success",
+    output: profile,
+    metadata: {
+      warningCount: state.warnings.length
+    }
+  },
   {
     toolName: "validate-worker-results",
     status: state.workerResults.length > 0 ? "success" : "failure",
@@ -92,23 +114,111 @@ export const runLeaderWorkerWorkflow = async (
   };
 
   const initialState = createInitialWorkflowState(task);
+
+  const runEligibleWorkers = async (
+    state: WorkflowState
+  ): Promise<Pick<WorkflowState, "warnings" | "workerResults">> => {
+    const profile = state.workerCapabilityProfile;
+
+    if (!profile) {
+      return {
+        workerResults: [],
+        warnings: [
+          ...state.warnings,
+          "No worker capability profile was available, so worker execution was skipped."
+        ]
+      };
+    }
+
+    const workerDefinitions = [
+      {
+        taskType: "summarization" as const,
+        agent: summarizeWorker
+      },
+      {
+        taskType: "codegen" as const,
+        agent: codegenWorker
+      },
+      {
+        taskType: "test-generation" as const,
+        agent: testWorker
+      },
+      {
+        taskType: "review-lite" as const,
+        agent: reviewWorker
+      }
+    ];
+
+    const warnings = [...state.warnings];
+    const executions = workerDefinitions
+      .filter(({ taskType }) => {
+        const eligibility = assessWorkerTaskEligibility(profile, taskType);
+
+        if (!eligibility.allowed) {
+          warnings.push(eligibility.reason);
+          return false;
+        }
+
+        if (eligibility.requiresLeaderReview) {
+          warnings.push(
+            `Worker ${profile.workerId} is allowed for ${taskType}, but leader review is required.`
+          );
+        }
+
+        return true;
+      })
+      .map(async ({ agent }) =>
+        agent.execute({
+          task: state.task,
+          scope: input.scope,
+          workerProfile: profile
+        })
+      );
+
+    return {
+      workerResults: await Promise.all(executions),
+      warnings
+    };
+  };
+
   const app = new StateGraph(LeaderWorkerState)
     .addNode("create_plan", async (state) => ({
       ...state,
       plan: await leader.createPlan(state.task)
     }))
+    .addNode("interview_worker", async (state) => {
+      const interviewResult =
+        input.workerCapabilityProfile ??
+        (
+          await runWorkerInterviewWorkflow({
+            context,
+            modelConfig: context.workerModel
+          })
+        ).profile;
+
+      return {
+        ...state,
+        workerCapabilityProfile: interviewResult,
+        warnings: interviewResult.status === "active"
+          ? state.warnings
+          : [
+              ...state.warnings,
+              `Worker ${interviewResult.workerId} is ${interviewResult.status}.`,
+              ...interviewResult.warnings
+            ]
+      };
+    })
     .addNode("workers", async (state) => ({
       ...state,
-      workerResults: await Promise.all([
-        summarizeWorker.execute({ task: state.task, scope: input.scope }),
-        codegenWorker.execute({ task: state.task, scope: input.scope }),
-        testWorker.execute({ task: state.task }),
-        reviewWorker.execute({ task: state.task })
-      ])
+      ...(await runEligibleWorkers(state))
     }))
     .addNode("validate", (state) => ({
       ...state,
-      toolResults: buildToolResults(context, state)
+      toolResults: buildToolResults(
+        context,
+        state,
+        state.workerCapabilityProfile
+      )
     }))
     .addNode("build_review", (state) => ({
       ...state,
@@ -123,7 +233,8 @@ export const runLeaderWorkerWorkflow = async (
       finalResult: await leader.finalize(state)
     }))
     .addEdge(START, "create_plan")
-    .addEdge("create_plan", "workers")
+    .addEdge("create_plan", "interview_worker")
+    .addEdge("interview_worker", "workers")
     .addEdge("workers", "validate")
     .addEdge("validate", "build_review")
     .addEdge("build_review", "finalize")

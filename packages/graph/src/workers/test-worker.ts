@@ -13,6 +13,7 @@ const capability: WorkerCapability = {
   outputSchema: z.object({
     suggestedTests: z.array(z.string())
   }),
+  supportedTaskTypes: ["test-generation"],
   preferredModel: "worker",
   costTier: "low"
 };
@@ -34,7 +35,9 @@ export class TestWorker extends WorkerAgent {
         ]
       },
       [],
-      0.81
+      0.81,
+      [],
+      input.workerProfile
     );
   }
 }

@@ -40,4 +40,13 @@ describe("cli parsing", () => {
     expect(output.join("\n")).toContain("ao_plan");
     expect(output.join("\n")).toContain("ao_list_tools");
   });
+
+  it("runs worker list", async () => {
+    const { io, output } = createIo();
+    const cli = buildCli(io);
+
+    await cli.parseAsync(["node", "ao", "worker", "list"]);
+
+    expect(output.join("\n")).toContain("[");
+  });
 });

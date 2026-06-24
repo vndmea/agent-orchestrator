@@ -2,7 +2,8 @@ import type {
   AgentResult,
   AgentTask,
   ExecutionContext,
-  WorkerCapability
+  WorkerCapability,
+  WorkerCapabilityProfile
 } from "@agent-orchestrator/core";
 import { ModelRouter } from "@agent-orchestrator/models";
 
@@ -10,6 +11,7 @@ export interface WorkerExecutionInput {
   notes?: string[];
   scope?: string;
   task: AgentTask;
+  workerProfile?: WorkerCapabilityProfile | null;
 }
 
 export abstract class WorkerAgent {
@@ -30,9 +32,14 @@ export abstract class WorkerAgent {
     output: unknown,
     risks: string[],
     confidence: number,
-    artifacts: AgentResult["artifacts"] = []
+    artifacts: AgentResult["artifacts"] = [],
+    workerProfile?: WorkerCapabilityProfile | null
   ): Promise<AgentResult> {
-    const routed = this.router.route("worker");
+    const primaryTaskType = this.capability.supportedTaskTypes[0] ?? "summarization";
+    const routed = this.router.routeWorkerTask(
+      primaryTaskType,
+      workerProfile
+    );
 
     await routed.provider.invoke(routed.config, {
       prompt: `Support task: ${task.goal}`,
@@ -54,7 +61,8 @@ export abstract class WorkerAgent {
       risks,
       artifacts,
       metadata: {
-        capability: this.capability.name
+        capability: this.capability.name,
+        workerProfileStatus: workerProfile?.status
       }
     };
   }

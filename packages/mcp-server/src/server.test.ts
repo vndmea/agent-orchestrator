@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { aoListModelsTool, aoToolDefinitions } from "@agent-orchestrator/mcp-server";
+import {
+  aoListModelsTool,
+  aoToolDefinitions
+} from "@agent-orchestrator/mcp-server";
 
 describe("mcp tool registration", () => {
   it("registers the expected MCP tool names", () => {
@@ -11,7 +14,10 @@ describe("mcp tool registration", () => {
       "ao_fix_error",
       "ao_list_models",
       "ao_list_workflows",
-      "ao_list_tools"
+      "ao_list_tools",
+      "ao_interview_worker",
+      "ao_list_workers",
+      "ao_get_worker_profile"
     ]);
   });
 

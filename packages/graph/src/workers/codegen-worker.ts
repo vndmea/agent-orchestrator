@@ -15,6 +15,7 @@ const capability: WorkerCapability = {
     patchPlan: z.array(z.string()),
     notes: z.array(z.string())
   }),
+  supportedTaskTypes: ["codegen"],
   preferredModel: "worker",
   costTier: "medium"
 };
@@ -47,7 +48,8 @@ export class CodegenWorker extends WorkerAgent {
           type: "text/markdown",
           content: "- Add contracts\n- Wire workflows\n- Validate before acceptance\n"
         }
-      ]
+      ],
+      input.workerProfile
     );
   }
 }

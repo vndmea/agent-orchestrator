@@ -4,7 +4,8 @@ import {
   runFixErrorWorkflow,
   runLeaderWorkerWorkflow,
   runPlanningWorkflow,
-  runReviewWorkflow
+  runReviewWorkflow,
+  runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -14,7 +15,8 @@ const inputSchema = z.object({
     "planning-workflow",
     "leader-worker-workflow",
     "review-workflow",
-    "fix-error-workflow"
+    "fix-error-workflow",
+    "worker-interview-workflow"
   ]),
   goal: z.string().optional(),
   scope: z.string().optional(),
@@ -52,6 +54,10 @@ export const aoRunWorkflowTool: AoToolDefinition<
         return runFixErrorWorkflow({
           errorLog: args.errorLog ?? "",
           scope: args.scope
+        });
+      case "worker-interview-workflow":
+        return runWorkerInterviewWorkflow({
+          workerId: args.scope
         });
       default:
         return null;

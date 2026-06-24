@@ -6,6 +6,7 @@ import { registerModelsCommand } from "./commands/models.js";
 import { registerPlanCommand } from "./commands/plan.js";
 import { registerReviewCommand } from "./commands/review.js";
 import { registerRunCommand } from "./commands/run.js";
+import { registerWorkerCommand } from "./commands/worker.js";
 
 export interface CliIo {
   error: (message: string) => void;
@@ -38,6 +39,7 @@ export const buildCli = (io: CliIo = defaultIo): Command => {
   registerReviewCommand(program, io);
   registerFixCommand(program, io);
   registerModelsCommand(program, io);
+  registerWorkerCommand(program, io);
   registerMcpCommand(program, io);
 
   return program;

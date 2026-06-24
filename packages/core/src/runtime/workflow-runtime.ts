@@ -4,7 +4,10 @@ import type {
 } from "../types/workflow.js";
 
 export class WorkflowRuntime {
-  private readonly workflows = new Map<string, WorkflowDefinition<unknown, unknown>>();
+  private readonly workflows = new Map<
+    string,
+    WorkflowDefinition<unknown, unknown>
+  >();
 
   public register<Input, Output>(
     workflow: WorkflowDefinition<Input, Output>

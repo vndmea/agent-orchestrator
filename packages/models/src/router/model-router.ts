@@ -1,9 +1,17 @@
-import type { AgentRole, ModelConfig } from "@agent-orchestrator/core";
+import {
+  AgentError,
+  type AgentRole,
+  type ModelConfig,
+  type WorkerCapabilityProfile,
+  type WorkerTaskType
+} from "@agent-orchestrator/core";
 
 import { AiSdkProvider } from "../providers/ai-sdk-provider.js";
 import { LiteLlmProvider } from "../providers/litellm-provider.js";
 import { MockModelProvider } from "../providers/mock-provider.js";
 import type { ModelProvider } from "../types/model-provider.js";
+import { assessWorkerTaskEligibility } from "./worker-routing.js";
+import { deriveWorkerProfileId } from "./worker-profile-store.js";
 
 export interface RoutedModel {
   config: ModelConfig;
@@ -41,6 +49,10 @@ export class ModelRouter {
     ];
   }
 
+  public static deriveWorkerId(config: ModelConfig): string {
+    return deriveWorkerProfileId(config);
+  }
+
   public route(role: AgentRole): RoutedModel {
     const config = role === "leader" || role === "reviewer"
       ? this.leaderModel
@@ -55,5 +67,23 @@ export class ModelRouter {
       provider,
       role
     };
+  }
+
+  public routeWorkerTask(
+    taskType: WorkerTaskType,
+    profile?: WorkerCapabilityProfile | null
+  ): RoutedModel {
+    if (profile) {
+      const eligibility = assessWorkerTaskEligibility(profile, taskType);
+
+      if (!eligibility.allowed) {
+        throw new AgentError("WORKER_ROUTING_BLOCKED", eligibility.reason, {
+          taskType,
+          workerId: profile.workerId
+        });
+      }
+    }
+
+    return this.route("worker");
   }
 }

@@ -75,6 +75,34 @@ ao mcp serve
 ao mcp list-tools
 ```
 
+## Worker 接入评估
+
+系统不会因为某个模型 endpoint 可用，就默认把它视为合格的 worker。
+
+在分配真实任务前，先执行接入评估：
+
+```bash
+ao worker interview --provider litellm --model qwen3-coder
+ao worker interview --provider litellm --model qwen3-coder --save
+ao worker list
+ao worker profile litellm:qwen3-coder
+```
+
+这套 interview 会评估：
+
+- 指令遵循能力
+- 结构化 JSON 输出能力
+- 摘要能力
+- 代码理解能力
+- 简单 TypeScript 代码生成能力
+- 置信度校准能力
+
+评估结果会生成 `WorkerCapabilityProfile`，并直接影响路由：
+
+- `active`：可以接收其通过评估的任务类型
+- `limited`：只允许低风险任务，并且需要 leader review
+- `blocked`：禁止进入生产工作流，并输出告警
+
 ## MCP server 用法
 
 启动 stdio server：
@@ -116,6 +144,7 @@ ao mcp list-tools
 - `leader-worker-workflow`：协调 leader 规划、worker 执行、工具验证与最终审查
 - `review-workflow`：汇总 diff 影响、风险、缺失测试与后续项
 - `fix-error-workflow`：分析错误日志并给出以验证为导向的安全修复建议
+- `worker-interview-workflow`：在生产路由前评估 worker 模型，并生成能力画像
 
 ## 运行基础示例
 
@@ -127,8 +156,10 @@ pnpm example:leader-worker-basic
 
 1. 在 `packages/graph/src/workers` 下新增 worker class。
 2. 为它定义清晰的 `WorkerCapability`，并使用 Zod schema 描述输入输出。
-3. 在工作流中接入它，并保证输出是可审查的。
-4. 为受影响的工作流路径补上测试。
+3. 声明它支持的任务类型，让路由层能够执行能力限制。
+4. 在工作流中接入它，并保证输出是可审查的。
+5. 确保 onboarding interview 的结果可以约束它的任务分配。
+6. 为受影响的工作流路径补上测试。
 
 ## 如何添加新的 workflow
 
@@ -159,6 +190,8 @@ pnpm example:leader-worker-basic
 - 文件写入需要显式的策略授权。
 - Shell 执行通过 allowlist 控制。
 - Worker 输出在 leader review 完成前都不能视为最终结果。
+- Worker 在进入生产任务前应先通过 onboarding evaluation。
+- structured output 或可靠性不达标的 worker 会被限制或阻断。
 - 密钥应通过环境变量提供，且绝不能写入日志。
 
 ## Roadmap

@@ -34,6 +34,8 @@ const FixErrorState = Annotation.Root({
   toolResults: Annotation<ReturnType<typeof createInitialWorkflowState>["toolResults"]>(),
   review: Annotation<ReturnType<typeof createInitialWorkflowState>["review"]>(),
   finalResult: Annotation<ReturnType<typeof createInitialWorkflowState>["finalResult"]>(),
+  workerCapabilityProfile: Annotation<ReturnType<typeof createInitialWorkflowState>["workerCapabilityProfile"]>(),
+  warnings: Annotation<ReturnType<typeof createInitialWorkflowState>["warnings"]>(),
   errors: Annotation<ReturnType<typeof createInitialWorkflowState>["errors"]>()
 });
 

@@ -7,5 +7,7 @@ export const createInitialWorkflowState = (task: AgentTask): WorkflowState => ({
   toolResults: [],
   review: null,
   finalResult: null,
+  workerCapabilityProfile: null,
+  warnings: [],
   errors: []
 });

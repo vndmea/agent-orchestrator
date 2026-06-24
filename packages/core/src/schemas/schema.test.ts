@@ -5,6 +5,7 @@ import {
   AgentTaskSchema,
   LeaderDecisionSchema,
   ModelConfigSchema,
+  WorkerCapabilityProfileSchema,
   WorkflowStateSchema
 } from "@agent-orchestrator/core";
 
@@ -72,7 +73,40 @@ describe("core schemas", () => {
         toolResults: [],
         review: null,
         finalResult: null,
+        workerCapabilityProfile: null,
+        warnings: [],
         errors: []
+      })
+    ).not.toThrow();
+  });
+
+  it("parses worker capability profiles", () => {
+    expect(() =>
+      WorkerCapabilityProfileSchema.parse({
+        workerId: "mock:gpt-5.4-mini",
+        provider: "mock",
+        model: "gpt-5.4-mini",
+        status: "limited",
+        supportedTaskTypes: ["summarization", "json-extraction"],
+        unsupportedTaskTypes: ["codegen"],
+        score: {
+          instructionFollowing: 0.9,
+          structuredOutput: 0.8,
+          reasoning: 0.75,
+          codeQuality: 0.3,
+          domainKnowledge: 0.7,
+          reliability: 0.68
+        },
+        risks: ["codegen quality is low"],
+        warnings: ["do not route codegen tasks"],
+        routingPolicy: {
+          maxTaskComplexity: "low",
+          requiresLeaderReview: true,
+          allowCodegen: false,
+          allowPatchGeneration: false,
+          allowDomainTasks: false
+        },
+        evaluatedAt: new Date().toISOString()
       })
     ).not.toThrow();
   });

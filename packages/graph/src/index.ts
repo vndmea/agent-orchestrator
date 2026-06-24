@@ -10,3 +10,4 @@ export * from "./workflows/fix-error-workflow.js";
 export * from "./workflows/leader-worker-workflow.js";
 export * from "./workflows/planning-workflow.js";
 export * from "./workflows/review-workflow.js";
+export * from "./workflows/worker-interview-workflow.js";
