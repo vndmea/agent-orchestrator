@@ -1,5 +1,7 @@
 # agent-orchestrator
 
+English | [简体中文](https://github.com/vndmea/agent-orchestrator/blob/master/README.zh-CN.md)
+
 `agent-orchestrator` is a TypeScript orchestration server for multi-model engineering workflows. It is designed for leader-worker execution, deterministic validation, and thin delivery layers through a CLI and MCP server.
 
 ## What this is
@@ -89,7 +91,7 @@ ao mcp list-tools
 
 ## Environment variables
 
-See [.env.example](/E:/MyCodes/agent-orchestrator/.env.example).
+See [.env.example](https://github.com/vndmea/agent-orchestrator/blob/master/.env.example).
 
 - `LEADER_MODEL_PROVIDER`
 - `LEADER_MODEL_NAME`
