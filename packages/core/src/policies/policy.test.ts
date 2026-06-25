@@ -24,6 +24,30 @@ describe("safety policy", () => {
     expect(result.allowed).toBe(true);
     expect(result.mode).toBe("dry-run");
   });
+
+  it("allows read-only git commands during dry-run", () => {
+    const policy = new SafetyPolicy({
+      allowedCommands: ["git"],
+      dryRun: true
+    });
+
+    const result = policy.evaluateCommand("git diff --no-ext-diff", "read-only");
+    expect(result.allowed).toBe(true);
+    expect(result.mode).toBe("execute");
+    expect(result.readOnly).toBe(true);
+    expect(result.dryRunContext).toBe(true);
+  });
+
+  it("blocks unsupported git subcommands in read-only mode", () => {
+    const policy = new SafetyPolicy({
+      allowedCommands: ["git"],
+      dryRun: true
+    });
+
+    const result = policy.evaluateCommand("git checkout main", "read-only");
+    expect(result.allowed).toBe(false);
+    expect(result.mode).toBe("blocked");
+  });
 });
 
 describe("write policy", () => {

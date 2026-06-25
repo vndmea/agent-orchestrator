@@ -1,6 +1,8 @@
+import { execFile as execFileCallback } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
@@ -8,8 +10,19 @@ import { createExecutionContextFromEnv, listAuditEvents } from "@agent-orchestra
 
 import { runSafeCommand } from "./safe-command.js";
 
+const execFile = promisify(execFileCallback);
+
 const createRootDir = async (): Promise<string> =>
   mkdtemp(join(tmpdir(), "ao-safe-command-"));
+
+const initGitRepo = async (rootDir: string): Promise<void> => {
+  await execFile("git", ["init"], { cwd: rootDir });
+  await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
+  await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+  await writeFile(join(rootDir, "README.md"), "first\n", "utf8");
+  await execFile("git", ["add", "."], { cwd: rootDir });
+  await execFile("git", ["commit", "-m", "init"], { cwd: rootDir });
+};
 
 describe("runSafeCommand", () => {
   it("returns dry-run for allowed commands by default", async () => {
@@ -106,5 +119,59 @@ describe("runSafeCommand", () => {
     const events = await listAuditEvents(rootDir, 10);
 
     expect(events.some((event) => event.action === "run-command" && event.mode === "blocked")).toBe(true);
+  });
+
+  it("executes git diff in dry-run context when marked read-only", async () => {
+    const rootDir = await createRootDir();
+    await initGitRepo(rootDir);
+    await writeFile(join(rootDir, "README.md"), "second\n", "utf8");
+    const context = createExecutionContextFromEnv(undefined, {
+      allowWrite: false,
+      dryRun: true,
+      rootDir
+    });
+
+    const result = await runSafeCommand("git diff --no-ext-diff", context, {
+      commandKind: "read-only"
+    });
+
+    expect(result.mode).toBe("execute");
+    expect(result.readOnly).toBe(true);
+    expect(result.dryRunContext).toBe(true);
+    expect(result.stdout).toContain("diff --git");
+  });
+
+  it("blocks unsupported git subcommands in read-only mode", async () => {
+    const rootDir = await createRootDir();
+    const context = createExecutionContextFromEnv(undefined, {
+      allowWrite: false,
+      dryRun: true,
+      rootDir
+    });
+
+    await expect(
+      runSafeCommand("git checkout main", context, {
+        commandKind: "read-only"
+      })
+    ).rejects.toThrow("read-only allowlist");
+  });
+
+  it("records read-only execution metadata in audit logs", async () => {
+    const rootDir = await createRootDir();
+    await initGitRepo(rootDir);
+    const context = createExecutionContextFromEnv(undefined, {
+      allowWrite: true,
+      dryRun: false,
+      rootDir
+    });
+
+    await runSafeCommand("git status --short", context, {
+      commandKind: "read-only"
+    });
+    const events = await listAuditEvents(rootDir, 10);
+    const event = events.find((candidate) => candidate.action === "run-command");
+
+    expect(event?.metadata?.readOnly).toBe(true);
+    expect(event?.metadata?.commandKind).toBe("read-only");
   });
 });

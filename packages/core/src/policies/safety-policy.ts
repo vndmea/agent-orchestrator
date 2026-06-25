@@ -3,11 +3,15 @@ export interface SafetyPolicyOptions {
   dryRun: boolean;
 }
 
+export type CommandKind = "read-only" | "mutating";
+
 export interface CommandEvaluation {
   allowed: boolean;
   reason: string;
   command: string;
   mode: "execute" | "dry-run" | "blocked";
+  readOnly?: boolean;
+  dryRunContext?: boolean;
 }
 
 const DEFAULT_ALLOWED_COMMANDS = ["git", "node", "pnpm"];
@@ -24,6 +28,36 @@ const DANGEROUS_COMMANDS = new Set([
   "cmd"
 ]);
 const METACHARACTER_PATTERN = /&&|\|\||;|\||`|\$\(|>>|>|</u;
+const SAFE_GIT_TOKEN = /^[A-Za-z0-9._~/:@+\-=\\]+$/u;
+
+const areSafeGitTokens = (tokens: string[]): boolean =>
+  tokens.every((token) => SAFE_GIT_TOKEN.test(token));
+
+const isAllowedReadOnlyGitCommand = (parts: string[]): boolean => {
+  if (parts[0] !== "git") {
+    return false;
+  }
+
+  const subcommand = parts[1];
+  const args = parts.slice(2);
+
+  switch (subcommand) {
+    case "diff":
+      return args.every((arg) => arg === "--no-ext-diff" || SAFE_GIT_TOKEN.test(arg));
+    case "status":
+      return args.length === 0 || args.every((arg) => arg === "--short");
+    case "ls-files":
+      return areSafeGitTokens(args);
+    case "rev-parse":
+      return areSafeGitTokens(args);
+    case "show":
+      return args[0] === "--stat" && areSafeGitTokens(args.slice(1));
+    case "log":
+      return args[0] === "--oneline" && areSafeGitTokens(args.slice(1));
+    default:
+      return false;
+  }
+};
 
 export class SafetyPolicy {
   private readonly allowedCommands: Set<string>;
@@ -36,8 +70,12 @@ export class SafetyPolicy {
     this.dryRun = options.dryRun ?? true;
   }
 
-  public evaluateCommand(command: string): CommandEvaluation {
-    const baseCommand = command.trim().split(/\s+/u)[0] ?? "";
+  public evaluateCommand(
+    command: string,
+    commandKind: CommandKind = "mutating"
+  ): CommandEvaluation {
+    const parts = command.trim().split(/\s+/u).filter(Boolean);
+    const baseCommand = parts[0] ?? "";
 
     if (!baseCommand) {
       return {
@@ -72,6 +110,28 @@ export class SafetyPolicy {
         reason: `Command "${baseCommand}" is not in the allowlist.`,
         command,
         mode: "blocked"
+      };
+    }
+
+    if (commandKind === "read-only" && !isAllowedReadOnlyGitCommand(parts)) {
+      return {
+        allowed: false,
+        reason: `Command "${command}" is not in the read-only allowlist.`,
+        command,
+        mode: "blocked"
+      };
+    }
+
+    if (commandKind === "read-only") {
+      return {
+        allowed: true,
+        reason: this.dryRun
+          ? "Read-only command is allowed to execute during dry-run."
+          : "Read-only command is allowed.",
+        command,
+        mode: "execute",
+        readOnly: true,
+        dryRunContext: this.dryRun
       };
     }
 

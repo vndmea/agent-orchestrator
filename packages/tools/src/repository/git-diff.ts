@@ -53,6 +53,7 @@ export const readGitDiff = async (
   const range = base && head ? `${base}...${head}` : undefined;
   const command = range ? `git diff --no-ext-diff ${range}` : "git diff --no-ext-diff";
   const result = await runSafeCommand(command, context, {
+    commandKind: "read-only",
     maxOutputBytes: options.maxBytes ?? 120_000
   });
   const diffText = result.stdout;

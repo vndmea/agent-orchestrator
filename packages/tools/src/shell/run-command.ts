@@ -80,7 +80,12 @@ export const runCommand = async (
     const spawnSpec = resolveSpawnSpec(command, args);
     const child = spawn(spawnSpec.command, spawnSpec.args, {
       cwd,
-      env: options.env,
+      env: options.env
+        ? {
+            ...process.env,
+            ...options.env
+          }
+        : process.env,
       shell: false,
       stdio: ["pipe", "pipe", "pipe"]
     });

@@ -2,6 +2,7 @@ import type { ExecutionContext } from "@agent-orchestrator/core";
 import {
   AgentError,
   createExecutionContextFromEnv,
+  type CommandKind,
   writeAuditEvent
 } from "@agent-orchestrator/core";
 
@@ -9,9 +10,12 @@ import { runCommand, type RunCommandResult } from "./run-command.js";
 
 export interface SafeCommandResult extends RunCommandResult {
   mode: "execute" | "dry-run";
+  dryRunContext?: boolean;
+  readOnly?: boolean;
 }
 
 export interface SafeCommandOptions {
+  commandKind?: CommandKind;
   env?: Record<string, string>;
   maxOutputBytes?: number;
   stdin?: string;
@@ -31,7 +35,8 @@ export const runSafeCommand = async (
   context: ExecutionContext = createExecutionContextFromEnv(),
   options: SafeCommandOptions = {}
 ): Promise<SafeCommandResult> => {
-  const evaluation = context.safetyPolicy.evaluateCommand(commandLine);
+  const commandKind = options.commandKind ?? "mutating";
+  const evaluation = context.safetyPolicy.evaluateCommand(commandLine, commandKind);
 
   if (!evaluation.allowed) {
     await writeAuditEvent(context, {
@@ -44,7 +49,8 @@ export const runSafeCommand = async (
       warnings: [],
       errors: [evaluation.reason],
       metadata: {
-        command: commandLine
+        command: commandLine,
+        commandKind
       }
     });
 
@@ -64,7 +70,8 @@ export const runSafeCommand = async (
       warnings: [],
       errors: [],
       metadata: {
-        command: commandLine
+        command: commandLine,
+        commandKind
       }
     });
 
@@ -100,6 +107,9 @@ export const runSafeCommand = async (
     metadata: {
       command: commandLine,
       code: result.code,
+      commandKind,
+      dryRunContext: evaluation.dryRunContext ?? false,
+      readOnly: evaluation.readOnly ?? false,
       stderrTruncated: result.stderrTruncated,
       stdoutTruncated: result.stdoutTruncated,
       timedOut: result.timedOut
@@ -108,6 +118,8 @@ export const runSafeCommand = async (
 
   return {
     ...result,
-    mode: "execute"
+    mode: "execute",
+    dryRunContext: evaluation.dryRunContext,
+    readOnly: evaluation.readOnly
   };
 };
