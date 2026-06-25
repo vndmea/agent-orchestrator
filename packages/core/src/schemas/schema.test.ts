@@ -6,6 +6,8 @@ import {
   LeaderDecisionSchema,
   ModelConfigSchema,
   WorkerCapabilityProfileSchema,
+  WorkerRegistrationSchema,
+  WorkerRegistrySchema,
   WorkflowStateSchema
 } from "@agent-orchestrator/core";
 
@@ -112,5 +114,36 @@ describe("core schemas", () => {
         suiteVersion: "1"
       })
     ).not.toThrow();
+  });
+
+  it("parses worker registry records without accepting stored API keys", () => {
+    const now = new Date().toISOString();
+    const registration = WorkerRegistrationSchema.parse({
+      workerId: "litellm:qwen3-coder",
+      provider: "litellm",
+      model: "qwen3-coder",
+      createdAt: now,
+      updatedAt: now,
+      apiKey: "should-not-survive"
+    });
+
+    expect(registration.enabled).toBe(true);
+    expect(registration.tags).toEqual([]);
+    expect("apiKey" in registration).toBe(false);
+    expect(() =>
+      WorkerRegistrySchema.parse({
+        version: 1,
+        workers: [registration]
+      })
+    ).not.toThrow();
+    expect(() =>
+      WorkerRegistrationSchema.parse({
+        workerId: "",
+        provider: "litellm",
+        model: "qwen3-coder",
+        createdAt: now,
+        updatedAt: now
+      })
+    ).toThrow();
   });
 });

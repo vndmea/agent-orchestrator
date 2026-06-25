@@ -115,3 +115,11 @@ export const createExecutionContextFromEnv = (
     writePolicy
   };
 };
+
+export const createExecutionContextWithWorkerModel = (
+  context: ExecutionContext,
+  workerModel: ModelConfig
+): ExecutionContext => ({
+  ...context,
+  workerModel
+});
