@@ -4,12 +4,15 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type {
   AgentTask,
   ExecutionContext,
-  WorkerCapabilityProfile,
   ToolExecutionResult,
+  WorkerCapabilityProfile,
   WorkflowState
 } from "@agent-orchestrator/core";
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
-import { assessWorkerTaskEligibility } from "@agent-orchestrator/models";
+import {
+  assessWorkerTaskEligibility,
+  resolveWorkerProfile
+} from "@agent-orchestrator/models";
 
 import { LeaderAgent } from "../leader/leader-agent.js";
 import { createInitialWorkflowState } from "../leader/leader-state.js";
@@ -22,8 +25,10 @@ import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 export interface LeaderWorkerWorkflowInput {
   context?: ExecutionContext;
   goal: string;
+  requireProfile?: boolean;
   scope?: string;
   workerCapabilityProfile?: WorkerCapabilityProfile | null;
+  workerId?: string;
 }
 
 export interface LeaderWorkerWorkflowOutput {
@@ -60,7 +65,8 @@ const buildToolResults = (
             : "success",
     output: profile,
     metadata: {
-      warningCount: state.warnings.length
+      warningCount: state.warnings.length,
+      workerId: profile?.workerId
     }
   },
   {
@@ -85,6 +91,18 @@ const buildToolResults = (
     metadata: {}
   }
 ];
+
+const buildProfileWarnings = (
+  profile: WorkerCapabilityProfile,
+  existingWarnings: string[]
+): string[] =>
+  profile.status === "active"
+    ? existingWarnings
+    : [
+        ...existingWarnings,
+        `Worker ${profile.workerId} is ${profile.status}.`,
+        ...profile.warnings
+      ];
 
 export const runLeaderWorkerWorkflow = async (
   input: LeaderWorkerWorkflowInput
@@ -187,25 +205,50 @@ export const runLeaderWorkerWorkflow = async (
       plan: await leader.createPlan(state.task)
     }))
     .addNode("interview_worker", async (state) => {
-      const interviewResult =
-        input.workerCapabilityProfile ??
-        (
-          await runWorkerInterviewWorkflow({
-            context,
-            modelConfig: context.workerModel
-          })
-        ).profile;
+      if (input.workerCapabilityProfile) {
+        return {
+          ...state,
+          workerCapabilityProfile: input.workerCapabilityProfile,
+          warnings: buildProfileWarnings(
+            input.workerCapabilityProfile,
+            state.warnings
+          )
+        };
+      }
+
+      const resolution = await resolveWorkerProfile({
+        context,
+        workerId: input.workerId,
+        requireProfile: input.requireProfile
+      });
+
+      if (resolution.freshness.usable && resolution.profile) {
+        return {
+          ...state,
+          workerCapabilityProfile: resolution.profile,
+          warnings: buildProfileWarnings(resolution.profile, state.warnings)
+        };
+      }
+
+      const interviewResult = await runWorkerInterviewWorkflow({
+        context,
+        workerId: resolution.workerId,
+        modelConfig: context.workerModel
+      });
+      const sourceWarning =
+        resolution.source === "missing"
+          ? `Worker profile for ${resolution.workerId} was missing; ran a fresh interview for this invocation.`
+          : resolution.source === "stale"
+            ? `Worker profile for ${resolution.workerId} was stale; ran a fresh interview for this invocation.`
+            : `Worker profile for ${resolution.workerId} was incompatible with the current worker model; ran a fresh interview for this invocation.`;
 
       return {
         ...state,
-        workerCapabilityProfile: interviewResult,
-        warnings: interviewResult.status === "active"
-          ? state.warnings
-          : [
-              ...state.warnings,
-              `Worker ${interviewResult.workerId} is ${interviewResult.status}.`,
-              ...interviewResult.warnings
-            ]
+        workerCapabilityProfile: interviewResult.profile,
+        warnings: buildProfileWarnings(interviewResult.profile, [
+          ...state.warnings,
+          sourceWarning
+        ])
       };
     })
     .addNode("workers", async (state) => ({

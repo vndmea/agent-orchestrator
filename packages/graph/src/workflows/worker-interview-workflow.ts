@@ -303,6 +303,11 @@ const createTaskResult = async (
 const average = (values: number[]): number =>
   clampScore(values.reduce((sum, value) => sum + value, 0) / values.length);
 
+const addDays = (isoDate: string, days: number): string => {
+  const base = Date.parse(isoDate);
+  return new Date(base + days * 86_400_000).toISOString();
+};
+
 const buildCapabilityProfile = (
   workerId: string,
   modelConfig: ModelConfig,
@@ -396,7 +401,10 @@ const buildCapabilityProfile = (
       allowDomainTasks:
         status === "active" && score.domainKnowledge >= 0.75
     },
-    evaluatedAt: new Date().toISOString()
+    evaluatedAt: new Date().toISOString(),
+    expiresAt: addDays(new Date().toISOString(), 30),
+    suiteName: "default-worker-onboarding-suite",
+    suiteVersion: "1"
   };
 
   return WorkerCapabilityProfileSchema.parse(profile);
