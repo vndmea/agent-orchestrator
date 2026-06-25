@@ -9,11 +9,13 @@ import type {
   WorkflowState
 } from "@agent-orchestrator/core";
 import {
+  createExecutionContextWithWorkerModel,
   createExecutionContextFromEnv,
   writeAuditEvent
 } from "@agent-orchestrator/core";
 import {
   assessWorkerTaskEligibility,
+  resolveWorkerModel,
   resolveWorkerProfile
 } from "@agent-orchestrator/models";
 
@@ -111,6 +113,14 @@ export const runLeaderWorkerWorkflow = async (
   input: LeaderWorkerWorkflowInput
 ): Promise<LeaderWorkerWorkflowOutput> => {
   const context = input.context ?? createExecutionContextFromEnv();
+  const workerModelResolution = await resolveWorkerModel({
+    context,
+    workerId: input.workerId
+  });
+  const workerContext = createExecutionContextWithWorkerModel(
+    context,
+    workerModelResolution.modelConfig
+  );
   await writeAuditEvent(context, {
     actor: "workflow",
     action: "start",
@@ -121,16 +131,17 @@ export const runLeaderWorkerWorkflow = async (
     warnings: [],
     errors: [],
     metadata: {
+      modelSource: workerModelResolution.source,
       requireProfile: input.requireProfile,
       scope: input.scope,
-      workerId: input.workerId
+      workerId: workerModelResolution.workerId
     }
   });
   const leader = new LeaderAgent(context);
-  const summarizeWorker = new SummarizeWorker(context);
-  const codegenWorker = new CodegenWorker(context);
-  const testWorker = new TestWorker(context);
-  const reviewWorker = new ReviewWorker(context);
+  const summarizeWorker = new SummarizeWorker(workerContext);
+  const codegenWorker = new CodegenWorker(workerContext);
+  const testWorker = new TestWorker(workerContext);
+  const reviewWorker = new ReviewWorker(workerContext);
   const task: AgentTask = {
     id: randomUUID(),
     goal: input.goal,
@@ -235,8 +246,9 @@ export const runLeaderWorkerWorkflow = async (
       }
 
       const resolution = await resolveWorkerProfile({
-        context,
-        workerId: input.workerId,
+        context: workerContext,
+        modelConfig: workerModelResolution.modelConfig,
+        workerId: workerModelResolution.workerId,
         requireProfile: input.requireProfile
       });
 
@@ -249,9 +261,9 @@ export const runLeaderWorkerWorkflow = async (
       }
 
       const interviewResult = await runWorkerInterviewWorkflow({
-        context,
+        context: workerContext,
         workerId: resolution.workerId,
-        modelConfig: context.workerModel
+        modelConfig: workerModelResolution.modelConfig
       });
       const sourceWarning =
         resolution.source === "missing"
@@ -265,6 +277,7 @@ export const runLeaderWorkerWorkflow = async (
         workerCapabilityProfile: interviewResult.profile,
         warnings: buildProfileWarnings(interviewResult.profile, [
           ...state.warnings,
+          ...workerModelResolution.warnings,
           sourceWarning
         ])
       };
@@ -276,7 +289,7 @@ export const runLeaderWorkerWorkflow = async (
     .addNode("validate", (state) => ({
       ...state,
       toolResults: buildToolResults(
-        context,
+        workerContext,
         state,
         state.workerCapabilityProfile
       )
@@ -314,6 +327,7 @@ export const runLeaderWorkerWorkflow = async (
     errors: state.errors,
     metadata: {
       finalStatus: state.finalResult?.status,
+      modelSource: workerModelResolution.source,
       workerId: state.workerCapabilityProfile?.workerId
     }
   });

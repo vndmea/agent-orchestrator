@@ -58,6 +58,31 @@ const writeProfiles = async (rootDir: string, profiles: unknown[]): Promise<void
   );
 };
 
+const writeRegistry = async (rootDir: string, workers: unknown[]): Promise<void> => {
+  const aoDir = join(rootDir, ".ao");
+  await mkdir(aoDir, { recursive: true });
+  await writeFile(
+    join(aoDir, "workers.json"),
+    JSON.stringify({ version: 1, workers }, null, 2),
+    "utf8"
+  );
+};
+
+const createRegistration = (overrides: Record<string, unknown> = {}) => {
+  const now = new Date().toISOString();
+
+  return {
+    workerId: "mock:registered-worker",
+    provider: "mock",
+    model: "registered-worker",
+    enabled: true,
+    tags: [],
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  };
+};
+
 const createContext = (rootDir: string) =>
   createExecutionContextFromEnv(undefined, {
     allowWrite: false,
@@ -97,6 +122,34 @@ describe("leader-worker workflow with persisted profiles", () => {
     expect(result.state.warnings.join("\n")).toContain("was missing; ran a fresh interview");
   });
 
+  it("uses registered worker model config when interviewing missing profiles", async () => {
+    const rootDir = await createRootDir();
+    await writeRegistry(rootDir, [createRegistration()]);
+
+    const result = await runLeaderWorkerWorkflow({
+      context: createContext(rootDir),
+      goal: "Review this repository",
+      workerId: "mock:registered-worker"
+    });
+
+    expect(result.state.workerCapabilityProfile?.workerId).toBe(
+      "mock:registered-worker"
+    );
+    expect(result.state.workerCapabilityProfile?.model).toBe("registered-worker");
+  });
+
+  it("fails clearly for unknown explicit workers", async () => {
+    const rootDir = await createRootDir();
+
+    await expect(
+      runLeaderWorkerWorkflow({
+        context: createContext(rootDir),
+        goal: "Review this repository",
+        workerId: "mock:unknown"
+      })
+    ).rejects.toThrow("not registered");
+  });
+
   it("fails early when no persisted profile exists and requireProfile is true", async () => {
     const rootDir = await createRootDir();
 
@@ -107,6 +160,64 @@ describe("leader-worker workflow with persisted profiles", () => {
         requireProfile: true
       })
     ).rejects.toBeInstanceOf(AgentError);
+  });
+
+  it("fails early for registered workers without profiles when requireProfile is true", async () => {
+    const rootDir = await createRootDir();
+    await writeRegistry(rootDir, [createRegistration()]);
+
+    await expect(
+      runLeaderWorkerWorkflow({
+        context: createContext(rootDir),
+        goal: "Review this repository",
+        workerId: "mock:registered-worker",
+        requireProfile: true
+      })
+    ).rejects.toBeInstanceOf(AgentError);
+  });
+
+  it("uses compatible registered profiles and re-interviews incompatible profiles", async () => {
+    const rootDir = await createRootDir();
+    await writeRegistry(rootDir, [createRegistration()]);
+    await writeProfiles(rootDir, [
+      createProfile({
+        workerId: "mock:registered-worker",
+        provider: "mock",
+        model: "registered-worker"
+      })
+    ]);
+
+    const compatible = await runLeaderWorkerWorkflow({
+      context: createContext(rootDir),
+      goal: "Review this repository",
+      workerId: "mock:registered-worker",
+      requireProfile: true
+    });
+
+    expect(compatible.state.warnings.join("\n")).not.toContain(
+      "ran a fresh interview"
+    );
+
+    await writeProfiles(rootDir, [
+      createProfile({
+        workerId: "mock:registered-worker",
+        provider: "mock",
+        model: "different-worker"
+      })
+    ]);
+
+    const reinterviewed = await runLeaderWorkerWorkflow({
+      context: createContext(rootDir),
+      goal: "Review this repository",
+      workerId: "mock:registered-worker"
+    });
+
+    expect(reinterviewed.state.warnings.join("\n")).toContain(
+      "was incompatible"
+    );
+    expect(reinterviewed.state.workerCapabilityProfile?.model).toBe(
+      "registered-worker"
+    );
   });
 
   it("prevents blocked persisted workers from receiving production tasks", async () => {
