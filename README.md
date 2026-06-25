@@ -55,9 +55,17 @@ examples/
 docs/
 ```
 
+## Runtime requirements
+
+- Node.js `>=22`
+- pnpm `>=10`
+
+This repository targets actively maintained Node.js LTS releases only. Use Node 22 or newer for local development, CI, and published CLI installs.
+
 ## Setup
 
 ```bash
+node --version
 pnpm install
 pnpm build
 pnpm cli -- doctor

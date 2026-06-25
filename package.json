@@ -4,6 +4,9 @@
   "private": true,
   "description": "TypeScript agent orchestration server for multi-model engineering workflows via CLI and MCP.",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
