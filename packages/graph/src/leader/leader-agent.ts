@@ -8,8 +8,12 @@ import type {
   ToolExecutionResult,
   WorkflowState
 } from "@agent-orchestrator/core";
-import { AgentTaskSchema, LeaderDecisionSchema } from "@agent-orchestrator/core";
-import { ModelRouter } from "@agent-orchestrator/models";
+import {
+  AgentTaskSchema,
+  LeaderDecisionSchema,
+  TaskPlanSchema
+} from "@agent-orchestrator/core";
+import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
 
 import { LEADER_SYSTEM_PROMPT, REVIEW_SYSTEM_PROMPT } from "./leader-prompts.js";
 
@@ -92,19 +96,31 @@ export class LeaderAgent {
     AgentTaskSchema.parse(task);
 
     const routed = this.router.route("leader");
-    const plan = createDefaultPlan(task);
-
-    await routed.provider.invoke(routed.config, {
+    const fallbackPlan = createDefaultPlan(task);
+    const invocation = await invokeStructured({
+      provider: routed.provider,
+      config: routed.config,
+      schema: TaskPlanSchema,
       systemPrompt: LEADER_SYSTEM_PROMPT,
       prompt: `Create a plan for: ${task.goal}`,
-      responseFormat: "json",
-      mockResponse: plan,
+      mockResponse: fallbackPlan,
       metadata: {
         taskId: task.id
-      }
+      },
+      maxAttempts: 1
     });
 
-    return plan;
+    if (invocation.ok) {
+      return invocation.data;
+    }
+
+    return {
+      ...fallbackPlan,
+      risks: [
+        ...fallbackPlan.risks,
+        `Structured leader plan output failed validation: ${invocation.errors.join("; ")}`
+      ]
+    };
   }
 
   public async review(
@@ -133,17 +149,27 @@ export class LeaderAgent {
       requiresHumanReview
     };
 
-    await routed.provider.invoke(routed.config, {
+    const invocation = await invokeStructured({
+      provider: routed.provider,
+      config: routed.config,
+      schema: LeaderDecisionSchema,
       systemPrompt: REVIEW_SYSTEM_PROMPT,
       prompt: `Review ${workerResults.length} worker result(s) and ${toolResults.length} tool result(s).`,
-      responseFormat: "json",
       mockResponse: decision,
       metadata: {
         taskId: task.id
-      }
+      },
+      maxAttempts: 1
     });
 
-    return LeaderDecisionSchema.parse(decision);
+    if (invocation.ok) {
+      return invocation.data;
+    }
+
+    return LeaderDecisionSchema.parse({
+      ...decision,
+      reason: `${decision.reason} Structured review output failed validation; using fallback review decision. Errors: ${invocation.errors.join("; ")}`
+    });
   }
 
   public async finalize(state: WorkflowState): Promise<AgentResult> {
