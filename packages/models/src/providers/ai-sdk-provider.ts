@@ -22,7 +22,7 @@ export class AiSdkProvider implements ModelProvider {
     });
 
     const result = await generateText({
-      model: client(config.model),
+      model: client.chat(config.model),
       system: request.systemPrompt,
       prompt: request.prompt,
       temperature: config.temperature,
