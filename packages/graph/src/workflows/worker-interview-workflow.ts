@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { z } from "zod";
@@ -44,6 +44,14 @@ export interface WorkerInterviewWorkflowOutput extends WorkerInterviewResult {
   suite: WorkerEvaluationSuite;
 }
 
+interface WorkerInterviewSuiteIdentity {
+  modelConfig?: ModelConfig;
+  workerId?: string;
+}
+
+const WORKER_EVALUATION_SUITE_NAME = "default-worker-onboarding-suite";
+const WORKER_EVALUATION_SUITE_VERSION = "2";
+
 const InterviewState = Annotation.Root({
   task: Annotation<WorkflowState["task"]>(),
   plan: Annotation<WorkflowState["plan"]>(),
@@ -68,14 +76,283 @@ const extractConfidence = (parsed: unknown): number | null => {
   return typeof maybeConfidence === "number" ? maybeConfidence : null;
 };
 
-const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
-  {
+const deriveSuiteSeed = (identity: WorkerInterviewSuiteIdentity): string => {
+  if (identity.workerId) {
+    return identity.workerId;
+  }
+
+  if (identity.modelConfig) {
+    return `${identity.modelConfig.provider}:${identity.modelConfig.model}`;
+  }
+
+  return "default:worker-interview";
+};
+
+const createPromptId = (seed: string, taskType: WorkerInterviewTaskType): string =>
+  createHash("sha256")
+    .update(`${WORKER_EVALUATION_SUITE_VERSION}:${seed}:${taskType}`)
+    .digest("hex")
+    .slice(0, 10);
+
+const pickVariant = <T>(
+  seed: string,
+  taskType: WorkerInterviewTaskType,
+  variants: T[]
+): T => {
+  const digest = createHash("sha256")
+    .update(`${WORKER_EVALUATION_SUITE_VERSION}:${seed}:${taskType}:variant`)
+    .digest("hex");
+  const numeric = Number.parseInt(digest.slice(0, 8), 16);
+  return variants[numeric % variants.length] ?? variants[0]!;
+};
+
+const createPrompt = (
+  seed: string,
+  taskType: WorkerInterviewTaskType,
+  lines: string[]
+): string =>
+  [
+    `Scenario ID: ${createPromptId(seed, taskType)}.`,
+    "Use the scenario details directly and do not mention the scenario ID in your answer.",
+    ...lines
+  ].join("\n");
+
+const instructionFollowingVariants = [
+  [
+    'Return exactly JSON with {"mode":"json-only","confidence":0.4} and nothing else.',
+    "Do not add markdown, prose, or extra keys."
+  ],
+  [
+    'Output must be exactly {"mode":"json-only","confidence":0.4}.',
+    "Return valid JSON only with no explanation."
+  ],
+  [
+    'Respond with the exact JSON object {"mode":"json-only","confidence":0.4}.',
+    "No surrounding text is allowed."
+  ]
+];
+
+const structuredOutputVariants = [
+  [
+    "Analyze the incident summary below and return only JSON.",
+    "Use exactly these keys and types:",
+    '- summary: string',
+    '- risks: string[]',
+    '- confidence: number',
+    '- files: string[]',
+    "Do not include markdown.",
+    "Return at least one risk and at least one file.",
+    "Incident summary:",
+    "- Build failed after a worker routing change.",
+    "- Stale worker profiles were accepted without revalidation.",
+    "- Affected files: packages/models/src/router/worker-profile-resolution.ts, packages/graph/src/workflows/leader-worker-workflow.ts.",
+    "- Main risk: a blocked worker could be routed into production tasks."
+  ],
+  [
+    "Review the release incident notes below and return only JSON.",
+    "Use exactly these keys and types:",
+    '- summary: string',
+    '- risks: string[]',
+    '- confidence: number',
+    '- files: string[]',
+    "Do not include markdown.",
+    "Return at least one risk and at least one file.",
+    "Incident notes:",
+    "- A hotfix changed model routing for worker selection.",
+    "- The fallback branch skipped capability freshness checks.",
+    "- Touched files: packages/models/src/router/model-router.ts, packages/graph/src/workflows/leader-worker-workflow.ts.",
+    "- Main risk: low-quality workers may receive code generation tasks."
+  ],
+  [
+    "Inspect the workflow regression summary below and return only JSON.",
+    "Use exactly these keys and types:",
+    '- summary: string',
+    '- risks: string[]',
+    '- confidence: number',
+    '- files: string[]',
+    "Do not include markdown.",
+    "Return at least one risk and at least one file.",
+    "Regression summary:",
+    "- Worker capability profiles were reused after a model swap.",
+    "- A stale compatibility gate caused outdated scores to look valid.",
+    "- Related files: packages/models/src/router/worker-profile-resolution.ts, packages/cli/src/commands/worker.ts.",
+    "- Main risk: routing decisions may trust the wrong worker profile."
+  ]
+];
+
+const summarizationVariants = [
+  [
+    "Summarize the error log below as JSON.",
+    "Use exactly these keys and types:",
+    '- issue: string',
+    '- impact: string',
+    '- nextSteps: string[]',
+    '- confidence: number',
+    "Do not include markdown.",
+    "Return at least two nextSteps.",
+    "Error log:",
+    "TS2322: Type '{ score: string; }' is not assignable to type '{ score: number; }'.",
+    "  at packages/models/src/router/worker-profile-store.ts:48:7",
+    "Build failed for @agent-orchestrator/models."
+  ],
+  [
+    "Convert the failure log below into JSON.",
+    "Use exactly these keys and types:",
+    '- issue: string',
+    '- impact: string',
+    '- nextSteps: string[]',
+    '- confidence: number',
+    "Do not include markdown.",
+    "Return at least two nextSteps.",
+    "Failure log:",
+    "Error: WORKER_PROFILE_REQUIRED",
+    "  Persisted worker profile openai-compatible:deepseek-v4-pro has expired.",
+    "  at packages/models/src/router/worker-profile-resolution.ts:132:9"
+  ],
+  [
+    "Summarize the build failure below as JSON.",
+    "Use exactly these keys and types:",
+    '- issue: string',
+    '- impact: string',
+    '- nextSteps: string[]',
+    '- confidence: number',
+    "Do not include markdown.",
+    "Return at least two nextSteps.",
+    "Build output:",
+    "pnpm --filter @agent-orchestrator/cli build",
+    "error TS6053: File 'packages/graph/dist/index.d.ts' not found.",
+    "DTS build aborted for @agent-orchestrator/cli."
+  ]
+];
+
+const codeUnderstandingVariants = [
+  [
+    "Given this TypeScript function, return only JSON.",
+    "Use exactly these keys and types:",
+    '- behavior: string',
+    '- risk: string',
+    '- confidence: number',
+    "Do not include markdown.",
+    "Code:",
+    "function sumValidated(values: unknown[]): number {",
+    "  return values",
+    '    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))',
+    "    .reduce((total, value) => total + value, 0);",
+    "}"
+  ],
+  [
+    "Review this TypeScript helper and return only JSON.",
+    "Use exactly these keys and types:",
+    '- behavior: string',
+    '- risk: string',
+    '- confidence: number',
+    "Do not include markdown.",
+    "Code:",
+    "function sumScores(input: Array<number | null>): number {",
+    "  return input",
+    "    .filter((value): value is number => value !== null)",
+    "    .reduce((sum, value) => sum + value, 0);",
+    "}"
+  ],
+  [
+    "Explain the TypeScript function below using only JSON.",
+    "Use exactly these keys and types:",
+    '- behavior: string',
+    '- risk: string',
+    '- confidence: number',
+    "Do not include markdown.",
+    "Code:",
+    "function sumFinite(values: readonly unknown[]): number {",
+    "  const filtered = values.filter((value): value is number =>",
+    '    typeof value === "number" && Number.isFinite(value)',
+    "  );",
+    "  return filtered.reduce((total, value) => total + value, 0);",
+    "}"
+  ]
+];
+
+const codegenVariants = [
+  [
+    "Return only JSON.",
+    "Use exactly these keys and types:",
+    '- code: string',
+    '- confidence: number',
+    "Do not include markdown.",
+    "The code value must be strict TypeScript.",
+    "It must define:",
+    'export function validateScore(value: number): { ok: boolean; message?: string }',
+    "The function must reject NaN and negative numbers."
+  ],
+  [
+    "Return only JSON.",
+    "Use exactly these keys and types:",
+    '- code: string',
+    '- confidence: number',
+    "Do not include markdown.",
+    "The code value must be strict TypeScript.",
+    "Generate exactly this function signature:",
+    'export function validateScore(value: number): { ok: boolean; message?: string }',
+    "The implementation must reject non-finite values and values below zero."
+  ],
+  [
+    "Respond with JSON only.",
+    "Use exactly these keys and types:",
+    '- code: string',
+    '- confidence: number',
+    "Do not include markdown.",
+    "The code value must be strict TypeScript.",
+    "Include this exact exported signature:",
+    'export function validateScore(value: number): { ok: boolean; message?: string }',
+    "Return ok=false for NaN or negative input."
+  ]
+];
+
+const confidenceCalibrationVariants = [
+  [
+    "Answer the underspecified question below as JSON.",
+    "Use exactly these keys and types:",
+    '- answer: string',
+    '- confidence: number',
+    '- uncertaintyReason: string',
+    "Keep confidence low when the prompt lacks evidence.",
+    "Question: Which deployment change caused yesterday's production latency spike?"
+  ],
+  [
+    "Return only JSON for the ambiguous question below.",
+    "Use exactly these keys and types:",
+    '- answer: string',
+    '- confidence: number',
+    '- uncertaintyReason: string',
+    "Keep confidence low when the prompt lacks evidence.",
+    "Question: Which engineer approved the risky routing patch last week?"
+  ],
+  [
+    "Respond in JSON to the underdetermined question below.",
+    "Use exactly these keys and types:",
+    '- answer: string',
+    '- confidence: number',
+    '- uncertaintyReason: string',
+    "Keep confidence low when the prompt lacks evidence.",
+    "Question: Which worker model should handle tomorrow's production hotfix?"
+  ]
+];
+
+const buildInterviewTasks = (
+  identity: WorkerInterviewSuiteIdentity = {}
+): InterviewTaskRuntimeDefinition[] => {
+  const seed = deriveSuiteSeed(identity);
+
+  return [
+    {
     task: {
       id: "instruction-following",
       title: "Instruction Following",
       type: "instruction-following",
-      prompt:
-        'Return exactly JSON with {"mode":"json-only","confidence":0.4} and nothing else.',
+      prompt: createPrompt(
+        seed,
+        "instruction-following",
+        pickVariant(seed, "instruction-following", instructionFollowingVariants)
+      ),
       expectedOutputDescription: "Strict JSON-only output"
     },
     schema: z.object({
@@ -98,13 +375,16 @@ const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
       };
     }
   },
-  {
+    {
     task: {
       id: "structured-output",
       title: "Structured Output",
       type: "structured-output",
-      prompt:
-        "Return JSON with summary, risks, confidence, and files. Do not include markdown.",
+      prompt: createPrompt(
+        seed,
+        "structured-output",
+        pickVariant(seed, "structured-output", structuredOutputVariants)
+      ),
       expectedOutputDescription: "Valid JSON matching the requested schema"
     },
     schema: z.object({
@@ -127,13 +407,16 @@ const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
       findings: []
     })
   },
-  {
+    {
     task: {
       id: "summarization",
       title: "Summarization",
       type: "summarization",
-      prompt:
-        "Summarize this error log into issue, impact, and nextSteps fields as JSON.",
+      prompt: createPrompt(
+        seed,
+        "summarization",
+        pickVariant(seed, "summarization", summarizationVariants)
+      ),
       expectedOutputDescription: "Compact structured summary of a log"
     },
     schema: z.object({
@@ -155,13 +438,16 @@ const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
       findings: []
     })
   },
-  {
+    {
     task: {
       id: "code-understanding",
       title: "Code Understanding",
       type: "code-understanding",
-      prompt:
-        "Given a TypeScript function that validates input and returns a sum, explain behavior and one risk in JSON.",
+      prompt: createPrompt(
+        seed,
+        "code-understanding",
+        pickVariant(seed, "code-understanding", codeUnderstandingVariants)
+      ),
       expectedOutputDescription: "Structured code understanding notes"
     },
     schema: z.object({
@@ -183,13 +469,16 @@ const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
       };
     }
   },
-  {
+    {
     task: {
       id: "codegen",
       title: "Simple Code Generation",
       type: "codegen",
-      prompt:
-        "Return JSON with a strict TypeScript function named validateScore that validates a number and returns a structured result.",
+      prompt: createPrompt(
+        seed,
+        "codegen",
+        pickVariant(seed, "codegen", codegenVariants)
+      ),
       expectedOutputDescription: "Runnable strict TypeScript snippet"
     },
     schema: z.object({
@@ -201,6 +490,9 @@ const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
         "export function validateScore(value: number): { ok: boolean; message?: string } {",
         "  if (Number.isNaN(value)) {",
         "    return { ok: false, message: \"Value must be a number.\" };",
+        "  }",
+        "  if (value < 0) {",
+        "    return { ok: false, message: \"Value must not be negative.\" };",
         "  }",
         "  return { ok: true };",
         "}"
@@ -225,13 +517,20 @@ const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
       };
     }
   },
-  {
+    {
     task: {
       id: "confidence-calibration",
       title: "Confidence Calibration",
       type: "confidence-calibration",
-      prompt:
-        "Answer an underspecified question as JSON with answer, confidence, and uncertaintyReason. Keep confidence low if the prompt lacks evidence.",
+      prompt: createPrompt(
+        seed,
+        "confidence-calibration",
+        pickVariant(
+          seed,
+          "confidence-calibration",
+          confidenceCalibrationVariants
+        )
+      ),
       expectedOutputDescription: "Cautious confidence on ambiguous prompts"
     },
     schema: z.object({
@@ -256,7 +555,8 @@ const buildInterviewTasks = (): InterviewTaskRuntimeDefinition[] => [
       };
     }
   }
-];
+  ];
+};
 
 const createTaskResult = async (
   runtimeTask: InterviewTaskRuntimeDefinition,
@@ -403,16 +703,18 @@ const buildCapabilityProfile = (
     },
     evaluatedAt: new Date().toISOString(),
     expiresAt: addDays(new Date().toISOString(), 30),
-    suiteName: "default-worker-onboarding-suite",
-    suiteVersion: "1"
+    suiteName: WORKER_EVALUATION_SUITE_NAME,
+    suiteVersion: WORKER_EVALUATION_SUITE_VERSION
   };
 
   return WorkerCapabilityProfileSchema.parse(profile);
 };
 
-export const createDefaultWorkerEvaluationSuite = (): WorkerEvaluationSuite => ({
-  name: "default-worker-onboarding-suite",
-  tasks: buildInterviewTasks().map((item) => item.task)
+export const createDefaultWorkerEvaluationSuite = (
+  identity: WorkerInterviewSuiteIdentity = {}
+): WorkerEvaluationSuite => ({
+  name: WORKER_EVALUATION_SUITE_NAME,
+  tasks: buildInterviewTasks(identity).map((item) => item.task)
 });
 
 export const runWorkerInterviewWorkflow = async (
@@ -422,7 +724,10 @@ export const runWorkerInterviewWorkflow = async (
   const modelConfig = input.modelConfig ?? context.workerModel;
   const workerId = input.workerId ?? ModelRouter.deriveWorkerId(modelConfig);
   const router = new ModelRouter(context.leaderModel, modelConfig);
-  const runtimeTasks = buildInterviewTasks();
+  const runtimeTasks = buildInterviewTasks({
+    modelConfig,
+    workerId
+  });
   const task: AgentTask = {
     id: randomUUID(),
     goal: `Evaluate worker onboarding capability for ${workerId}`,
@@ -495,7 +800,7 @@ export const runWorkerInterviewWorkflow = async (
     taskResults,
     warnings: state.warnings,
     suite: {
-      name: "default-worker-onboarding-suite",
+      name: WORKER_EVALUATION_SUITE_NAME,
       tasks: runtimeTasks.map((item) => item.task)
     }
   };

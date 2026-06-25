@@ -77,6 +77,7 @@ export async function invokeStructured<T>(
         prompt: options.prompt,
         systemPrompt: options.systemPrompt,
         responseFormat: "json",
+        responseSchema: options.schema,
         mockResponse: options.mockResponse,
         metadata: options.metadata
       });

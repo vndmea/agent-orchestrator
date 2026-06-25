@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
 import {
+  createDefaultWorkerEvaluationSuite,
   runLeaderWorkerWorkflow,
   runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
@@ -80,5 +81,36 @@ describe("worker interview workflow", () => {
     expect(workflow.state.workerResults).toHaveLength(0);
     expect(workflow.state.warnings.join("\n")).toContain("blocked");
     expect(workflow.finalResult?.status).toBe("needs_review");
+  });
+
+  it("uses interview prompts with concrete fixtures and explicit field names", () => {
+    const suite = createDefaultWorkerEvaluationSuite();
+
+    expect(
+      suite.tasks.find((task) => task.id === "structured-output")?.prompt
+    ).toContain("Scenario ID:");
+    expect(
+      suite.tasks.find((task) => task.id === "summarization")?.prompt
+    ).toMatch(/Error log:|Failure log:|Build output:/u);
+    expect(
+      suite.tasks.find((task) => task.id === "code-understanding")?.prompt
+    ).toContain("Code:");
+    expect(
+      suite.tasks.find((task) => task.id === "codegen")?.prompt
+    ).toContain("- confidence: number");
+  });
+
+  it("derives different prompt sets for different worker models", () => {
+    const proSuite = createDefaultWorkerEvaluationSuite({
+      workerId: "openai-compatible:deepseek-v4-pro"
+    });
+    const flashSuite = createDefaultWorkerEvaluationSuite({
+      workerId: "openai-compatible:deepseek-v4-flash"
+    });
+
+    expect(proSuite.tasks).toHaveLength(flashSuite.tasks.length);
+    expect(proSuite.tasks.map((task) => task.prompt)).not.toEqual(
+      flashSuite.tasks.map((task) => task.prompt)
+    );
   });
 });

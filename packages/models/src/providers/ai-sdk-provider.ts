@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 
 import type { ModelConfig } from "@agent-orchestrator/core";
 
@@ -8,6 +8,22 @@ import type {
   ModelInvocationResult,
   ModelProvider
 } from "../types/model-provider.js";
+
+const extractUsage = (
+  usage: Awaited<ReturnType<typeof generateText>>["usage"] | undefined
+): ModelInvocationResult["usage"] => ({
+  ...(usage?.inputTokens !== undefined
+    ? { inputTokens: usage.inputTokens }
+    : {}),
+  ...(usage?.outputTokens !== undefined
+    ? { outputTokens: usage.outputTokens }
+    : {})
+});
+
+const isStructuredOutputCompatibilityError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  return /response_format|json_schema/iu.test(message);
+};
 
 export class AiSdkProvider implements ModelProvider {
   public readonly name = "openai-compatible";
@@ -20,6 +36,36 @@ export class AiSdkProvider implements ModelProvider {
       ...(config.apiKey ? { apiKey: config.apiKey } : {}),
       ...(config.baseURL ? { baseURL: config.baseURL } : {})
     });
+
+    if (request.responseFormat === "json" && request.responseSchema) {
+      try {
+        const result = await generateText({
+          model: client.chat(config.model),
+          system: request.systemPrompt,
+          prompt: request.prompt,
+          temperature: config.temperature,
+          maxOutputTokens: config.maxTokens,
+          output: Output.object({
+            schema: request.responseSchema
+          })
+        });
+
+        return {
+          provider: config.provider,
+          model: config.model,
+          text: JSON.stringify(result.output),
+          raw: {
+            output: result.output,
+            response: result.response
+          },
+          usage: extractUsage(result.usage)
+        };
+      } catch (error) {
+        if (!isStructuredOutputCompatibilityError(error)) {
+          throw error;
+        }
+      }
+    }
 
     const result = await generateText({
       model: client.chat(config.model),
@@ -34,14 +80,7 @@ export class AiSdkProvider implements ModelProvider {
       model: config.model,
       text: result.text,
       raw: result.response,
-      usage: {
-        ...(result.usage?.inputTokens !== undefined
-          ? { inputTokens: result.usage.inputTokens }
-          : {}),
-        ...(result.usage?.outputTokens !== undefined
-          ? { outputTokens: result.usage.outputTokens }
-          : {})
-      }
+      usage: extractUsage(result.usage)
     };
   }
 }

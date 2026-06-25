@@ -19,6 +19,7 @@ class SequenceProvider implements ModelProvider {
   public readonly name = "sequence";
 
   public calls = 0;
+  public requests: ModelInvocationRequest[] = [];
 
   public constructor(
     private readonly responses: Array<ModelInvocationResult | Error>
@@ -29,7 +30,7 @@ class SequenceProvider implements ModelProvider {
     request: ModelInvocationRequest
   ): Promise<ModelInvocationResult> {
     void config;
-    void request;
+    this.requests.push(request);
 
     const response = this.responses[this.calls];
     this.calls += 1;
@@ -208,6 +209,30 @@ describe("invokeStructured", () => {
       inputTokens: 10,
       outputTokens: 20
     });
+  });
+
+  it("passes schema-aware JSON invocation hints to the provider", async () => {
+    const provider = new SequenceProvider([
+      {
+        provider: "sequence",
+        model: "mock-model",
+        text: JSON.stringify({
+          message: "ok",
+          count: 2
+        })
+      }
+    ]);
+
+    await invokeStructured({
+      provider,
+      config,
+      schema,
+      prompt: "Return JSON"
+    });
+
+    expect(provider.requests).toHaveLength(1);
+    expect(provider.requests[0]?.responseFormat).toBe("json");
+    expect(provider.requests[0]?.responseSchema).toBe(schema);
   });
 
   it("stays compatible with the mock provider", async () => {

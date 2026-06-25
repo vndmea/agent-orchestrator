@@ -1,9 +1,11 @@
 import type { ModelConfig } from "@agent-orchestrator/core";
+import type * as z from "zod";
 
 export interface ModelInvocationRequest {
   prompt: string;
   systemPrompt?: string;
   responseFormat?: "text" | "json";
+  responseSchema?: z.ZodType<unknown>;
   mockResponse?: unknown;
   metadata?: Record<string, unknown>;
 }
