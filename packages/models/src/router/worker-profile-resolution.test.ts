@@ -115,6 +115,44 @@ describe("resolveWorkerProfile", () => {
     expect(result.freshness.usable).toBe(false);
   });
 
+  it("checks compatibility against an effective registered model config", async () => {
+    const rootDir = await createRootDir();
+    await writeProfiles(rootDir, [
+      createProfile({
+        workerId: "mock:registered-worker",
+        provider: "mock",
+        model: "registered-worker"
+      })
+    ]);
+    const context = createExecutionContextFromEnv(undefined, {
+      rootDir,
+      workerModel: {
+        provider: "mock",
+        model: "env-worker"
+      }
+    });
+
+    const compatible = await resolveWorkerProfile({
+      context,
+      workerId: "mock:registered-worker",
+      modelConfig: {
+        provider: "mock",
+        model: "registered-worker"
+      }
+    });
+    const incompatible = await resolveWorkerProfile({
+      context,
+      workerId: "mock:registered-worker",
+      modelConfig: {
+        provider: "mock",
+        model: "different-worker"
+      }
+    });
+
+    expect(compatible.freshness.usable).toBe(true);
+    expect(incompatible.source).toBe("incompatible");
+  });
+
   it("returns stale when the persisted profile is expired", async () => {
     const rootDir = await createRootDir();
     await writeProfiles(rootDir, [

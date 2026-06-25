@@ -1,6 +1,7 @@
 import {
   AgentError,
   type ExecutionContext,
+  type ModelConfig,
   type WorkerCapabilityProfile,
   type WorkerStatus
 } from "@agent-orchestrator/core";
@@ -10,6 +11,7 @@ import { deriveWorkerProfileId } from "./worker-profile-store.js";
 
 export interface ResolveWorkerProfileInput {
   context: ExecutionContext;
+  modelConfig?: ModelConfig;
   workerId?: string;
   requireProfile?: boolean;
 }
@@ -61,10 +63,12 @@ const failIfRequired = (
 
 export const resolveWorkerProfile = async ({
   context,
+  modelConfig,
   workerId,
   requireProfile
 }: ResolveWorkerProfileInput): Promise<ResolveWorkerProfileResult> => {
-  const resolvedWorkerId = workerId ?? deriveWorkerProfileId(context.workerModel);
+  const effectiveModelConfig = modelConfig ?? context.workerModel;
+  const resolvedWorkerId = workerId ?? deriveWorkerProfileId(effectiveModelConfig);
   const profile = await getWorkerProfile(context.rootDir, resolvedWorkerId);
 
   if (!profile) {
@@ -92,8 +96,8 @@ export const resolveWorkerProfile = async ({
   }
 
   if (
-    profile.provider !== context.workerModel.provider ||
-    profile.model !== context.workerModel.model
+    profile.provider !== effectiveModelConfig.provider ||
+    profile.model !== effectiveModelConfig.model
   ) {
     return failIfRequired(
       buildFailure(

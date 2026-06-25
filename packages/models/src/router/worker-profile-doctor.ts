@@ -1,6 +1,7 @@
 import type { DoctorCheck, ExecutionContext } from "@agent-orchestrator/core";
 
 import { resolveWorkerProfile } from "./worker-profile-resolution.js";
+import { readWorkerRegistry } from "./worker-registry-store.js";
 import { readPersistedWorkerProfiles } from "./worker-profile-store.js";
 
 export const createWorkerProfileDoctorChecks = async (
@@ -8,6 +9,7 @@ export const createWorkerProfileDoctorChecks = async (
 ): Promise<DoctorCheck[]> => {
   const checks: DoctorCheck[] = [];
   const persisted = await readPersistedWorkerProfiles(context.rootDir);
+  const registry = await readWorkerRegistry(context.rootDir);
 
   if (!persisted.exists) {
     checks.push({
@@ -39,6 +41,75 @@ export const createWorkerProfileDoctorChecks = async (
         profileCount: persisted.profiles.length
       }
     });
+  }
+
+  if (!registry.exists) {
+    checks.push({
+      name: "worker-registry",
+      status: "warning",
+      message: "No worker registry was found.",
+      metadata: {
+        path: registry.path
+      }
+    });
+  } else if (registry.error) {
+    checks.push({
+      name: "worker-registry",
+      status: "fail",
+      message: `Worker registry could not be parsed: ${registry.error}`,
+      metadata: {
+        path: registry.path
+      }
+    });
+
+    return checks;
+  } else {
+    checks.push({
+      name: "worker-registry",
+      status: "pass",
+      message: `Worker registry is readable with ${registry.workers.length} registered worker(s).`,
+      metadata: {
+        path: registry.path,
+        workerCount: registry.workers.length
+      }
+    });
+
+    registry.workers.forEach((registration) => {
+      if (!registration.enabled) {
+        checks.push({
+          name: "registered-worker",
+          status: "warning",
+          message: `Registered worker ${registration.workerId} is disabled.`,
+          metadata: {
+            workerId: registration.workerId
+          }
+        });
+      }
+    });
+
+    for (const registration of registry.workers.filter(
+      (item) => item.enabled
+    )) {
+      const registeredResolution = await resolveWorkerProfile({
+        context,
+        workerId: registration.workerId,
+        modelConfig: {
+          provider: registration.provider,
+          model: registration.model,
+          baseURL: registration.baseURL
+        }
+      });
+
+      checks.push({
+        name: "registered-worker-profile",
+        status: registeredResolution.freshness.usable ? "pass" : "warning",
+        message: registeredResolution.freshness.reason,
+        metadata: {
+          source: registeredResolution.source,
+          workerId: registration.workerId
+        }
+      });
+    }
   }
 
   const resolution = await resolveWorkerProfile({
