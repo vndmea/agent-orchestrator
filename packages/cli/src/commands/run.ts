@@ -25,6 +25,8 @@ export const registerRunCommand = (program: Command, io: CliIo): void => {
     .option("--diff <diff>", "Diff text or revision range for review workflow")
     .option("--file <path...>", "Optional file list for review workflow")
     .option("--error-log <text>", "Error log text for fix-error workflow")
+    .option("--worker <workerId>", "Worker profile id for leader-worker workflows")
+    .option("--require-profile", "Fail if no usable worker profile is available", false)
     .option("--allow-write", "Allow writes for this invocation", false)
     .action(
       async (
@@ -35,7 +37,9 @@ export const registerRunCommand = (program: Command, io: CliIo): void => {
           errorLog?: string;
           file?: string[];
           goal?: string;
+          requireProfile: boolean;
           scope?: string;
+          worker?: string;
         }
       ) => {
         const resolvedWorkflow = workflowAliases[workflow] ?? workflow;
@@ -43,6 +47,18 @@ export const registerRunCommand = (program: Command, io: CliIo): void => {
           allowWrite: options.allowWrite,
           dryRun: !options.allowWrite
         });
+        const supportsWorkerProfiles =
+          resolvedWorkflow === "leader-worker-workflow";
+
+        if (!supportsWorkerProfiles && options.worker) {
+          throw new Error(`--worker is only supported for leader-worker-workflow.`);
+        }
+
+        if (!supportsWorkerProfiles && options.requireProfile) {
+          throw new Error(
+            `--require-profile is only supported for leader-worker-workflow.`
+          );
+        }
 
         let result: unknown;
         switch (resolvedWorkflow) {
@@ -56,7 +72,9 @@ export const registerRunCommand = (program: Command, io: CliIo): void => {
             result = await runLeaderWorkerWorkflow({
               context,
               goal: options.goal ?? "No goal provided",
-              scope: options.scope
+              requireProfile: options.requireProfile,
+              scope: options.scope,
+              workerId: options.worker
             });
             break;
           case "review-workflow":
