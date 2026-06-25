@@ -24,10 +24,13 @@ class SequenceProvider implements ModelProvider {
     private readonly responses: Array<ModelInvocationResult | Error>
   ) {}
 
-  public async invoke(
-    _config: ModelConfig,
-    _request: ModelInvocationRequest
+  public invoke(
+    config: ModelConfig,
+    request: ModelInvocationRequest
   ): Promise<ModelInvocationResult> {
+    void config;
+    void request;
+
     const response = this.responses[this.calls];
     this.calls += 1;
 
@@ -36,7 +39,7 @@ class SequenceProvider implements ModelProvider {
     }
 
     if (response) {
-      return response;
+      return Promise.resolve(response);
     }
 
     const fallback = this.responses[this.responses.length - 1];
@@ -44,7 +47,7 @@ class SequenceProvider implements ModelProvider {
       throw new Error("No valid mock response configured.");
     }
 
-    return fallback;
+    return Promise.resolve(fallback);
   }
 }
 

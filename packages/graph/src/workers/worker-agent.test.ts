@@ -20,15 +20,18 @@ class SequenceProvider implements ModelProvider {
     private readonly responses: ModelInvocationResult[]
   ) {}
 
-  public async invoke(
-    _config: ModelConfig,
-    _request: ModelInvocationRequest
+  public invoke(
+    config: ModelConfig,
+    request: ModelInvocationRequest
   ): Promise<ModelInvocationResult> {
-    return this.responses.shift() ?? {
+    void config;
+    void request;
+
+    return Promise.resolve(this.responses.shift() ?? {
       provider: "sequence",
       model: "test-model",
       text: "{}"
-    };
+    });
   }
 }
 

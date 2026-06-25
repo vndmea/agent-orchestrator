@@ -1,5 +1,5 @@
 import type { ModelConfig } from "@agent-orchestrator/core";
-import { z } from "zod";
+import type * as z from "zod";
 
 import type {
   ModelInvocationResult,
