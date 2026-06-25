@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { extname } from "node:path";
 
 export interface RunCommandResult {
   code: number | null;
@@ -14,6 +15,37 @@ export interface RunCommandOptions {
   maxOutputBytes?: number;
   timeoutMs?: number;
 }
+
+const resolveCommandForSpawn = (command: string): string => {
+  if (process.platform !== "win32") {
+    return command;
+  }
+
+  if (command.includes("/") || command.includes("\\") || extname(command)) {
+    return command;
+  }
+
+  return command === "pnpm" ? "pnpm.cmd" : command;
+};
+
+const resolveSpawnSpec = (
+  command: string,
+  args: string[]
+): { command: string; args: string[] } => {
+  const resolvedCommand = resolveCommandForSpawn(command);
+
+  if (process.platform === "win32" && resolvedCommand.endsWith(".cmd")) {
+    return {
+      command: process.env.ComSpec ?? "cmd.exe",
+      args: ["/d", "/s", "/c", resolvedCommand, ...args]
+    };
+  }
+
+  return {
+    command: resolvedCommand,
+    args
+  };
+};
 
 const appendChunk = (
   existing: string,
@@ -44,7 +76,8 @@ export const runCommand = async (
   new Promise((resolve, reject) => {
     const timeoutMs = options.timeoutMs ?? 30_000;
     const maxOutputBytes = options.maxOutputBytes ?? 200_000;
-    const child = spawn(command, args, {
+    const spawnSpec = resolveSpawnSpec(command, args);
+    const child = spawn(spawnSpec.command, spawnSpec.args, {
       cwd,
       env: options.env,
       shell: false,

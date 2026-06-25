@@ -1,4 +1,4 @@
-import { readGitDiff } from "../git/read-diff.js";
+import { readGitDiff } from "../repository/git-diff.js";
 import { readRepositoryFile } from "../filesystem/read-file.js";
 import { searchRepository } from "../filesystem/search-repo.js";
 import { writeRepositoryFile } from "../filesystem/write-file.js";

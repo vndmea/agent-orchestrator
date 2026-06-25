@@ -5,6 +5,8 @@ import {
   AgentTaskSchema,
   LeaderDecisionSchema,
   ModelConfigSchema,
+  RepositoryContextPackSchema,
+  ValidationReportSchema,
   WorkerCapabilityProfileSchema,
   WorkerRegistrationSchema,
   WorkerRegistrySchema,
@@ -143,6 +145,59 @@ describe("core schemas", () => {
         model: "qwen3-coder",
         createdAt: now,
         updatedAt: now
+      })
+    ).toThrow();
+  });
+
+  it("parses repository context packs and validation reports", () => {
+    expect(() =>
+      RepositoryContextPackSchema.parse({
+        rootDir: "/repo",
+        files: [
+          {
+            path: "package.json",
+            sizeBytes: 100,
+            selected: true
+          }
+        ],
+        selectedFiles: [
+          {
+            path: "package.json",
+            content: "{\"name\":\"demo\"}",
+            truncated: false,
+            sizeBytes: 100
+          }
+        ],
+        warnings: [],
+        generatedAt: new Date().toISOString()
+      })
+    ).not.toThrow();
+
+    expect(() =>
+      ValidationReportSchema.parse({
+        checks: [
+          {
+            name: "typecheck",
+            command: "pnpm typecheck",
+            status: "success"
+          }
+        ],
+        ok: true,
+        warnings: []
+      })
+    ).not.toThrow();
+
+    expect(() =>
+      ValidationReportSchema.parse({
+        checks: [
+          {
+            name: "typecheck",
+            command: "pnpm typecheck",
+            status: "unknown"
+          }
+        ],
+        ok: true,
+        warnings: []
       })
     ).toThrow();
   });
