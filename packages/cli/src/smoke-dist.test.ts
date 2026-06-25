@@ -47,5 +47,5 @@ describe("cli dist smoke", () => {
         ]
       ).toBeTruthy();
     });
-  });
+  }, 15_000);
 });

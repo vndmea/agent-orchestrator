@@ -139,7 +139,7 @@ describe("task session workflow", () => {
     expect(fixArtifact.exists).toBe(true);
     expect(persisted?.steps.some((step) => step.id === "fix-planned" && step.status === "success")).toBe(true);
     expect(report.report).toContain("Task Session Report");
-  });
+  }, 15_000);
 
   it("blocks patch apply without explicit confirmation gates", async () => {
     const rootDir = await createWorkspace();

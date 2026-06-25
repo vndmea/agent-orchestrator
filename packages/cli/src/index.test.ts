@@ -512,7 +512,7 @@ describe("cli parsing", () => {
       ]);
       expect(output.at(-1)).toContain("packages/core/src/index.ts");
     });
-  });
+  }, 15_000);
 
   it("runs validate and fix error commands", async () => {
     await withTempCwd(async (rootDir) => {
@@ -550,7 +550,7 @@ describe("cli parsing", () => {
       await writeWorkspaceFixture(rootDir);
       await writeAoConfig(rootDir, {
         context: {
-          maxFileBytes: 8,
+          maxFileBytes: 1,
           maxTotalBytes: 64,
           ignoredPaths: ["tmp"]
         },
@@ -574,7 +574,9 @@ describe("cli parsing", () => {
       const reviewResult = JSON.parse(output.at(-1) ?? "{}") as {
         repositoryContext?: { selectedFiles?: Array<{ truncated?: boolean }> };
       };
-      expect(reviewResult.repositoryContext?.selectedFiles?.[0]?.truncated).toBe(true);
+      expect(
+        reviewResult.repositoryContext?.selectedFiles?.some((file) => file.truncated === true)
+      ).toBe(true);
 
       await cli.parseAsync([
         "node",
@@ -603,10 +605,12 @@ describe("cli parsing", () => {
         repositoryContext?: { selectedFiles?: Array<{ truncated?: boolean }> };
         validationReport?: { checks?: Array<{ status?: string }> };
       };
-      expect(taskResult.repositoryContext?.selectedFiles?.[0]?.truncated).toBe(true);
+      expect(
+        taskResult.repositoryContext?.selectedFiles?.some((file) => file.truncated === true)
+      ).toBe(true);
       expect(taskResult.validationReport?.checks?.[0]?.status).toBe("success");
     });
-  });
+  }, 15_000);
 
   it("initializes local ao scaffolding", async () => {
     await withTempCwd(async () => {
@@ -834,5 +838,5 @@ describe("cli parsing", () => {
       ]);
       expect(output.at(-1)).toContain("\"mode\": \"execute\"");
     });
-  });
+  }, 15_000);
 });

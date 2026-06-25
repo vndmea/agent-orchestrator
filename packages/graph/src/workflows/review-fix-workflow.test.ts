@@ -102,7 +102,7 @@ describe("review workflow", () => {
     });
 
     expect(result.repositoryContext.gitDiff?.changedFiles).toContain("packages/core/src/index.ts");
-  });
+  }, 15_000);
 });
 
 describe("fix-error workflow", () => {

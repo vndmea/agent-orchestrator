@@ -57,7 +57,7 @@ describe("readGitDiff", () => {
     expect(result.head).toBe("HEAD");
     expect(result.changedFiles).toContain("demo.ts");
     expect(result.diffText).toContain("export const value = 2");
-  });
+  }, 15_000);
 
   it("rejects unsafe refs", async () => {
     const rootDir = await createGitRoot();

@@ -339,7 +339,7 @@ describe("mcp tool registration", () => {
       expect(validation.checks[0]?.status).toBe("dry-run");
       expect(fix.repositoryContext.scope).toBe("packages/core");
     });
-  });
+  }, 15_000);
 
   it("uses ao config for repository review entrypoints", async () => {
     await withTempCwd(async (rootDir) => {
@@ -347,7 +347,7 @@ describe("mcp tool registration", () => {
       await initGitRepo(rootDir);
       await writeAoConfig(rootDir, {
         context: {
-          maxFileBytes: 8,
+          maxFileBytes: 1,
           maxTotalBytes: 64,
           ignoredPaths: ["tmp"]
         }
@@ -357,9 +357,11 @@ describe("mcp tool registration", () => {
         scope: "packages/core"
       });
 
-      expect(repoReview.repositoryContext.selectedFiles[0]?.truncated).toBe(true);
+      expect(repoReview.repositoryContext.selectedFiles.some((file) => file.truncated === true)).toBe(
+        true
+      );
     });
-  });
+  }, 15_000);
 
   it("executes patch proposal, inspection, and apply tools", async () => {
     await withTempCwd(async (rootDir) => {

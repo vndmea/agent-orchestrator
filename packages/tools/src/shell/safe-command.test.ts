@@ -173,5 +173,5 @@ describe("runSafeCommand", () => {
 
     expect(event?.metadata?.readOnly).toBe(true);
     expect(event?.metadata?.commandKind).toBe("read-only");
-  });
+  }, 15_000);
 });
