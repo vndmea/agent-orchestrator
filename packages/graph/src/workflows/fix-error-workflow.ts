@@ -4,9 +4,16 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type {
   AgentTask,
   ExecutionContext,
-  ToolExecutionResult
+  RepositoryContextPack,
+  ToolExecutionResult,
+  ValidationReport
 } from "@agent-orchestrator/core";
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import {
+  buildRepositoryContextPack,
+  readRepositoryFile,
+  runRepositoryValidation
+} from "@agent-orchestrator/tools";
 
 import { LeaderAgent } from "../leader/leader-agent.js";
 import { createInitialWorkflowState } from "../leader/leader-state.js";
@@ -15,16 +22,23 @@ import { TestWorker } from "../workers/test-worker.js";
 
 export interface FixErrorWorkflowInput {
   context?: ExecutionContext;
-  errorLog: string;
+  errorLog?: string;
+  errorLogFile?: string;
   scope?: string;
+  validate?: {
+    lint?: boolean;
+    test?: boolean;
+    typecheck?: boolean;
+  };
 }
 
 export interface FixErrorWorkflowOutput {
   candidateFixPlan: string[];
   leaderReview: Awaited<ReturnType<LeaderAgent["review"]>>;
+  repositoryContext: RepositoryContextPack;
   rootCauseAnalysis: string;
   suggestedPatchArtifact: string;
-  validationResult: ToolExecutionResult;
+  validationReport: ValidationReport;
 }
 
 const FixErrorState = Annotation.Root({
@@ -46,11 +60,39 @@ export const runFixErrorWorkflow = async (
   const leader = new LeaderAgent(context);
   const codegenWorker = new CodegenWorker(context);
   const testWorker = new TestWorker(context);
+  const errorLog = input.errorLog ??
+    (input.errorLogFile
+      ? await readRepositoryFile(input.errorLogFile, context.rootDir, 20_000)
+      : "");
+  const repositoryContext = await buildRepositoryContextPack(context, {
+    rootDir: context.rootDir,
+    scope: input.scope
+  });
+  const validationReport = await runRepositoryValidation(context, {
+    typecheck: input.validate?.typecheck,
+    lint: input.validate?.lint,
+    test: input.validate?.test,
+    scope: input.scope
+  });
+  const validationChecks = validationReport.checks.map((check) => ({
+    toolName: `validation:${check.name}`,
+    status:
+      check.status === "success"
+        ? "success"
+        : check.status === "failure"
+          ? "failure"
+          : "dry-run",
+    output: check,
+    metadata: {}
+  })) satisfies ToolExecutionResult[];
   const task: AgentTask = {
     id: randomUUID(),
     goal: "Analyze an error log and propose a safe fix plan",
     input: {
-      errorLog: input.errorLog,
+      errorLog,
+      errorLogFile: input.errorLogFile,
+      repositoryContext,
+      validationReport,
       scope: input.scope
     },
     constraints: [
@@ -82,12 +124,13 @@ export const runFixErrorWorkflow = async (
       toolResults: [
         {
           toolName: "error-log-check",
-          status: input.errorLog.trim() ? "success" : "failure",
+          status: errorLog.trim() ? "success" : "failure",
           output: {
-            hasErrorLog: Boolean(input.errorLog.trim())
+            hasErrorLog: Boolean(errorLog.trim())
           },
           metadata: {}
-        }
+        },
+        ...validationChecks
       ]
     }))
     .addEdge(START, "create_plan")
@@ -104,7 +147,7 @@ export const runFixErrorWorkflow = async (
   );
 
   return {
-    rootCauseAnalysis: input.errorLog.trim()
+    rootCauseAnalysis: errorLog.trim()
       ? "The supplied error log should be traced from failing validation back to the owning package boundary."
       : "No error log was provided, so the analysis is incomplete.",
     candidateFixPlan: [
@@ -112,15 +155,9 @@ export const runFixErrorWorkflow = async (
       "Limit the fix to the provided scope.",
       "Run deterministic validation after the change."
     ],
+    repositoryContext,
     suggestedPatchArtifact: "candidate-patch-plan.md",
-    validationResult: state.toolResults[0] ?? {
-      toolName: "error-log-check",
-      status: "failure",
-      output: {
-        hasErrorLog: false
-      },
-      metadata: {}
-    },
+    validationReport,
     leaderReview
   };
 };

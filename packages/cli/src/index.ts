@@ -8,6 +8,7 @@ import { registerModelsCommand } from "./commands/models.js";
 import { registerPlanCommand } from "./commands/plan.js";
 import { registerReviewCommand } from "./commands/review.js";
 import { registerRunCommand } from "./commands/run.js";
+import { registerValidateCommand } from "./commands/validate.js";
 import { registerWorkerCommand } from "./commands/worker.js";
 
 export interface CliIo {
@@ -40,6 +41,7 @@ export const buildCli = (io: CliIo = defaultIo): Command => {
   registerRunCommand(program, io);
   registerReviewCommand(program, io);
   registerFixCommand(program, io);
+  registerValidateCommand(program, io);
   registerAuditCommand(program, io);
   registerDoctorCommand(program, io);
   registerModelsCommand(program, io);

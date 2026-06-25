@@ -1,10 +1,14 @@
+import { execFile as execFileCallback } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
 import { buildCli } from "@agent-orchestrator/cli";
+
+const execFile = promisify(execFileCallback);
 
 const createIo = () => {
   const output: string[] = [];
@@ -54,6 +58,62 @@ const writeRegistry = async (rootDir: string, workers: unknown[]): Promise<void>
   await writeFile(
     join(aoDir, "workers.json"),
     JSON.stringify({ version: 1, workers }, null, 2),
+    "utf8"
+  );
+};
+
+const writeWorkspaceFixture = async (rootDir: string): Promise<void> => {
+  await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
+  await mkdir(join(rootDir, "tmp"), { recursive: true });
+  await writeFile(
+    join(rootDir, "package.json"),
+    JSON.stringify(
+      {
+        scripts: {
+          typecheck: "node -e \"process.exit(0)\"",
+          lint: "node -e \"process.exit(0)\"",
+          test: "node -e \"process.exit(0)\""
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeFile(
+    join(rootDir, "packages", "core", "package.json"),
+    JSON.stringify(
+      {
+        scripts: {
+          typecheck: "node -e \"process.exit(0)\""
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeFile(
+    join(rootDir, "packages", "core", "src", "index.ts"),
+    "export const value = 1;\n",
+    "utf8"
+  );
+  await writeFile(
+    join(rootDir, "tmp", "error.log"),
+    "TS2304: Cannot find name 'missingValue'.\n",
+    "utf8"
+  );
+};
+
+const initGitRepo = async (rootDir: string): Promise<void> => {
+  await execFile("git", ["init"], { cwd: rootDir });
+  await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
+  await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+  await execFile("git", ["add", "."], { cwd: rootDir });
+  await execFile("git", ["commit", "-m", "initial"], { cwd: rootDir });
+  await writeFile(
+    join(rootDir, "packages", "core", "src", "index.ts"),
+    "export const value = 2;\n",
     "utf8"
   );
 };
@@ -340,6 +400,81 @@ describe("cli parsing", () => {
           "mock:unknown"
         ])
       ).rejects.toThrow("not registered");
+    });
+  });
+
+  it("runs repository review commands", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      await initGitRepo(rootDir);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "review",
+        "repo",
+        "--scope",
+        "packages/core",
+        "--typecheck"
+      ]);
+      expect(output.at(-1)).toContain("\"repositoryContext\"");
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "review",
+        "diff",
+        "--base",
+        "HEAD",
+        "--head",
+        "HEAD",
+        "--scope",
+        "packages/core"
+      ]);
+      expect(output.at(-1)).toContain("\"gitDiff\"");
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "review",
+        "files",
+        "--file",
+        "packages/core/src/index.ts"
+      ]);
+      expect(output.at(-1)).toContain("packages/core/src/index.ts");
+    });
+  });
+
+  it("runs validate and fix error commands", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "validate",
+        "--typecheck"
+      ]);
+      expect(output.at(-1)).toContain("\"checks\"");
+      expect(output.at(-1)).toContain("\"dry-run\"");
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "fix",
+        "error",
+        "--error-log-file",
+        "tmp/error.log",
+        "--scope",
+        "packages/core",
+        "--typecheck"
+      ]);
+      expect(output.at(-1)).toContain("\"rootCauseAnalysis\"");
+      expect(output.at(-1)).toContain("\"repositoryContext\"");
     });
   });
 });
