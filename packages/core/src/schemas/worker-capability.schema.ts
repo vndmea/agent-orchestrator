@@ -48,7 +48,10 @@ export const WorkerCapabilityProfileSchema = z.object({
   risks: z.array(z.string()),
   warnings: z.array(z.string()),
   routingPolicy: WorkerRoutingPolicySchema,
-  evaluatedAt: z.string().datetime()
+  evaluatedAt: z.string().datetime(),
+  expiresAt: z.string().datetime().optional(),
+  suiteName: z.string().min(1).optional(),
+  suiteVersion: z.string().min(1).optional()
 });
 
 export const WorkerInterviewTaskSchema = z.object({

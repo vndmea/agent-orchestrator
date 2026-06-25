@@ -106,7 +106,10 @@ describe("core schemas", () => {
           allowPatchGeneration: false,
           allowDomainTasks: false
         },
-        evaluatedAt: new Date().toISOString()
+        evaluatedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        suiteName: "default-worker-onboarding-suite",
+        suiteVersion: "1"
       })
     ).not.toThrow();
   });

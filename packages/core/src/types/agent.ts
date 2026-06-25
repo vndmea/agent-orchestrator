@@ -72,6 +72,9 @@ export interface WorkerCapabilityProfile {
   warnings: string[];
   routingPolicy: WorkerRoutingPolicy;
   evaluatedAt: string;
+  expiresAt?: string;
+  suiteName?: string;
+  suiteVersion?: string;
 }
 
 export interface WorkerInterviewTask {
