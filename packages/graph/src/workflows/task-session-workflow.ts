@@ -1,6 +1,6 @@
 import {
   AgentError,
-  createExecutionContextFromEnv,
+  resolveExecutionContext,
   createExecutionContextWithWorkerModel,
   createTaskSession,
   getTaskSessionPath,
@@ -345,16 +345,18 @@ const loadArtifact = async <T>(
   return artifact.exists ? (artifact.value as T) : undefined;
 };
 
-const createBaseContext = (
+const createBaseContext = async (
   inputContext: ExecutionContext | undefined,
   overrides: {
     allowWrite?: boolean;
   } = {}
-): ExecutionContext =>
+): Promise<ExecutionContext> =>
   inputContext ??
-  createExecutionContextFromEnv(undefined, {
-    allowWrite: overrides.allowWrite ?? false,
-    dryRun: !(overrides.allowWrite ?? false)
+  resolveExecutionContext({
+    cliOverrides: {
+      allowWrite: overrides.allowWrite ?? false,
+      dryRun: !(overrides.allowWrite ?? false)
+    }
   });
 
 const executeReviewStep = async (input: {
@@ -556,7 +558,7 @@ const persistReport = async (
 export const runTaskSessionWorkflow = async (
   input: TaskSessionWorkflowInput
 ): Promise<TaskSessionWorkflowOutput> => {
-  const baseContext = createBaseContext(input.context, {
+  const baseContext = await createBaseContext(input.context, {
     allowWrite: input.allowWrite
   });
   const resolved = await resolveTaskContext(
@@ -675,7 +677,7 @@ export const runTaskSessionWorkflow = async (
 export const resumeTaskSessionWorkflow = async (
   input: ResumeTaskSessionWorkflowInput
 ): Promise<TaskSessionWorkflowOutput> => {
-  const baseContext = createBaseContext(input.context, {
+  const baseContext = await createBaseContext(input.context, {
     allowWrite: input.allowWrite
   });
   const session = await readTaskSession(baseContext.rootDir, input.taskId);

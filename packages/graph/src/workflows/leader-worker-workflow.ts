@@ -9,8 +9,8 @@ import type {
   WorkflowState
 } from "@agent-orchestrator/core";
 import {
+  resolveExecutionContext,
   createExecutionContextWithWorkerModel,
-  createExecutionContextFromEnv,
   writeAuditEvent
 } from "@agent-orchestrator/core";
 import {
@@ -112,7 +112,7 @@ const buildProfileWarnings = (
 export const runLeaderWorkerWorkflow = async (
   input: LeaderWorkerWorkflowInput
 ): Promise<LeaderWorkerWorkflowOutput> => {
-  const context = input.context ?? createExecutionContextFromEnv();
+  const context = input.context ?? await resolveExecutionContext();
   const workerModelResolution = await resolveWorkerModel({
     context,
     workerId: input.workerId

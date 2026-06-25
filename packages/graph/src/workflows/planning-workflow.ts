@@ -7,7 +7,7 @@ import type {
   TaskPlan,
   WorkflowState
 } from "@agent-orchestrator/core";
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 
 import { LeaderAgent } from "../leader/leader-agent.js";
 import { createInitialWorkflowState } from "../leader/leader-state.js";
@@ -41,7 +41,7 @@ const PlanningState = Annotation.Root({
 export const runPlanningWorkflow = async (
   input: PlanningWorkflowInput
 ): Promise<PlanningWorkflowOutput> => {
-  const context = input.context ?? createExecutionContextFromEnv();
+  const context = input.context ?? await resolveExecutionContext();
   const leader = new LeaderAgent(context);
   const task: AgentTask = {
     id: randomUUID(),

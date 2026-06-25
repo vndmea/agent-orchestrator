@@ -8,7 +8,7 @@ import type {
   ReviewSummary,
   ValidationReport
 } from "@agent-orchestrator/core";
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import {
   buildRepositoryContextPack,
   readGitDiff,
@@ -58,7 +58,7 @@ const ReviewState = Annotation.Root({
 export const runReviewWorkflow = async (
   input: ReviewWorkflowInput
 ): Promise<ReviewWorkflowOutput> => {
-  const context = input.context ?? createExecutionContextFromEnv();
+  const context = input.context ?? await resolveExecutionContext();
   const leader = new LeaderAgent(context);
   const reviewWorker = new ReviewWorker(context);
   const diffSummary =

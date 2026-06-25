@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
 
 import {
-  createExecutionContextFromEnv,
   createExecutionContextWithWorkerModel,
   PatchInspectionSchema,
   PatchProposalSchema,
@@ -10,6 +9,7 @@ import {
   type PatchInspection,
   type PatchProposal,
   type RepositoryContextPack,
+  resolveExecutionContext,
   writeAuditEvent
 } from "@agent-orchestrator/core";
 import {
@@ -161,7 +161,7 @@ const buildFallbackProposal = (
 export const runPatchProposalWorkflow = async (
   input: PatchProposalWorkflowInput
 ): Promise<PatchProposalWorkflowOutput> => {
-  const context = input.context ?? createExecutionContextFromEnv();
+  const context = input.context ?? await resolveExecutionContext();
   const repositoryContext =
     input.repositoryContext ??
     await buildRepositoryContextPack(context, {

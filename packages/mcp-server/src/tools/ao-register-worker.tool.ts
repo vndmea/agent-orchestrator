@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import {
   deriveWorkerRegistrationId,
   getWorkerRegistration,
@@ -28,9 +28,11 @@ export const aoRegisterWorkerTool: AoToolDefinition<
   description: "Register a worker model in the local worker registry.",
   inputSchema,
   execute: async (args) => {
-    const context = createExecutionContextFromEnv(undefined, {
-      allowWrite: args.allowWrite ?? false,
-      dryRun: !(args.allowWrite ?? false)
+    const context = await resolveExecutionContext({
+      cliOverrides: {
+        allowWrite: args.allowWrite ?? false,
+        dryRun: !(args.allowWrite ?? false)
+      }
     });
     const workerId =
       args.workerId ??

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runReviewWorkflow } from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
@@ -24,7 +24,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
       test: boolean;
       typecheck: boolean;
     }) => {
-      const context = createExecutionContextFromEnv();
+      const context = await resolveExecutionContext();
       const result = await runReviewWorkflow({
         context,
         maxFileBytes: options.maxFileBytes,
@@ -61,7 +61,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
         test: boolean;
         typecheck: boolean;
       }) => {
-        const context = createExecutionContextFromEnv();
+        const context = await resolveExecutionContext();
         const result = await runReviewWorkflow({
           context,
           includeDiff: true,
@@ -100,7 +100,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
         test: boolean;
         typecheck: boolean;
       }) => {
-        const context = createExecutionContextFromEnv();
+        const context = await resolveExecutionContext();
         const result = await runReviewWorkflow({
           context,
           files: options.file,

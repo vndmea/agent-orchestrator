@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runFixErrorWorkflow } from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
@@ -28,7 +28,7 @@ export const registerFixCommand = (program: Command, io: CliIo): void => {
         test: boolean;
         typecheck: boolean;
       }) => {
-        const context = createExecutionContextFromEnv();
+        const context = await resolveExecutionContext();
         const result = await runFixErrorWorkflow({
           context,
           errorLog: options.errorLog,

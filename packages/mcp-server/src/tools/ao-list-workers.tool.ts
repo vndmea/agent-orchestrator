@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { listWorkerProfiles } from "@agent-orchestrator/models";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -15,7 +15,7 @@ export const aoListWorkersTool: AoToolDefinition<
   description: "List persisted worker capability profiles.",
   inputSchema,
   execute: async () => {
-    const context = createExecutionContextFromEnv();
+    const context = await resolveExecutionContext();
     return listWorkerProfiles(context.rootDir);
   }
 };

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runFixErrorWorkflow } from "@agent-orchestrator/graph";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -21,8 +22,10 @@ export const aoFixErrorTool: AoToolDefinition<
   name: "ao_fix_error",
   description: "Analyze an error log, propose a safe fix plan, and return validation guidance.",
   inputSchema,
-  execute: async (args) =>
-    runFixErrorWorkflow({
+  execute: async (args) => {
+    const context = await resolveExecutionContext();
+    return runFixErrorWorkflow({
+      context,
       errorLog: args.errorLog,
       errorLogFile: args.errorLogFile,
       proposePatch: args.proposePatch,
@@ -32,5 +35,6 @@ export const aoFixErrorTool: AoToolDefinition<
         lint: args.lint,
         test: args.test
       }
-    })
+    });
+  }
 };

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-import { createExecutionContextFromEnv, PatchProposalSchema } from "@agent-orchestrator/core";
+import { PatchProposalSchema, resolveExecutionContext } from "@agent-orchestrator/core";
 import {
   applyPatchProposal,
   inspectPatch,
@@ -44,8 +44,10 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
     .command("inspect")
     .argument("<patchFile>", "Patch proposal file")
     .action(async (patchFile: string) => {
-      const context = createExecutionContextFromEnv(undefined, {
-        dryRun: false
+      const context = await resolveExecutionContext({
+        cliOverrides: {
+          dryRun: false
+        }
       });
       const proposal = await parsePatchProposalFile(patchFile, context.rootDir);
       const inspection = await inspectPatch(context, proposal);
@@ -83,9 +85,11 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
           typecheck: boolean;
         }
       ) => {
-        const context = createExecutionContextFromEnv(undefined, {
-          allowWrite: options.allowWrite,
-          dryRun: false
+        const context = await resolveExecutionContext({
+          cliOverrides: {
+            allowWrite: options.allowWrite,
+            dryRun: false
+          }
         });
         const proposal = await parsePatchProposalFile(patchFile, context.rootDir);
         const result = await applyPatchProposal(context, proposal, {
@@ -124,7 +128,7 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
         scope?: string;
         worker?: string;
       }) => {
-        const context = createExecutionContextFromEnv();
+        const context = await resolveExecutionContext();
         const errorLog = options.errorLog ??
           (options.errorLogFile
             ? await readRepositoryFile(options.errorLogFile, context.rootDir, 20_000)

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runReviewWorkflow } from "@agent-orchestrator/graph";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -21,8 +22,10 @@ export const aoReviewFilesTool: AoToolDefinition<
   name: "ao_review_files",
   description: "Review selected repository files and return structured findings.",
   inputSchema,
-  execute: async (args) =>
-    runReviewWorkflow({
+  execute: async (args) => {
+    const context = await resolveExecutionContext();
+    return runReviewWorkflow({
+      context,
       files: args.files,
       scope: args.scope,
       maxFileBytes: args.maxFileBytes,
@@ -32,5 +35,6 @@ export const aoReviewFilesTool: AoToolDefinition<
         lint: args.lint,
         test: args.test
       }
-    })
+    });
+  }
 };

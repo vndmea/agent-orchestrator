@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 
 import {
-  createExecutionContextFromEnv,
+  resolveExecutionContext,
   writeAuditEvent
 } from "@agent-orchestrator/core";
 import {
@@ -46,9 +46,11 @@ export const registerRunCommand = (program: Command, io: CliIo): void => {
         }
       ) => {
         const resolvedWorkflow = workflowAliases[workflow] ?? workflow;
-        const context = createExecutionContextFromEnv(undefined, {
-          allowWrite: options.allowWrite,
-          dryRun: !options.allowWrite
+        const context = await resolveExecutionContext({
+          cliOverrides: {
+            allowWrite: options.allowWrite,
+            dryRun: !options.allowWrite
+          }
         });
         const supportsWorkerProfiles =
           resolvedWorkflow === "leader-worker-workflow";

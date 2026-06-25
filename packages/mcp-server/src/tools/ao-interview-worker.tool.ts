@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runWorkerInterviewWorkflow } from "@agent-orchestrator/graph";
 import {
   getWorkerRegistration,
@@ -29,7 +29,7 @@ export const aoInterviewWorkerTool: AoToolDefinition<
     "Evaluate a worker model, generate a capability profile, and optionally persist it.",
   inputSchema,
   execute: async (args) => {
-    const context = createExecutionContextFromEnv();
+    const context = await resolveExecutionContext();
     const hasModelOverride =
       Boolean(args.provider) || Boolean(args.model) || Boolean(args.baseURL);
     const registeredWorker = args.workerId

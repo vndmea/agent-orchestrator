@@ -19,7 +19,7 @@ import type {
 } from "@agent-orchestrator/core";
 import {
   WorkerCapabilityProfileSchema,
-  createExecutionContextFromEnv
+  resolveExecutionContext
 } from "@agent-orchestrator/core";
 import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
 
@@ -418,7 +418,7 @@ export const createDefaultWorkerEvaluationSuite = (): WorkerEvaluationSuite => (
 export const runWorkerInterviewWorkflow = async (
   input: WorkerInterviewWorkflowInput = {}
 ): Promise<WorkerInterviewWorkflowOutput> => {
-  const context = input.context ?? createExecutionContextFromEnv();
+  const context = input.context ?? await resolveExecutionContext();
   const modelConfig = input.modelConfig ?? context.workerModel;
   const workerId = input.workerId ?? ModelRouter.deriveWorkerId(modelConfig);
   const router = new ModelRouter(context.leaderModel, modelConfig);

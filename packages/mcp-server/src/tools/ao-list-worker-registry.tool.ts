@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { listWorkerRegistrations } from "@agent-orchestrator/models";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -15,7 +15,7 @@ export const aoListWorkerRegistryTool: AoToolDefinition<
   description: "List registered worker models.",
   inputSchema,
   execute: async () => {
-    const context = createExecutionContextFromEnv();
+    const context = await resolveExecutionContext();
     return listWorkerRegistrations(context.rootDir);
   }
 };

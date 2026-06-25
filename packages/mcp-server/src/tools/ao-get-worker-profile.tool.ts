@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import {
   ModelRouter,
   getWorkerProfile
@@ -20,7 +20,7 @@ export const aoGetWorkerProfileTool: AoToolDefinition<
   description: "Get a single worker capability profile by id.",
   inputSchema,
   execute: async (args) => {
-    const context = createExecutionContextFromEnv();
+    const context = await resolveExecutionContext();
     const workerId =
       args.workerId ?? ModelRouter.deriveWorkerId(context.workerModel);
     return getWorkerProfile(context.rootDir, workerId);

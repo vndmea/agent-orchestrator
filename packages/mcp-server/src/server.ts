@@ -1,7 +1,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 
 import { aoDoctorTool } from "./tools/ao-doctor.tool.js";
 import { aoApplyPatchTool } from "./tools/ao-apply-patch.tool.js";
@@ -63,8 +63,8 @@ export const aoToolDefinitions = [
   aoDoctorTool
 ] as const;
 
-export const createAoMcpServer = () => {
-  const context = createExecutionContextFromEnv();
+export const createAoMcpServer = async () => {
+  const context = await resolveExecutionContext();
   const server = new McpServer({
     name: context.serverName,
     version: context.serverVersion
@@ -101,7 +101,7 @@ export const createAoMcpServer = () => {
 };
 
 export const serveAoMcpServer = async (): Promise<void> => {
-  const server = createAoMcpServer();
+  const server = await createAoMcpServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 };

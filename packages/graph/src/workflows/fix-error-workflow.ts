@@ -8,7 +8,7 @@ import type {
   ToolExecutionResult,
   ValidationReport
 } from "@agent-orchestrator/core";
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import {
   buildRepositoryContextPack,
   readRepositoryFile,
@@ -60,7 +60,7 @@ const FixErrorState = Annotation.Root({
 export const runFixErrorWorkflow = async (
   input: FixErrorWorkflowInput
 ): Promise<FixErrorWorkflowOutput> => {
-  const context = input.context ?? createExecutionContextFromEnv();
+  const context = input.context ?? await resolveExecutionContext();
   const leader = new LeaderAgent(context);
   const codegenWorker = new CodegenWorker(context);
   const testWorker = new TestWorker(context);

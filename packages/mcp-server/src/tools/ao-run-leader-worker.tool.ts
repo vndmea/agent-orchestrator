@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv, writeAuditEvent } from "@agent-orchestrator/core";
+import { resolveExecutionContext, writeAuditEvent } from "@agent-orchestrator/core";
 import { runLeaderWorkerWorkflow } from "@agent-orchestrator/graph";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -20,7 +20,7 @@ export const aoRunLeaderWorkerTool: AoToolDefinition<
   description: "Run the leader-worker workflow with optional worker profile requirements.",
   inputSchema,
   execute: async (args) => {
-    const context = createExecutionContextFromEnv();
+    const context = await resolveExecutionContext();
     const result = await runLeaderWorkerWorkflow({
       context,
       goal: args.goal,

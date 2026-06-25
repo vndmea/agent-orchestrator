@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv, PatchProposalSchema } from "@agent-orchestrator/core";
+import { PatchProposalSchema, resolveExecutionContext } from "@agent-orchestrator/core";
 import { inspectPatch } from "@agent-orchestrator/tools";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -17,8 +17,10 @@ export const aoInspectPatchTool: AoToolDefinition<
   description: "Inspect a structured patch proposal for safety and applicability.",
   inputSchema,
   execute: async (args) => {
-    const context = createExecutionContextFromEnv(undefined, {
-      dryRun: false
+    const context = await resolveExecutionContext({
+      cliOverrides: {
+        dryRun: false
+      }
     });
     const proposal = PatchProposalSchema.parse(args.patchProposal);
 

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runWorkerInterviewWorkflow } from "@agent-orchestrator/graph";
 import {
   deriveWorkerRegistrationId,
@@ -45,9 +45,11 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         tag: string[];
         worker?: string;
       }) => {
-        const context = createExecutionContextFromEnv(undefined, {
-          allowWrite: options.allowWrite,
-          dryRun: !options.allowWrite
+        const context = await resolveExecutionContext({
+          cliOverrides: {
+            allowWrite: options.allowWrite,
+            dryRun: !options.allowWrite
+          }
         });
         const workerId =
           options.worker ??
@@ -93,9 +95,11 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .argument("<workerId>", "Worker registry id")
     .option("--allow-write", "Persist the removal", false)
     .action(async (workerId: string, options: { allowWrite: boolean }) => {
-      const context = createExecutionContextFromEnv(undefined, {
-        allowWrite: options.allowWrite,
-        dryRun: !options.allowWrite
+      const context = await resolveExecutionContext({
+        cliOverrides: {
+          allowWrite: options.allowWrite,
+          dryRun: !options.allowWrite
+        }
       });
       const result = await removeWorkerRegistration(
         context,
@@ -114,7 +118,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .command("list")
     .description("List registered worker models.")
     .action(async () => {
-      const context = createExecutionContextFromEnv();
+      const context = await resolveExecutionContext();
       io.write(
         JSON.stringify(await listWorkerRegistrations(context.rootDir), null, 2)
       );
@@ -125,7 +129,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .description("Get one registered worker model.")
     .argument("<workerId>", "Worker registry id")
     .action(async (workerId: string) => {
-      const context = createExecutionContextFromEnv();
+      const context = await resolveExecutionContext();
       const registration = await getWorkerRegistration(context.rootDir, workerId);
 
       if (!registration) {
@@ -151,7 +155,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         save: boolean;
         worker?: string;
       }) => {
-        const context = createExecutionContextFromEnv();
+        const context = await resolveExecutionContext();
         const hasModelOverride =
           Boolean(options.provider) || Boolean(options.model) || Boolean(options.baseUrl);
         const registeredWorker = options.worker
@@ -201,7 +205,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .command("list")
     .description("List known worker capability profiles.")
     .action(async () => {
-      const context = createExecutionContextFromEnv();
+      const context = await resolveExecutionContext();
       io.write(JSON.stringify(await listWorkerProfiles(context.rootDir), null, 2));
     });
 
@@ -210,7 +214,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .description("Get a worker capability profile by id.")
     .argument("[workerId]", "Worker profile id")
     .action(async (workerId?: string) => {
-      const context = createExecutionContextFromEnv();
+      const context = await resolveExecutionContext();
       const resolvedWorkerId =
         workerId ?? ModelRouter.deriveWorkerId(context.workerModel);
       const profile = await getWorkerProfile(context.rootDir, resolvedWorkerId);

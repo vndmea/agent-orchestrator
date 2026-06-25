@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runReviewWorkflow } from "@agent-orchestrator/graph";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -22,8 +23,10 @@ export const aoReviewDiffTool: AoToolDefinition<
   name: "ao_review_diff",
   description: "Review a git diff and return structured impact analysis.",
   inputSchema,
-  execute: async (args) =>
-    runReviewWorkflow({
+  execute: async (args) => {
+    const context = await resolveExecutionContext();
+    return runReviewWorkflow({
+      context,
       includeDiff: true,
       diffBase: args.base,
       diffHead: args.head,
@@ -35,5 +38,6 @@ export const aoReviewDiffTool: AoToolDefinition<
         lint: args.lint,
         test: args.test
       }
-    })
+    });
+  }
 };

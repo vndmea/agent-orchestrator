@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { removeWorkerRegistration } from "@agent-orchestrator/models";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -18,9 +18,11 @@ export const aoUnregisterWorkerTool: AoToolDefinition<
   description: "Remove a worker from the local worker registry.",
   inputSchema,
   execute: async (args) => {
-    const context = createExecutionContextFromEnv(undefined, {
-      allowWrite: args.allowWrite ?? false,
-      dryRun: !(args.allowWrite ?? false)
+    const context = await resolveExecutionContext({
+      cliOverrides: {
+        allowWrite: args.allowWrite ?? false,
+        dryRun: !(args.allowWrite ?? false)
+      }
     });
     return removeWorkerRegistration(
       context,

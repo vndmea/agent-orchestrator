@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runRepositoryValidation } from "@agent-orchestrator/tools";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -20,8 +20,10 @@ export const aoValidateRepositoryTool: AoToolDefinition<
   description: "Run deterministic repository validation checks with dry-run by default.",
   inputSchema,
   execute: async (args) => {
-    const context = createExecutionContextFromEnv(undefined, {
-      dryRun: !args.execute
+    const context = await resolveExecutionContext({
+      cliOverrides: {
+        dryRun: !args.execute
+      }
     });
 
     return runRepositoryValidation(context, {

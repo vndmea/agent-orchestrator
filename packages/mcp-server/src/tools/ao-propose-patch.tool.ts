@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { runPatchProposalWorkflow } from "@agent-orchestrator/graph";
 
 import type { AoToolDefinition } from "./tool-types.js";
@@ -19,12 +20,15 @@ export const aoProposePatchTool: AoToolDefinition<
   name: "ao_propose_patch",
   description: "Generate a structured patch proposal and inspect it without applying changes.",
   inputSchema,
-  execute: async (args) =>
-    runPatchProposalWorkflow({
+  execute: async (args) => {
+    const context = await resolveExecutionContext();
+    return runPatchProposalWorkflow({
+      context,
       goal: args.goal,
       scope: args.scope,
       errorLog: args.errorLog,
       workerId: args.workerId,
       requireProfile: args.requireProfile
-    })
+    });
+  }
 };
