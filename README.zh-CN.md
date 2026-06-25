@@ -59,9 +59,29 @@ docs/
 
 ```bash
 pnpm install
+pnpm build
+pnpm cli -- doctor
+ao init --allow-write
+ao doctor
 pnpm typecheck
 pnpm test
 ```
+
+## 首次使用
+
+```bash
+ao init --allow-write
+ao doctor
+ao mcp config
+```
+
+`ao init` 会在 `.ao/` 下创建仅本地使用的脚手架：
+
+- `.ao/config.json`
+- `.ao/workers.json`
+- `.ao/worker-profiles.json`
+- `.ao/audit/`
+- `.ao/runs/`
 
 ## CLI 用法
 
@@ -73,7 +93,12 @@ ao review diff --base main --head HEAD
 ao review files --file packages/graph/src/index.ts
 ao validate --typecheck --lint --test
 ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
+ao task start --goal "Fix failing typecheck" --scope packages/core --typecheck --allow-write-session
+ao task report <taskId>
+ao cleanup runs --dry-run
+ao cleanup audit --dry-run
 ao models list
+ao mcp config
 ao mcp serve
 ao mcp list-tools
 ```
@@ -218,12 +243,49 @@ ao patch apply ./tmp/candidate.patch \
 - patch 相关动作会写入 audit event。
 - apply 之后可以继续跑 validation，但本阶段不会自动回滚失败结果。
 
+## Task session 流程
+
+task session 会把本地可审查产物和可恢复状态写入 `.ao/runs`：
+
+```bash
+ao task start \
+  --goal "Fix failing typecheck in packages/core" \
+  --scope packages/core \
+  --worker litellm:qwen3-coder \
+  --require-profile \
+  --typecheck \
+  --lint \
+  --propose-patch \
+  --allow-write-session
+
+ao task status <taskId>
+ao task resume <taskId>
+ao task report <taskId>
+```
+
+即使在 task resume 里，patch apply 仍然需要显式 gate：
+
+```bash
+ao task resume <taskId> \
+  --apply-patch \
+  --allow-write \
+  --confirm-apply
+```
+
+`--allow-write-session` 只允许写入 `.ao/runs` 会话产物，并不等于允许修改仓库文件。
+
 ## MCP server 用法
 
 启动 stdio server：
 
 ```bash
 ao mcp serve
+```
+
+打印通用的本地 MCP server 配置片段：
+
+```bash
+ao mcp config
 ```
 
 列出当前暴露的工具名：
@@ -252,6 +314,17 @@ ao mcp list-tools
 - `AO_DRY_RUN`
 - `AO_ALLOW_WRITE`
 - `AO_ALLOWED_COMMANDS`
+
+## 配置优先级
+
+运行时配置按以下顺序解析：
+
+1. CLI flags
+2. 环境变量
+3. `.ao/config.json`
+4. 内置默认值
+
+`config.json` 只记录密钥环境变量名，例如 `apiKeyEnvVar`，不会保存实际 API key。
 
 ## 内置工作流
 
@@ -304,11 +377,13 @@ pnpm example:leader-worker-basic
 - 默认模式是 dry-run。
 - 文件写入需要显式的策略授权。
 - Shell 执行通过 allowlist 控制。
+- `ao init`、`ao cleanup`、worker registry 写入和 task session 持久化都只作用于本地。
 - 仓库读取必须留在 repo root 内，并会阻止 `.env`、私钥等 secret-like 文件进入上下文。
 - 专用 review / fix 流程只返回结构化 JSON，不会自动应用 patch。
 - patch proposal / inspection / apply 被显式拆开，保证写入动作始终可审查。
 - validation 命令统一走安全命令路径，相关行为可通过 audit log 追踪。
 - `ao audit list` 可查看本地 workflow、文件与命令事件。
+- `ao cleanup runs` 和 `ao cleanup audit` 只删除本地 `.ao` 产物，不会碰项目源代码。
 - Worker 输出在 leader review 完成前都不能视为最终结果。
 - Worker 在进入生产任务前应先通过 onboarding evaluation。
 - structured output 或可靠性不达标的 worker 会被限制或阻断。

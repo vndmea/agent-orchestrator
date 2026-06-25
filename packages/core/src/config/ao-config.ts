@@ -30,7 +30,7 @@ const buildDefaultConfig = (): AoConfig =>
   });
 
 const hasEnvValue = (env: NodeJS.ProcessEnv, key: string): boolean =>
-  typeof env[key] === "string" && env[key]!.length > 0;
+  typeof env[key] === "string" && env[key].length > 0;
 
 const mergeModelConfig = (
   base: ExecutionContext["leaderModel"],

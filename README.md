@@ -59,9 +59,29 @@ docs/
 
 ```bash
 pnpm install
+pnpm build
+pnpm cli -- doctor
+ao init --allow-write
+ao doctor
 pnpm typecheck
 pnpm test
 ```
+
+## First run
+
+```bash
+ao init --allow-write
+ao doctor
+ao mcp config
+```
+
+`ao init` creates local-only scaffolding under `.ao/`:
+
+- `.ao/config.json`
+- `.ao/workers.json`
+- `.ao/worker-profiles.json`
+- `.ao/audit/`
+- `.ao/runs/`
 
 ## CLI usage
 
@@ -73,7 +93,12 @@ ao review diff --base main --head HEAD
 ao review files --file packages/graph/src/index.ts
 ao validate --typecheck --lint --test
 ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
+ao task start --goal "Fix failing typecheck" --scope packages/core --typecheck --allow-write-session
+ao task report <taskId>
+ao cleanup runs --dry-run
+ao cleanup audit --dry-run
 ao models list
+ao mcp config
 ao mcp serve
 ao mcp list-tools
 ```
@@ -218,12 +243,49 @@ Safety constraints for patch lifecycle:
 - Patch actions emit audit events.
 - Validation can run after apply, but failed validation does not auto-revert in this iteration.
 
+## Task sessions
+
+Task sessions keep local review artifacts and resumable state under `.ao/runs`:
+
+```bash
+ao task start \
+  --goal "Fix failing typecheck in packages/core" \
+  --scope packages/core \
+  --worker litellm:qwen3-coder \
+  --require-profile \
+  --typecheck \
+  --lint \
+  --propose-patch \
+  --allow-write-session
+
+ao task status <taskId>
+ao task resume <taskId>
+ao task report <taskId>
+```
+
+Patch apply is still a separate explicit gate even inside task resume:
+
+```bash
+ao task resume <taskId> \
+  --apply-patch \
+  --allow-write \
+  --confirm-apply
+```
+
+Session persistence is separate from repository writes. `--allow-write-session` only permits `.ao/runs` artifacts. It does not enable patch apply.
+
 ## MCP server usage
 
 Start the stdio server:
 
 ```bash
 ao mcp serve
+```
+
+Print a generic stdio config snippet for local MCP clients:
+
+```bash
+ao mcp config
 ```
 
 List exposed tool names:
@@ -252,6 +314,17 @@ See [.env.example](https://github.com/vndmea/agent-orchestrator/blob/master/.env
 - `AO_DRY_RUN`
 - `AO_ALLOW_WRITE`
 - `AO_ALLOWED_COMMANDS`
+
+## Config precedence
+
+Runtime configuration resolves in this order:
+
+1. CLI flags
+2. Environment variables
+3. `.ao/config.json`
+4. built-in defaults
+
+`config.json` stores only env-var names for secrets such as `apiKeyEnvVar`. Actual API keys stay in the environment.
 
 ## Workflows
 
@@ -304,11 +377,13 @@ If you want different endpoints for leader and worker traffic, use the model-spe
 - Default mode is dry-run.
 - File writes require explicit policy allowance.
 - Shell execution is allowlisted.
+- `ao init`, `ao cleanup`, worker registry writes, and task session persistence remain local-only.
 - Repository reads stay inside the repo root and block secret-like files such as `.env` and private keys.
 - Dedicated review and fix flows return structured JSON and do not apply patches.
 - Patch proposal, inspection, and apply are separated to keep write actions reviewable.
 - Validation commands go through the safe command path and can be inspected through audit logs.
 - `ao audit list` exposes the local audit trail for workflow, file, and command events.
+- `ao cleanup runs` and `ao cleanup audit` only delete local `.ao` artifacts and never touch project source files.
 - Worker outputs are not final until leader review completes.
 - Workers must pass onboarding evaluation before they should receive production tasks.
 - Workers that fail structured output or reliability checks are limited or blocked.

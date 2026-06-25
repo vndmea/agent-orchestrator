@@ -1,4 +1,4 @@
-import { readdir, readFile, rm, stat } from "node:fs/promises";
+import { readdir, rm, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 import type { Command } from "commander";

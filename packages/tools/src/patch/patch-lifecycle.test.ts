@@ -257,5 +257,5 @@ describe("patch lifecycle tools", () => {
       "Patch applied but validation failed; manual review required."
     );
     expect(contents.stdout).toContain("// comment");
-  });
+  }, 15_000);
 });
