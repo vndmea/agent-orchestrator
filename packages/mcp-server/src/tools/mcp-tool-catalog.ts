@@ -17,6 +17,18 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
     description: "Run the leader-worker workflow with optional worker profile requirements."
   },
   {
+    name: "ao_propose_patch",
+    description: "Generate a structured patch proposal and inspect it without applying changes."
+  },
+  {
+    name: "ao_inspect_patch",
+    description: "Inspect a structured patch proposal for safety and applicability."
+  },
+  {
+    name: "ao_apply_patch",
+    description: "Apply a structured patch proposal with dry-run default and explicit confirmation gates."
+  },
+  {
     name: "ao_review_repository",
     description: "Review repository context for a scope and return structured findings."
   },

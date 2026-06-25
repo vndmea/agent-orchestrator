@@ -7,6 +7,7 @@ import type { AoToolDefinition } from "./tool-types.js";
 const inputSchema = z.object({
   errorLog: z.string().optional(),
   errorLogFile: z.string().optional(),
+  proposePatch: z.boolean().optional(),
   scope: z.string().optional(),
   typecheck: z.boolean().optional(),
   lint: z.boolean().optional(),
@@ -24,6 +25,7 @@ export const aoFixErrorTool: AoToolDefinition<
     runFixErrorWorkflow({
       errorLog: args.errorLog,
       errorLogFile: args.errorLogFile,
+      proposePatch: args.proposePatch,
       scope: args.scope,
       validate: {
         typecheck: args.typecheck,

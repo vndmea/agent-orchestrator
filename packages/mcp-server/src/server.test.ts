@@ -6,16 +6,20 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
+import { PatchProposalSchema } from "@agent-orchestrator/core";
 import {
+  aoApplyPatchTool,
   aoDoctorTool,
-  aoGetWorkerRegistrationTool,
   aoFixErrorTool,
-  aoListToolsTool,
+  aoGetWorkerRegistrationTool,
+  aoInspectPatchTool,
   aoListModelsTool,
+  aoListToolsTool,
   aoReviewDiffTool,
   aoReviewFilesTool,
   aoReviewRepositoryTool,
   aoListWorkerRegistryTool,
+  aoProposePatchTool,
   aoRegisterWorkerTool,
   aoRunLeaderWorkerTool,
   aoToolDefinitions,
@@ -47,6 +51,38 @@ const writeProfiles = async (rootDir: string, profiles: unknown[]): Promise<void
     JSON.stringify(profiles, null, 2),
     "utf8"
   );
+};
+
+const createPatchProposal = async (rootDir: string) => {
+  const targetPath = join(rootDir, "packages", "core", "src", "index.ts");
+  const originalContents = "export const value = 2;\n";
+  await writeFile(targetPath, `// comment\n${originalContents}`, "utf8");
+  const diff = await execFile("git", ["diff", "--", "packages/core/src/index.ts"], {
+    cwd: rootDir
+  });
+  await writeFile(targetPath, originalContents, "utf8");
+
+  return PatchProposalSchema.parse({
+    id: "patch-1",
+    title: "Add a candidate comment",
+    summary: "Insert a comment above the export.",
+    rationale: ["Used by MCP patch tests."],
+    unifiedDiff: diff.stdout,
+    files: [
+      {
+        path: "packages/core/src/index.ts",
+        changeType: "modify",
+        summary: "Insert a candidate comment.",
+        riskLevel: "low"
+      }
+    ],
+    risks: [],
+    validationPlan: ["pnpm typecheck"],
+    generatedAt: new Date().toISOString(),
+    source: {
+      workflow: "patch-proposal-workflow"
+    }
+  });
 };
 
 const writeWorkspaceFixture = async (rootDir: string): Promise<void> => {
@@ -103,6 +139,8 @@ const initGitRepo = async (rootDir: string): Promise<void> => {
     "export const value = 2;\n",
     "utf8"
   );
+  await execFile("git", ["add", "packages/core/src/index.ts"], { cwd: rootDir });
+  await execFile("git", ["commit", "-m", "update"], { cwd: rootDir });
 };
 
 const createProfile = () => ({
@@ -148,6 +186,9 @@ describe("mcp tool registration", () => {
       "ao_plan",
       "ao_run_workflow",
       "ao_run_leader_worker",
+      "ao_propose_patch",
+      "ao_inspect_patch",
+      "ao_apply_patch",
       "ao_review_repository",
       "ao_review_diff",
       "ao_review_files",
@@ -179,6 +220,7 @@ describe("mcp tool registration", () => {
     expect(tools.some((tool) => tool.name === "ao_list_audit_events")).toBe(true);
     expect(tools.some((tool) => tool.name === "ao_register_worker")).toBe(true);
     expect(tools.some((tool) => tool.name === "ao_run_leader_worker")).toBe(true);
+    expect(tools.some((tool) => tool.name === "ao_propose_patch")).toBe(true);
     expect(tools.some((tool) => tool.name === "ao_review_repository")).toBe(true);
     expect(tools.some((tool) => tool.name === "ao_validate_repository")).toBe(true);
     expect(tools.some((tool) => tool.name === "ao_doctor")).toBe(true);
@@ -269,6 +311,34 @@ describe("mcp tool registration", () => {
       expect(fileReview.repositoryContext.selectedFiles[0]?.path).toBe("packages/core/src/index.ts");
       expect(validation.checks[0]?.status).toBe("dry-run");
       expect(fix.repositoryContext.scope).toBe("packages/core");
+    });
+  });
+
+  it("executes patch proposal, inspection, and apply tools", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      await initGitRepo(rootDir);
+      const proposal = await createPatchProposal(rootDir);
+
+      const proposed = await aoProposePatchTool.execute({
+        goal: "Fix typecheck",
+        scope: "packages/core"
+      });
+      const inspected = await aoInspectPatchTool.execute({
+        patchProposal: proposal
+      });
+      const dryRunApply = await aoApplyPatchTool.execute({
+        patchProposal: proposal
+      });
+      const blockedApply = await aoApplyPatchTool.execute({
+        patchProposal: proposal,
+        allowWrite: true
+      });
+
+      expect(proposed.proposal.unifiedDiff).toContain("diff --git");
+      expect(inspected.files[0]?.path).toBe("packages/core/src/index.ts");
+      expect(dryRunApply.mode).toBe("dry-run");
+      expect(blockedApply.mode).toBe("blocked");
     });
   });
 });

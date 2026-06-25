@@ -187,6 +187,37 @@ ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/core
 
 These commands build repository context packs, read scoped files safely, and route deterministic validation into the review output.
 
+## Patch lifecycle
+
+Patch handling is intentionally separated into proposal, inspection, and gated apply steps:
+
+```bash
+ao fix error --error-log-file ./tmp/tsc.log --scope packages/core
+
+ao patch propose \
+  --goal "Fix failing typecheck" \
+  --scope packages/core
+
+ao patch inspect ./tmp/candidate.patch
+
+ao patch apply ./tmp/candidate.patch --dry-run
+
+ao patch apply ./tmp/candidate.patch \
+  --allow-write \
+  --confirm-apply \
+  --typecheck \
+  --lint \
+  --test
+```
+
+Safety constraints for patch lifecycle:
+
+- Dry-run is the default.
+- Applying a patch requires both an explicit write gate and an explicit confirmation gate.
+- No command creates commits or PRs automatically.
+- Patch actions emit audit events.
+- Validation can run after apply, but failed validation does not auto-revert in this iteration.
+
 ## MCP server usage
 
 Start the stdio server:
@@ -275,6 +306,7 @@ If you want different endpoints for leader and worker traffic, use the model-spe
 - Shell execution is allowlisted.
 - Repository reads stay inside the repo root and block secret-like files such as `.env` and private keys.
 - Dedicated review and fix flows return structured JSON and do not apply patches.
+- Patch proposal, inspection, and apply are separated to keep write actions reviewable.
 - Validation commands go through the safe command path and can be inspected through audit logs.
 - `ao audit list` exposes the local audit trail for workflow, file, and command events.
 - Worker outputs are not final until leader review completes.
