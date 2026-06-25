@@ -10,6 +10,9 @@ const inputSchema = z.object({
   scope: z.string().optional(),
   workerId: z.string().optional(),
   requireProfile: z.boolean().optional(),
+  errorLog: z.string().optional(),
+  errorLogFile: z.string().optional(),
+  runFix: z.boolean().optional(),
   typecheck: z.boolean().optional(),
   lint: z.boolean().optional(),
   test: z.boolean().optional(),
@@ -38,10 +41,13 @@ export const aoStartTaskTool: AoToolDefinition<
 
     return runTaskSessionWorkflow({
       context,
+      errorLog: args.errorLog,
+      errorLogFile: args.errorLogFile,
       goal: args.goal,
       scope: args.scope,
       workerId: args.workerId,
       requireProfile: args.requireProfile,
+      runFix: args.runFix,
       validate: {
         typecheck: args.typecheck,
         lint: args.lint,

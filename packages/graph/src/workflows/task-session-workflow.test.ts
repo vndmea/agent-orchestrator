@@ -4,7 +4,11 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createExecutionContextFromEnv, readTaskSession } from "@agent-orchestrator/core";
+import {
+  createExecutionContextFromEnv,
+  readTaskArtifact,
+  readTaskSession
+} from "@agent-orchestrator/core";
 import {
   getTaskSessionReport,
   resumeTaskSessionWorkflow,
@@ -49,6 +53,12 @@ const createWorkspace = async (): Promise<string> => {
     "export const value = 1;\n",
     "utf8"
   );
+  await mkdir(join(rootDir, "tmp"), { recursive: true });
+  await writeFile(
+    join(rootDir, "tmp", "error.log"),
+    "TS2304: Cannot find name 'missingValue'.\n",
+    "utf8"
+  );
   return rootDir;
 };
 
@@ -80,7 +90,7 @@ describe("task session workflow", () => {
     expect(result.validationReport?.checks[0]?.status).toBe("dry-run");
   });
 
-  it("persists artifacts and report when session writes are allowed", async () => {
+  it("persists separate artifacts and report when session writes are allowed", async () => {
     const rootDir = await createWorkspace();
     const result = await runTaskSessionWorkflow({
       context: createContext(rootDir, {
@@ -89,6 +99,8 @@ describe("task session workflow", () => {
       }),
       goal: "Review and propose patch",
       scope: "packages/core",
+      errorLogFile: "tmp/error.log",
+      runFix: true,
       validate: {
         typecheck: true
       },
@@ -98,11 +110,34 @@ describe("task session workflow", () => {
     });
 
     const persisted = await readTaskSession(rootDir, result.session.taskId);
+    const repositoryContextArtifact = await readTaskArtifact(
+      rootDir,
+      result.session.taskId,
+      "repository-context.json"
+    );
+    const validationArtifact = await readTaskArtifact(
+      rootDir,
+      result.session.taskId,
+      "validation-report.json"
+    );
+    const fixArtifact = await readTaskArtifact(
+      rootDir,
+      result.session.taskId,
+      "fix-result.json"
+    );
     const report = await getTaskSessionReport(rootDir, result.session.taskId);
 
     expect(result.patchProposal?.id).toBeTruthy();
     expect(result.patchInspection).toBeDefined();
+    expect(result.fixResult?.rootCauseAnalysis).toContain("error log");
+    expect(persisted?.artifacts["repository-context.json"]).toContain(".ao");
     expect(persisted?.artifacts["review-result.json"]).toContain(".ao");
+    expect(persisted?.artifacts["validation-report.json"]).toContain(".ao");
+    expect(persisted?.artifacts["fix-result.json"]).toContain(".ao");
+    expect(repositoryContextArtifact.exists).toBe(true);
+    expect(validationArtifact.exists).toBe(true);
+    expect(fixArtifact.exists).toBe(true);
+    expect(persisted?.steps.some((step) => step.id === "fix-planned" && step.status === "success")).toBe(true);
     expect(report.report).toContain("Task Session Report");
   });
 
@@ -125,7 +160,7 @@ describe("task session workflow", () => {
     expect(result.session.status).toBe("blocked");
   });
 
-  it("resumes from patch apply without rerunning successful review", async () => {
+  it("resumes from patch application steps without rerunning successful review", async () => {
     const rootDir = await createWorkspace();
     const initial = await runTaskSessionWorkflow({
       context: createContext(rootDir, {
@@ -144,7 +179,7 @@ describe("task session workflow", () => {
         dryRun: false
       }),
       taskId: initial.session.taskId,
-      fromStep: "apply-patch",
+      fromStep: "patch-applied",
       applyPatch: true,
       allowWrite: true,
       confirmApply: true,
@@ -152,6 +187,21 @@ describe("task session workflow", () => {
     });
 
     expect(resumed.patchApplyResult?.mode).toBe("blocked");
-    expect(resumed.session.steps.find((step) => step.id === "apply-patch")?.status).toBe("blocked");
+    expect(resumed.session.steps.find((step) => step.id === "patch-applied")?.status).toBe("blocked");
+    expect(resumed.session.steps.find((step) => step.id === "reviewed")?.status).toBe("success");
+  });
+
+  it("supports inline error logs for fix planning", async () => {
+    const rootDir = await createWorkspace();
+    const result = await runTaskSessionWorkflow({
+      context: createContext(rootDir),
+      goal: "Fix inline error",
+      scope: "packages/core",
+      errorLog: "TS1005: ';' expected",
+      runFix: true
+    });
+
+    expect(result.fixResult?.rootCauseAnalysis).toContain("error log");
+    expect(result.session.steps.find((step) => step.id === "fix-planned")?.status).toBe("success");
   });
 });

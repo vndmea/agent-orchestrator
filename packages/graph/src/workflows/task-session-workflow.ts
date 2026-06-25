@@ -28,6 +28,10 @@ import {
 import { applyPatchProposal } from "@agent-orchestrator/tools";
 
 import {
+  runFixErrorWorkflow,
+  type FixErrorWorkflowOutput
+} from "./fix-error-workflow.js";
+import {
   runPatchProposalWorkflow,
   type PatchProposalWorkflowOutput
 } from "./patch-proposal-workflow.js";
@@ -48,10 +52,13 @@ export interface TaskSessionWorkflowInput {
   applyPatch?: boolean;
   confirmApply?: boolean;
   context?: ExecutionContext;
+  errorLog?: string;
+  errorLogFile?: string;
   goal: string;
   inspectPatch?: boolean;
   proposePatch?: boolean;
   requireProfile?: boolean;
+  runFix?: boolean;
   scope?: string;
   validate?: TaskSessionValidationOptions;
   workerId?: string;
@@ -63,13 +70,17 @@ export interface ResumeTaskSessionWorkflowInput {
   applyPatch?: boolean;
   confirmApply?: boolean;
   context?: ExecutionContext;
+  errorLog?: string;
+  errorLogFile?: string;
   fromStep?: string;
   inspectPatch?: boolean;
   proposePatch?: boolean;
+  runFix?: boolean;
   taskId: string;
 }
 
 export interface TaskSessionWorkflowOutput {
+  fixResult?: FixErrorWorkflowOutput;
   mode: "execute" | "dry-run";
   patchApplyResult?: PatchApplyResult;
   patchInspection?: PatchInspection;
@@ -89,11 +100,22 @@ interface ResolvedTaskContext {
   workerId: string;
 }
 
-const STEP_IDS = ["review", "propose-patch", "apply-patch"] as const;
+const STEP_IDS = [
+  "context-built",
+  "reviewed",
+  "fix-planned",
+  "validated",
+  "patch-proposed",
+  "patch-inspected",
+  "patch-applied"
+] as const;
 type TaskStepId = (typeof STEP_IDS)[number];
 
 const ARTIFACT_NAMES = {
+  repositoryContext: "repository-context.json",
   reviewResult: "review-result.json",
+  validationReport: "validation-report.json",
+  fixResult: "fix-result.json",
   patchProposal: "patch-proposal.json",
   patchInspection: "patch-inspection.json",
   patchApplyResult: "patch-apply-result.json",
@@ -101,9 +123,19 @@ const ARTIFACT_NAMES = {
 } as const;
 
 const TASK_STEP_LABELS: Record<TaskStepId, string> = {
-  review: "Repository review",
-  "propose-patch": "Patch proposal",
-  "apply-patch": "Patch apply"
+  "context-built": "Repository context built",
+  reviewed: "Repository reviewed",
+  "fix-planned": "Fix plan created",
+  validated: "Validation recorded",
+  "patch-proposed": "Patch proposed",
+  "patch-inspected": "Patch inspected",
+  "patch-applied": "Patch applied"
+};
+
+const LEGACY_STEP_IDS: Record<string, TaskStepId> = {
+  review: "reviewed",
+  "propose-patch": "patch-proposed",
+  "apply-patch": "patch-applied"
 };
 
 const buildDefaultValidation = (
@@ -121,6 +153,11 @@ const normalizeStepId = (value: string | undefined): TaskStepId | undefined => {
 
   if (STEP_IDS.includes(value as TaskStepId)) {
     return value as TaskStepId;
+  }
+
+  const legacyStepId = LEGACY_STEP_IDS[value];
+  if (legacyStepId) {
+    return legacyStepId;
   }
 
   throw new AgentError("TASK_STEP_INVALID", `Unknown task step: ${value}`, {
@@ -234,21 +271,27 @@ const resolveTaskContext = async (
 };
 
 const buildSessionMetadata = (input: {
+  errorLog?: string;
+  errorLogFile?: string;
   goal: string;
   inspectPatch?: boolean;
   proposePatch?: boolean;
   requireProfile?: boolean;
+  runFix?: boolean;
   scope?: string;
   validate?: TaskSessionValidationOptions;
   workerId?: string;
 }): Record<string, unknown> => ({
+  errorLogFile: input.errorLogFile,
   goal: input.goal,
+  hasErrorLog: Boolean(input.errorLog),
   scope: input.scope,
   workerId: input.workerId,
   requestedWorkerId: input.workerId,
   requireProfile: input.requireProfile ?? false,
   proposePatch: input.proposePatch ?? false,
   inspectPatch: input.inspectPatch ?? false,
+  runFix: Boolean(input.runFix || input.errorLog || input.errorLogFile),
   validate: buildDefaultValidation(input.validate)
 });
 
@@ -256,26 +299,32 @@ const deriveResumeOptions = (
   session: TaskSession,
   overrides: Pick<
     ResumeTaskSessionWorkflowInput,
-    "inspectPatch" | "proposePatch" | "applyPatch"
+    "applyPatch" | "errorLog" | "errorLogFile" | "inspectPatch" | "proposePatch" | "runFix"
   >
 ) => {
   const metadata = session.metadata as {
+    errorLogFile?: string;
     inspectPatch?: boolean;
     proposePatch?: boolean;
     requestedWorkerId?: string;
+    runFix?: boolean;
     validate?: TaskSessionValidationOptions;
   };
 
   return {
+    errorLog: overrides.errorLog,
+    errorLogFile: overrides.errorLogFile ?? metadata.errorLogFile,
     inspectPatch: overrides.inspectPatch ?? metadata.inspectPatch ?? false,
     proposePatch: overrides.proposePatch ?? metadata.proposePatch ?? false,
     requestedWorkerId: metadata.requestedWorkerId,
+    runFix: overrides.runFix ?? metadata.runFix ?? false,
     validate: buildDefaultValidation(metadata.validate),
     applyPatch: overrides.applyPatch ?? false
   };
 };
 
 const buildSessionReport = (input: {
+  fixResult?: FixErrorWorkflowOutput;
   patchApplyResult?: PatchApplyResult;
   patchInspection?: PatchInspection;
   patchProposal?: PatchProposal;
@@ -288,6 +337,7 @@ const buildSessionReport = (input: {
     session: input.session,
     repositoryContext: input.repositoryContext,
     reviewResult: input.reviewResult,
+    fixResult: input.fixResult,
     validationReport: input.validationReport,
     patchProposal: input.patchProposal,
     patchInspection: input.patchInspection,
@@ -366,8 +416,9 @@ const executeReviewStep = async (input: {
   session: TaskSession;
   validate: TaskSessionValidationOptions;
 }): Promise<ReviewWorkflowOutput> => {
-  const step = getStep(input.session, "review");
-  markStepRunning(step);
+  markStepRunning(getStep(input.session, "context-built"));
+  markStepRunning(getStep(input.session, "reviewed"));
+  markStepRunning(getStep(input.session, "validated"));
   await syncSessionState(
     input.context,
     input.session,
@@ -379,16 +430,54 @@ const executeReviewStep = async (input: {
     scope: input.scope,
     validate: input.validate
   });
-  const artifactPath = await persistArtifact(
+  const repositoryContextPath = await persistArtifact(
+    input.context,
+    input.session,
+    ARTIFACT_NAMES.repositoryContext,
+    reviewResult.repositoryContext,
+    input.allowWriteSession
+  );
+  finalizeStep(getStep(input.session, "context-built"), "success", {
+    artifactPath: repositoryContextPath,
+    warnings: reviewResult.repositoryContext.warnings
+  });
+  await syncSessionState(
+    input.context,
+    input.session,
+    "context-built",
+    input.allowWriteSession
+  );
+  const reviewArtifactPath = await persistArtifact(
     input.context,
     input.session,
     ARTIFACT_NAMES.reviewResult,
     reviewResult,
     input.allowWriteSession
   );
-  finalizeStep(step, "success", {
-    artifactPath
+  finalizeStep(getStep(input.session, "reviewed"), "success", {
+    artifactPath: reviewArtifactPath
   });
+  await syncSessionState(
+    input.context,
+    input.session,
+    "reviewed",
+    input.allowWriteSession
+  );
+  const validationArtifactPath = await persistArtifact(
+    input.context,
+    input.session,
+    ARTIFACT_NAMES.validationReport,
+    reviewResult.validationReport,
+    input.allowWriteSession
+  );
+  finalizeStep(
+    getStep(input.session, "validated"),
+    reviewResult.validationReport.ok ? "success" : "failure",
+    {
+      artifactPath: validationArtifactPath,
+      warnings: reviewResult.validationReport.warnings
+    }
+  );
   await syncSessionState(
     input.context,
     input.session,
@@ -398,25 +487,93 @@ const executeReviewStep = async (input: {
   return reviewResult;
 };
 
+const shouldRunFixStep = (input: {
+  errorLog?: string;
+  errorLogFile?: string;
+  runFix?: boolean;
+}): boolean =>
+  Boolean(input.runFix || input.errorLog || input.errorLogFile);
+
+const executeFixStep = async (input: {
+  allowWriteSession: boolean;
+  context: ExecutionContext;
+  errorLog?: string;
+  errorLogFile?: string;
+  scope?: string;
+  session: TaskSession;
+  validate: TaskSessionValidationOptions;
+}): Promise<FixErrorWorkflowOutput> => {
+  const step = getStep(input.session, "fix-planned");
+  markStepRunning(step);
+  const fixResult = await runFixErrorWorkflow({
+    context: input.context,
+    errorLog: input.errorLog,
+    errorLogFile: input.errorLogFile,
+    scope: input.scope,
+    validate: input.validate
+  });
+  const repositoryContextPath = await persistArtifact(
+    input.context,
+    input.session,
+    ARTIFACT_NAMES.repositoryContext,
+    fixResult.repositoryContext,
+    input.allowWriteSession
+  );
+  const validationArtifactPath = await persistArtifact(
+    input.context,
+    input.session,
+    ARTIFACT_NAMES.validationReport,
+    fixResult.validationReport,
+    input.allowWriteSession
+  );
+  const fixArtifactPath = await persistArtifact(
+    input.context,
+    input.session,
+    ARTIFACT_NAMES.fixResult,
+    fixResult,
+    input.allowWriteSession
+  );
+  input.session.artifacts[ARTIFACT_NAMES.repositoryContext] = repositoryContextPath;
+  input.session.artifacts[ARTIFACT_NAMES.validationReport] = validationArtifactPath;
+  finalizeStep(step, "success", {
+    artifactPath: fixArtifactPath,
+    warnings: fixResult.validationReport.warnings
+  });
+  await syncSessionState(
+    input.context,
+    input.session,
+    "fix-planned",
+    input.allowWriteSession
+  );
+  return fixResult;
+};
+
 const executePatchProposalStep = async (input: {
   allowWriteSession: boolean;
   context: ExecutionContext;
+  errorLog?: string;
+  fixResult?: FixErrorWorkflowOutput;
   goal: string;
   reviewResult: ReviewWorkflowOutput;
   session: TaskSession;
   workerId?: string;
 }): Promise<PatchProposalWorkflowOutput> => {
-  const step = getStep(input.session, "propose-patch");
-  markStepRunning(step);
+  const proposalStep = getStep(input.session, "patch-proposed");
+  const inspectionStep = getStep(input.session, "patch-inspected");
+  markStepRunning(proposalStep);
+  markStepRunning(inspectionStep);
   const patchResult = await runPatchProposalWorkflow({
-      context: input.context,
-      goal: input.goal,
-      scope: input.session.scope,
-      repositoryContext: input.reviewResult.repositoryContext,
-      reviewResult: input.reviewResult,
-      workerId: input.workerId,
-      requireProfile: input.session.requireProfile
-    });
+    context: input.context,
+    errorLog: input.errorLog,
+    fixResult: input.fixResult,
+    goal: input.goal,
+    scope: input.session.scope,
+    repositoryContext:
+      input.fixResult?.repositoryContext ?? input.reviewResult.repositoryContext,
+    reviewResult: input.reviewResult,
+    workerId: input.workerId,
+    requireProfile: input.session.requireProfile
+  });
   const proposalPath = await persistArtifact(
     input.context,
     input.session,
@@ -431,12 +588,26 @@ const executePatchProposalStep = async (input: {
     patchResult.inspection,
     input.allowWriteSession
   );
-  finalizeStep(step, patchResult.inspection.ok ? "success" : "blocked", {
+  finalizeStep(proposalStep, "success", {
     artifactPath: proposalPath,
-    errors: patchResult.inspection.blockedReasons,
     warnings: patchResult.warnings
   });
+  finalizeStep(
+    inspectionStep,
+    patchResult.inspection.ok ? "success" : "blocked",
+    {
+      artifactPath: inspectionPath,
+      errors: patchResult.inspection.blockedReasons,
+      warnings: patchResult.warnings
+    }
+  );
   input.session.artifacts[ARTIFACT_NAMES.patchInspection] = inspectionPath;
+  await syncSessionState(
+    input.context,
+    input.session,
+    "patch-proposed",
+    input.allowWriteSession
+  );
   await syncSessionState(
     input.context,
     input.session,
@@ -455,7 +626,7 @@ const executePatchApplyStep = async (input: {
   session: TaskSession;
   validate: TaskSessionValidationOptions;
 }): Promise<PatchApplyResult> => {
-  const step = getStep(input.session, "apply-patch");
+  const step = getStep(input.session, "patch-applied");
   markStepRunning(step);
   const applyResult = await applyPatchProposal(input.context, input.patchProposal, {
     allowWrite: input.allowWrite,
@@ -496,16 +667,34 @@ const hydrateWorkflowOutput = async (
   rootDir: string,
   session: TaskSession
 ): Promise<{
+  fixResult?: FixErrorWorkflowOutput;
+  repositoryContext?: RepositoryContextPack;
+  validationReport?: ValidationReport;
   patchApplyResult?: PatchApplyResult;
   patchInspection?: PatchInspection;
   patchProposal?: PatchProposal;
   report?: string;
   reviewResult?: ReviewWorkflowOutput;
 }> => {
+  const repositoryContext = await loadArtifact<RepositoryContextPack>(
+    rootDir,
+    session.taskId,
+    ARTIFACT_NAMES.repositoryContext
+  );
   const reviewResult = await loadArtifact<ReviewWorkflowOutput>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.reviewResult
+  );
+  const validationReport = await loadArtifact<ValidationReport>(
+    rootDir,
+    session.taskId,
+    ARTIFACT_NAMES.validationReport
+  );
+  const fixResult = await loadArtifact<FixErrorWorkflowOutput>(
+    rootDir,
+    session.taskId,
+    ARTIFACT_NAMES.fixResult
   );
   const patchProposal = await loadArtifact<PatchProposal>(
     rootDir,
@@ -529,7 +718,10 @@ const hydrateWorkflowOutput = async (
   );
 
   return {
+    repositoryContext: repositoryContext ?? reviewResult?.repositoryContext,
     reviewResult,
+    validationReport: validationReport ?? reviewResult?.validationReport,
+    fixResult,
     patchProposal,
     patchInspection,
     patchApplyResult,
@@ -575,12 +767,15 @@ export const runTaskSessionWorkflow = async (
       workerId: resolved.workerId,
       requireProfile: input.requireProfile,
       metadata: buildSessionMetadata({
+        errorLog: input.errorLog,
+        errorLogFile: input.errorLogFile,
         goal: input.goal,
         scope: input.scope,
         workerId: resolved.requestedWorkerId,
         requireProfile: input.requireProfile,
         proposePatch: input.proposePatch,
         inspectPatch: input.inspectPatch,
+        runFix: input.runFix,
         validate: input.validate
       })
     },
@@ -595,21 +790,38 @@ export const runTaskSessionWorkflow = async (
     validate: validation,
     allowWriteSession
   });
+  let fixResult: FixErrorWorkflowOutput | undefined;
   let patchResult: PatchProposalWorkflowOutput | undefined;
   let patchApplyResult: PatchApplyResult | undefined;
+
+  if (shouldRunFixStep(input)) {
+    fixResult = await executeFixStep({
+      context: resolved.context,
+      session,
+      scope: input.scope,
+      validate: validation,
+      errorLog: input.errorLog,
+      errorLogFile: input.errorLogFile,
+      allowWriteSession
+    });
+  } else {
+    finalizeStep(getStep(session, "fix-planned"), "skipped");
+  }
 
   if (input.proposePatch || input.inspectPatch) {
     patchResult = await executePatchProposalStep({
       context: resolved.context,
       session,
       reviewResult,
+      fixResult,
       goal: input.goal,
+      errorLog: input.errorLog,
       workerId: resolved.requestedWorkerId,
       allowWriteSession
     });
   } else {
-    const step = getStep(session, "propose-patch");
-    finalizeStep(step, "skipped");
+    finalizeStep(getStep(session, "patch-proposed"), "skipped");
+    finalizeStep(getStep(session, "patch-inspected"), "skipped");
   }
 
   if (input.applyPatch) {
@@ -632,15 +844,18 @@ export const runTaskSessionWorkflow = async (
       allowWriteSession
     });
   } else {
-    const step = getStep(session, "apply-patch");
-    finalizeStep(step, "skipped");
+    finalizeStep(getStep(session, "patch-applied"), "skipped");
   }
 
+  const repositoryContext =
+    fixResult?.repositoryContext ?? reviewResult.repositoryContext;
+  const validationReport =
+    fixResult?.validationReport ?? reviewResult.validationReport;
   const finalStatus = resolveFinalStatus({
     applyPatchRequested: input.applyPatch ?? false,
     patchApplyResult,
     patchInspection: patchResult?.inspection,
-    validationReport: reviewResult.validationReport
+    validationReport
   });
   await syncSessionState(
     resolved.context,
@@ -651,8 +866,9 @@ export const runTaskSessionWorkflow = async (
   const report = buildSessionReport({
     session,
     reviewResult,
-    repositoryContext: reviewResult.repositoryContext,
-    validationReport: reviewResult.validationReport,
+    repositoryContext,
+    fixResult,
+    validationReport,
     patchProposal: patchResult?.proposal,
     patchInspection: patchResult?.inspection,
     patchApplyResult
@@ -665,8 +881,9 @@ export const runTaskSessionWorkflow = async (
     sessionPath: sessionCreate.path,
     workerId: resolved.workerId,
     reviewResult,
-    repositoryContext: reviewResult.repositoryContext,
-    validationReport: reviewResult.validationReport,
+    repositoryContext,
+    validationReport,
+    fixResult,
     patchProposal: patchResult?.proposal,
     patchInspection: patchResult?.inspection,
     patchApplyResult,
@@ -698,10 +915,25 @@ export const resumeTaskSessionWorkflow = async (
   );
   const options = deriveResumeOptions(session, input);
   const fromStep = normalizeStepId(input.fromStep);
+  let repositoryContext = await loadArtifact<RepositoryContextPack>(
+    resolved.context.rootDir,
+    session.taskId,
+    ARTIFACT_NAMES.repositoryContext
+  );
   let reviewResult = await loadArtifact<ReviewWorkflowOutput>(
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.reviewResult
+  );
+  let validationReport = await loadArtifact<ValidationReport>(
+    resolved.context.rootDir,
+    session.taskId,
+    ARTIFACT_NAMES.validationReport
+  );
+  let fixResult = await loadArtifact<FixErrorWorkflowOutput>(
+    resolved.context.rootDir,
+    session.taskId,
+    ARTIFACT_NAMES.fixResult
   );
   let patchProposal = await loadArtifact<PatchProposal>(
     resolved.context.rootDir,
@@ -719,7 +951,7 @@ export const resumeTaskSessionWorkflow = async (
     ARTIFACT_NAMES.patchApplyResult
   );
 
-  if (shouldRunStep(session, "review", fromStep)) {
+  if (shouldRunStep(session, "reviewed", fromStep)) {
     reviewResult = await executeReviewStep({
       context: resolved.context,
       session,
@@ -727,6 +959,8 @@ export const resumeTaskSessionWorkflow = async (
       validate: options.validate,
       allowWriteSession: input.allowWriteSession ?? false
     });
+    repositoryContext = reviewResult.repositoryContext;
+    validationReport = reviewResult.validationReport;
   }
 
   if (!reviewResult) {
@@ -737,12 +971,28 @@ export const resumeTaskSessionWorkflow = async (
     );
   }
 
-  if ((options.proposePatch || options.inspectPatch) && shouldRunStep(session, "propose-patch", fromStep)) {
+  if (shouldRunFixStep(options) && shouldRunStep(session, "fix-planned", fromStep)) {
+    fixResult = await executeFixStep({
+      context: resolved.context,
+      session,
+      scope: session.scope,
+      validate: options.validate,
+      errorLog: options.errorLog,
+      errorLogFile: options.errorLogFile,
+      allowWriteSession: input.allowWriteSession ?? false
+    });
+    repositoryContext = fixResult.repositoryContext;
+    validationReport = fixResult.validationReport;
+  }
+
+  if ((options.proposePatch || options.inspectPatch) && shouldRunStep(session, "patch-proposed", fromStep)) {
     const patchResult = await executePatchProposalStep({
       context: resolved.context,
       session,
       reviewResult,
+      fixResult,
       goal: session.goal,
+      errorLog: options.errorLog,
       workerId: options.requestedWorkerId,
       allowWriteSession: input.allowWriteSession ?? false
     });
@@ -750,7 +1000,7 @@ export const resumeTaskSessionWorkflow = async (
     patchInspection = patchResult.inspection;
   }
 
-  if (options.applyPatch && shouldRunStep(session, "apply-patch", fromStep)) {
+  if (options.applyPatch && shouldRunStep(session, "patch-applied", fromStep)) {
     if (!patchProposal) {
       throw new AgentError(
         "TASK_PATCH_PROPOSAL_MISSING",
@@ -773,8 +1023,9 @@ export const resumeTaskSessionWorkflow = async (
   const report = buildSessionReport({
     session,
     reviewResult,
-    repositoryContext: reviewResult.repositoryContext,
-    validationReport: reviewResult.validationReport,
+    repositoryContext: repositoryContext ?? reviewResult.repositoryContext,
+    fixResult,
+    validationReport: validationReport ?? reviewResult.validationReport,
     patchProposal,
     patchInspection,
     patchApplyResult
@@ -789,7 +1040,7 @@ export const resumeTaskSessionWorkflow = async (
     applyPatchRequested: options.applyPatch,
     patchApplyResult,
     patchInspection,
-    validationReport: reviewResult.validationReport
+    validationReport: validationReport ?? reviewResult.validationReport
   });
   await syncSessionState(
     resolved.context,
@@ -807,8 +1058,9 @@ export const resumeTaskSessionWorkflow = async (
     sessionPath: getTaskSessionPath(resolved.context.rootDir, session.taskId),
     workerId: resolved.workerId,
     reviewResult,
-    repositoryContext: reviewResult.repositoryContext,
-    validationReport: reviewResult.validationReport,
+    repositoryContext: repositoryContext ?? reviewResult.repositoryContext,
+    validationReport: validationReport ?? reviewResult.validationReport,
+    fixResult,
     patchProposal,
     patchInspection,
     patchApplyResult,
@@ -842,8 +1094,9 @@ export const getTaskSessionReport = async (
     buildSessionReport({
       session,
       reviewResult: hydrated.reviewResult,
-      repositoryContext: hydrated.reviewResult?.repositoryContext,
-      validationReport: hydrated.reviewResult?.validationReport,
+      repositoryContext: hydrated.repositoryContext,
+      fixResult: hydrated.fixResult,
+      validationReport: hydrated.validationReport,
       patchProposal: hydrated.patchProposal,
       patchInspection: hydrated.patchInspection,
       patchApplyResult: hydrated.patchApplyResult

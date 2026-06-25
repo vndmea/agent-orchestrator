@@ -20,6 +20,9 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
     .option("--scope <scope>", "Optional scope")
     .option("--worker <workerId>", "Optional worker id")
     .option("--require-profile", "Require a persisted worker profile", false)
+    .option("--error-log <text>", "Inline error log for fix planning")
+    .option("--error-log-file <path>", "Repository-local error log file for fix planning")
+    .option("--run-fix", "Run fix planning before patch proposal", false)
     .option("--typecheck", "Run typecheck", false)
     .option("--lint", "Run lint", false)
     .option("--test", "Run tests", false)
@@ -35,11 +38,14 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
         allowWriteSession: boolean;
         applyPatch: boolean;
         confirmApply: boolean;
+        errorLog?: string;
+        errorLogFile?: string;
         goal: string;
         inspectPatch: boolean;
         lint: boolean;
         proposePatch: boolean;
         requireProfile: boolean;
+        runFix: boolean;
         scope?: string;
         test: boolean;
         typecheck: boolean;
@@ -53,10 +59,13 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
         });
         const result = await runTaskSessionWorkflow({
           context,
+          errorLog: options.errorLog,
+          errorLogFile: options.errorLogFile,
           goal: options.goal,
           scope: options.scope,
           workerId: options.worker,
           requireProfile: options.requireProfile,
+          runFix: options.runFix,
           validate: {
             typecheck: options.typecheck,
             lint: options.lint,
