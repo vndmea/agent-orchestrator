@@ -41,6 +41,22 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
     description: "List local audit events in reverse chronological order."
   },
   {
+    name: "ao_register_worker",
+    description: "Register a worker model in the local worker registry."
+  },
+  {
+    name: "ao_unregister_worker",
+    description: "Remove a worker from the local worker registry."
+  },
+  {
+    name: "ao_list_worker_registry",
+    description: "List registered worker models."
+  },
+  {
+    name: "ao_get_worker_registration",
+    description: "Get one registered worker model."
+  },
+  {
     name: "ao_interview_worker",
     description: "Evaluate a worker model, generate a capability profile, and optionally persist it."
   },

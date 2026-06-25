@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
 import { runWorkerInterviewWorkflow } from "@agent-orchestrator/graph";
-import { saveWorkerProfile } from "@agent-orchestrator/models";
+import {
+  getWorkerRegistration,
+  resolveWorkerModel,
+  saveWorkerProfile
+} from "@agent-orchestrator/models";
 
 import type { AoToolDefinition } from "./tool-types.js";
 
@@ -26,7 +30,23 @@ export const aoInterviewWorkerTool: AoToolDefinition<
   inputSchema,
   execute: async (args) => {
     const context = createExecutionContextFromEnv();
-    const modelConfig = {
+    const hasModelOverride =
+      Boolean(args.provider) || Boolean(args.model) || Boolean(args.baseURL);
+    const registeredWorker = args.workerId
+      ? await getWorkerRegistration(context.rootDir, args.workerId)
+      : null;
+    const resolved = registeredWorker
+      ? await resolveWorkerModel({
+          context,
+          workerId: args.workerId
+        })
+      : null;
+
+    if (args.workerId && !registeredWorker && !hasModelOverride) {
+      throw new Error(`Worker ${args.workerId} is not registered.`);
+    }
+
+    const modelConfig = resolved?.modelConfig ?? {
       ...context.workerModel,
       ...(args.provider ? { provider: args.provider } : {}),
       ...(args.model ? { model: args.model } : {}),
@@ -34,7 +54,7 @@ export const aoInterviewWorkerTool: AoToolDefinition<
     };
     const result = await runWorkerInterviewWorkflow({
       context,
-      workerId: args.workerId,
+      workerId: resolved?.workerId ?? args.workerId,
       modelConfig
     });
     const persistence = args.persistProfile

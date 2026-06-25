@@ -6,10 +6,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   aoDoctorTool,
+  aoGetWorkerRegistrationTool,
   aoListToolsTool,
   aoListModelsTool,
+  aoListWorkerRegistryTool,
+  aoRegisterWorkerTool,
   aoRunLeaderWorkerTool,
-  aoToolDefinitions
+  aoToolDefinitions,
+  aoUnregisterWorkerTool
 } from "@agent-orchestrator/mcp-server";
 
 const withTempCwd = async (
@@ -85,6 +89,10 @@ describe("mcp tool registration", () => {
       "ao_list_workflows",
       "ao_list_tools",
       "ao_list_audit_events",
+      "ao_register_worker",
+      "ao_unregister_worker",
+      "ao_list_worker_registry",
+      "ao_get_worker_registration",
       "ao_interview_worker",
       "ao_list_workers",
       "ao_get_worker_profile",
@@ -101,8 +109,44 @@ describe("mcp tool registration", () => {
     const tools = await aoListToolsTool.execute({});
 
     expect(tools.some((tool) => tool.name === "ao_list_audit_events")).toBe(true);
+    expect(tools.some((tool) => tool.name === "ao_register_worker")).toBe(true);
     expect(tools.some((tool) => tool.name === "ao_run_leader_worker")).toBe(true);
     expect(tools.some((tool) => tool.name === "ao_doctor")).toBe(true);
+  });
+
+  it("manages worker registry through MCP tools", async () => {
+    await withTempCwd(async () => {
+      const dryRun = await aoRegisterWorkerTool.execute({
+        provider: "mock",
+        model: "registered-worker"
+      });
+
+      expect(dryRun.mode).toBe("dry-run");
+
+      const registered = await aoRegisterWorkerTool.execute({
+        provider: "mock",
+        model: "registered-worker",
+        apiKeyEnvVar: "AO_TEST_WORKER_KEY",
+        tags: ["coding"],
+        allowWrite: true
+      });
+      const registrations = await aoListWorkerRegistryTool.execute({});
+      const registration = await aoGetWorkerRegistrationTool.execute({
+        workerId: "mock:registered-worker"
+      });
+
+      expect(registered.mode).toBe("execute");
+      expect(registrations).toHaveLength(1);
+      expect(registration?.apiKeyEnvVar).toBe("AO_TEST_WORKER_KEY");
+      expect(JSON.stringify(registration)).not.toContain("secret");
+
+      const removed = await aoUnregisterWorkerTool.execute({
+        workerId: "mock:registered-worker",
+        allowWrite: true
+      });
+
+      expect(removed.removed).toBe(true);
+    });
   });
 
   it("executes the dedicated leader-worker MCP tool", async () => {
