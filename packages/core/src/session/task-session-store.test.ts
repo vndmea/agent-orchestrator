@@ -128,8 +128,16 @@ describe("task session store", () => {
 
     older.session.updatedAt = "2026-06-25T10:00:00.000Z";
     newer.session.updatedAt = "2026-06-25T11:00:00.000Z";
-    await updateTaskSession(context, older.session, true);
-    await updateTaskSession(context, newer.session, true);
+    await writeFile(
+      getTaskSessionPath(rootDir, older.session.taskId),
+      JSON.stringify(older.session, null, 2),
+      "utf8"
+    );
+    await writeFile(
+      getTaskSessionPath(rootDir, newer.session.taskId),
+      JSON.stringify(newer.session, null, 2),
+      "utf8"
+    );
 
     const listed = await listTaskSessions(rootDir);
     const scanned = await scanTaskSessions(rootDir);
