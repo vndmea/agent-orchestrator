@@ -227,7 +227,9 @@ export const runPatchProposalWorkflow = async (
     maxAttempts: 1
   });
   const proposal = invocation.ok ? invocation.data : fallbackProposal;
-  let inspection = await inspectPatch(context, proposal);
+  let inspection = await inspectPatch(context, proposal, {
+    scope: input.scope
+  });
 
   if (!invocation.ok) {
     warnings.push("Patch proposal is a fallback placeholder and must not be applied.");

@@ -126,6 +126,31 @@ export const resolveRepositoryScope = (
   return ensureInsideRoot(rootDir, scope);
 };
 
+export const resolveRepositoryPath = (
+  rootDir: string,
+  path: string
+): string => ensureInsideRoot(rootDir, path);
+
+export const isRepositoryPathInsideScope = (
+  rootDir: string,
+  path: string,
+  scope?: string
+): boolean => {
+  if (!scope) {
+    return true;
+  }
+
+  const scopedRoot = resolveRepositoryScope(rootDir, scope);
+  const normalized = ensureInsideRoot(rootDir, path);
+  const relativePath = relative(scopedRoot, normalized);
+
+  return !(
+    relativePath.startsWith("..") ||
+    relativePath.includes(`..\\`) ||
+    relativePath.includes("../")
+  );
+};
+
 export const readScopedRepositoryFile = async (
   rootDir: string,
   path: string,

@@ -636,7 +636,8 @@ const executePatchApplyStep = async (input: {
     allowWrite: input.allowWrite,
     confirmApply: input.confirmApply,
     dryRun: !input.allowWrite,
-    runValidation: input.validate
+    runValidation: input.validate,
+    scope: input.session.scope
   });
   const artifactPath = await persistArtifact(
     input.context,

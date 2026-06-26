@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 
 import {
@@ -10,6 +12,10 @@ import {
 } from "@agent-orchestrator/core";
 
 import { parseUnifiedDiff, type ParsedPatchFile } from "./patch-parser.js";
+import {
+  isRepositoryPathInsideScope,
+  resolveRepositoryPath
+} from "../repository/file-selection.js";
 
 const SECRET_FILE_PATTERNS = [
   /^\.env(?:\..+)?$/iu,
@@ -84,6 +90,9 @@ const isPlaceholderProposal = (proposal: PatchProposal): boolean =>
     "Placeholder proposal generated because structured model output failed."
   );
 
+const computeContentHash = (content: string): string =>
+  createHash("sha256").update(content).digest("hex");
+
 export async function inspectPatch(
   context: ExecutionContext,
   proposal: PatchProposal,
@@ -91,8 +100,6 @@ export async function inspectPatch(
     scope?: string;
   } = {}
 ): Promise<PatchInspection> {
-  void options;
-  await Promise.resolve();
   const blockedReasons: string[] = [];
   const warnings: string[] = [];
   const diffText = proposal.unifiedDiff.trim();
@@ -125,7 +132,7 @@ export async function inspectPatch(
 
   const files = mergeInspectionFiles(parsedFiles, proposal.files);
 
-  files.forEach((file) => {
+  for (const file of files) {
     const pathEvaluation = evaluateFileWritePath(file.path, {
       allowWrite: true,
       dryRun: false,
@@ -134,6 +141,15 @@ export async function inspectPatch(
     });
     if (!pathEvaluation.allowed || pathEvaluation.mode === "blocked") {
       blockedReasons.push(`${file.path}: ${pathEvaluation.reason}`);
+    }
+
+    if (
+      options.scope &&
+      !isRepositoryPathInsideScope(context.rootDir, file.path, options.scope)
+    ) {
+      blockedReasons.push(
+        `${file.path}: patch touches a file outside the requested scope ${options.scope}.`
+      );
     }
 
     if (SECRET_FILE_PATTERNS.some((pattern) => pattern.test(basename(file.path)))) {
@@ -146,7 +162,26 @@ export async function inspectPatch(
     ) {
       blockedReasons.push(`${file.path}: deleting lockfiles is blocked.`);
     }
-  });
+
+    if (file.beforeHash) {
+      try {
+        const currentContents = await readFile(
+          resolveRepositoryPath(context.rootDir, file.path),
+          "utf8"
+        );
+        const currentHash = computeContentHash(currentContents);
+        if (currentHash !== file.beforeHash) {
+          warnings.push(
+            `${file.path}: beforeHash did not match the current file contents.`
+          );
+        }
+      } catch {
+        warnings.push(
+          `${file.path}: beforeHash was provided but the current file could not be read for comparison.`
+        );
+      }
+    }
+  }
 
   if (proposal.files.length !== files.length) {
     warnings.push("Proposal metadata file list did not fully match parsed diff files.");

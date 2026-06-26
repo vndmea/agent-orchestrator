@@ -173,6 +173,48 @@ describe("patch lifecycle tools", () => {
     expect(secretInspection.ok).toBe(false);
   });
 
+  it("blocks files outside the requested scope and warns on beforeHash mismatches", async () => {
+    const rootDir = await createGitRoot();
+    const context = createContext(rootDir);
+    await writeFile(join(rootDir, "nested.ts"), "export const nested = true;\n", "utf8");
+    await execFile("git", ["add", "nested.ts"], { cwd: rootDir });
+    await execFile("git", ["commit", "-m", "add nested"], { cwd: rootDir });
+    const scopedProposal = createProposal(
+      [
+        "diff --git a/nested.ts b/nested.ts",
+        "--- a/nested.ts",
+        "+++ b/nested.ts",
+        "@@ -1,1 +1,2 @@",
+        "+// scoped comment",
+        " export const nested = true;"
+      ].join("\n"),
+      "nested.ts"
+    );
+    const mismatchedHashProposal = PatchProposalSchema.parse({
+      ...scopedProposal,
+      files: [
+        {
+          path: scopedProposal.files[0]?.path ?? "nested.ts",
+          changeType: scopedProposal.files[0]?.changeType ?? "modify",
+          summary: scopedProposal.files[0]?.summary ?? "Insert a candidate comment.",
+          riskLevel: scopedProposal.files[0]?.riskLevel ?? "low",
+          beforeHash: "sha256-does-not-match"
+        }
+      ]
+    });
+
+    const blocked = await inspectPatch(context, scopedProposal, {
+      scope: "packages/core"
+    });
+    const warned = await inspectPatch(context, mismatchedHashProposal);
+
+    expect(blocked.ok).toBe(false);
+    expect(blocked.blockedReasons[0]).toContain("outside the requested scope");
+    expect(warned.warnings).toContain(
+      "nested.ts: beforeHash did not match the current file contents."
+    );
+  });
+
   it("blocks .git paths and empty diffs", async () => {
     const rootDir = await createGitRoot();
     const context = createContext(rootDir);
