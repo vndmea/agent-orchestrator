@@ -2,6 +2,7 @@ export * from "./leader/leader-agent.js";
 export * from "./leader/leader-prompts.js";
 export * from "./leader/leader-state.js";
 export * from "./workers/codegen-worker.js";
+export * from "./workers/patch-generation-worker.js";
 export * from "./workers/review-worker.js";
 export * from "./workers/summarize-worker.js";
 export * from "./workers/test-worker.js";

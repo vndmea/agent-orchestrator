@@ -48,6 +48,17 @@ export const assessWorkerTaskEligibility = (
     };
   }
 
+  if (
+    taskType === "patch-generation" &&
+    !profile.routingPolicy.allowPatchGeneration
+  ) {
+    return {
+      allowed: false,
+      reason: `Worker ${profile.workerId} is not allowed to generate patch proposals.`,
+      requiresLeaderReview: true
+    };
+  }
+
   return {
     allowed: true,
     reason: `Worker ${profile.workerId} is qualified for ${taskType}.`,

@@ -4,7 +4,14 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import {
+  createExecutionContextFromEnv,
+  WorkerCapabilityProfileSchema
+} from "@agent-orchestrator/core";
+import {
+  saveWorkerProfile,
+  saveWorkerRegistration
+} from "@agent-orchestrator/models";
 import * as models from "@agent-orchestrator/models";
 import {
   runFixErrorWorkflow,
@@ -43,6 +50,45 @@ const createContext = (rootDir: string) =>
     allowWrite: false
   });
 
+const createProfile = (overrides: Record<string, unknown> = {}) =>
+  WorkerCapabilityProfileSchema.parse({
+    workerId: "mock:gpt-5.4-mini",
+    provider: "mock",
+    model: "gpt-5.4-mini",
+    status: "active",
+    supportedTaskTypes: [
+      "summarization",
+      "log-analysis",
+      "json-extraction",
+      "review-lite",
+      "codegen",
+      "patch-generation"
+    ],
+    unsupportedTaskTypes: [],
+    score: {
+      instructionFollowing: 0.9,
+      structuredOutput: 0.9,
+      reasoning: 0.9,
+      codeQuality: 0.9,
+      domainKnowledge: 0.8,
+      reliability: 0.9
+    },
+    risks: [],
+    warnings: [],
+    routingPolicy: {
+      maxTaskComplexity: "medium",
+      requiresLeaderReview: false,
+      allowCodegen: true,
+      allowPatchGeneration: false,
+      allowDomainTasks: true
+    },
+    evaluatedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    suiteName: "default-worker-onboarding-suite",
+    suiteVersion: "2",
+    ...overrides
+  });
+
 describe("patch proposal workflow", () => {
   it("returns a structured proposal with inspection", async () => {
     const rootDir = await createWorkspace();
@@ -55,6 +101,7 @@ describe("patch proposal workflow", () => {
     });
 
     expect(result.proposal.id).toBeTruthy();
+    expect(result.proposal.title).not.toContain("[PLACEHOLDER]");
     expect(result.proposal.unifiedDiff).toContain("diff --git");
     expect(result.inspection.files.length).toBeGreaterThan(0);
   });
@@ -96,6 +143,39 @@ describe("patch proposal workflow", () => {
     );
 
     invokeStructuredSpy.mockRestore();
+  });
+
+  it("returns a blocked placeholder when the persisted worker profile is not qualified for patch generation", async () => {
+    const rootDir = await createWorkspace();
+    await saveWorkerRegistration(
+      createContext(rootDir),
+      {
+        workerId: "mock:gpt-5.4-mini",
+        provider: "mock",
+        model: "gpt-5.4-mini",
+        enabled: true,
+        tags: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      true
+    );
+    await saveWorkerProfile(createContext(rootDir), createProfile(), true);
+
+    const result = await runPatchProposalWorkflow({
+      context: createContext(rootDir),
+      goal: "Fix the failing typecheck",
+      scope: "packages/core",
+      workerId: "mock:gpt-5.4-mini",
+      requireProfile: true
+    });
+
+    expect(result.proposal.title).toContain("[PLACEHOLDER]");
+    expect(result.inspection.ok).toBe(false);
+    expect(result.warnings.join("\n")).toContain("not allowed to generate patch proposals");
+    expect(result.inspection.blockedReasons).toContain(
+      "Patch proposal is a fallback placeholder and must not be applied."
+    );
   });
 });
 

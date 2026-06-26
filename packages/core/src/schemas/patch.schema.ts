@@ -24,7 +24,8 @@ export const PatchProposalSchema = z.object({
   source: z.object({
     workflow: z.string(),
     taskId: z.string().optional(),
-    workerId: z.string().optional()
+    workerId: z.string().optional(),
+    scope: z.string().optional()
   })
 });
 

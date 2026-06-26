@@ -3,6 +3,7 @@ import { z } from "zod";
 export const WorkerTaskTypeSchema = z.enum([
   "summarization",
   "codegen",
+  "patch-generation",
   "test-generation",
   "log-analysis",
   "json-extraction",

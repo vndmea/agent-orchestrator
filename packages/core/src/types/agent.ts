@@ -4,6 +4,7 @@ export type AgentRole = "leader" | "worker" | "reviewer" | "tool";
 export type WorkerTaskType =
   | "summarization"
   | "codegen"
+  | "patch-generation"
   | "test-generation"
   | "log-analysis"
   | "json-extraction"
