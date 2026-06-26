@@ -57,6 +57,7 @@ describe("repository context pack", () => {
     expect(result.scope).toBe("packages/pkg");
     expect(result.selectedFiles.length).toBeGreaterThan(0);
     expect(result.selectedFiles.every((file) => file.path.startsWith("packages/pkg/"))).toBe(true);
+    expect(result.selectionReasons.length).toBeGreaterThan(0);
     expect(result.packageMetadata?.packageJsonPath).toBe("packages/pkg/package.json");
     expect(result.packageMetadata?.scripts.typecheck).toContain("process.exit(0)");
   });
@@ -151,5 +152,41 @@ describe("repository context pack", () => {
 
     expect(result.selectedFiles[0]?.truncated).toBe(false);
     expect(result.selectedFiles[0]?.content.length).toBeGreaterThan(8);
+  });
+
+  it("ranks files using error-log matches, dependency hints, and selection reasons", async () => {
+    const rootDir = await createRootDir();
+    const context = createExecutionContextFromEnv(undefined, {
+      rootDir
+    });
+
+    await writeText(
+      rootDir,
+      "packages/pkg/src/index.ts",
+      'import { helper } from "./helper";\nexport const value = helper();\n'
+    );
+    await writeText(
+      rootDir,
+      "packages/pkg/src/helper.ts",
+      "export const helper = () => 1;\n"
+    );
+    await writeText(
+      rootDir,
+      "packages/pkg/src/helper.test.ts",
+      'import { helper } from "./helper";\nexpect(helper()).toBe(1);\n'
+    );
+
+    const result = await buildRepositoryContextPack(context, {
+      rootDir,
+      scope: "packages/pkg",
+      errorLog: "TS2304 in packages/pkg/src/helper.ts:1:1"
+    });
+
+    expect(result.selectedFiles[0]?.path).toBe("packages/pkg/src/helper.ts");
+    expect(result.selectionReasons[0]?.path).toBe("packages/pkg/src/helper.ts");
+    expect(result.selectionReasons[0]?.reason).toContain("error log");
+    expect(
+      result.selectionReasons.some((entry) => entry.path === "packages/pkg/src/helper.test.ts")
+    ).toBe(true);
   });
 });

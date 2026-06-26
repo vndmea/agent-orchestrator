@@ -13,4 +13,5 @@ export * from "./workflows/planning-workflow.js";
 export * from "./workflows/patch-proposal-workflow.js";
 export * from "./workflows/review-workflow.js";
 export * from "./workflows/task-session-workflow.js";
+export * from "./workflows/worker-benchmark-workflow.js";
 export * from "./workflows/worker-interview-workflow.js";

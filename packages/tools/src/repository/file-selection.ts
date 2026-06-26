@@ -4,8 +4,11 @@ import { basename, extname, join, relative, resolve } from "node:path";
 import {
   AgentError,
   type RepositoryFileContent,
-  type RepositoryFileSummary
+  type RepositoryFileSummary,
+  type SelectionReason
 } from "@agent-orchestrator/core";
+
+import { rankRepositoryContextFiles } from "./context-ranker.js";
 
 const DEFAULT_IGNORED_PATHS = [
   "node_modules",
@@ -43,6 +46,7 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 
 export interface SelectRepositoryFilesOptions {
+  errorLog?: string;
   files?: string[];
   ignoredPaths?: string[];
   maxFileBytes?: number;
@@ -185,23 +189,26 @@ export const selectRepositoryFiles = async ({
   rootDir,
   scope,
   files,
+  errorLog,
   ignoredPaths = [...DEFAULT_IGNORED_PATHS],
   maxFileBytes = 20_000,
   maxTotalBytes = 120_000
 }: SelectRepositoryFilesOptions): Promise<{
   files: RepositoryFileSummary[];
+  selectionReasons: SelectionReason[];
   selectedFiles: RepositoryFileContent[];
   warnings: string[];
 }> => {
   const scopedRoot = resolveRepositoryScope(rootDir, scope);
   const warnings: string[] = [];
   const summaries: RepositoryFileSummary[] = [];
-  const selectedFiles: RepositoryFileContent[] = [];
-  let totalBytes = 0;
+  let selectedFiles: RepositoryFileContent[] = [];
+  let selectionReasons: SelectionReason[] = [];
 
   const selectedSet = new Set(
     (files ?? []).map((file) => toRelativePath(rootDir, ensureInsideRoot(rootDir, file)))
   );
+  const candidateFiles: RepositoryFileContent[] = [];
 
   const walk = async (directory: string): Promise<void> => {
     const entries = await readdir(directory, { withFileTypes: true });
@@ -220,25 +227,17 @@ export const selectRepositoryFiles = async ({
       }
 
       const fileStat = await stat(fullPath);
-      const explicitlySelected =
-        selectedSet.size > 0 ? selectedSet.has(relativePath) : false;
       const candidateSelection =
-        explicitlySelected ||
-        (selectedSet.size === 0 && isReadableTextFile(fullPath));
+        selectedSet.size === 0 && isReadableTextFile(fullPath);
 
       summaries.push({
         path: relativePath,
         sizeBytes: fileStat.size,
-        selected: candidateSelection,
+        selected: false,
         ...(candidateSelection ? {} : { reason: "Not selected for context." })
       });
 
       if (!candidateSelection) {
-        continue;
-      }
-
-      if (totalBytes >= maxTotalBytes) {
-        warnings.push("Maximum repository context size reached.");
         continue;
       }
 
@@ -247,19 +246,12 @@ export const selectRepositoryFiles = async ({
         fullPath,
         maxFileBytes
       );
-      const nextBytes = totalBytes + Buffer.byteLength(fileContent.content, "utf8");
-
-      if (nextBytes > maxTotalBytes) {
-        warnings.push(`Skipping ${relativePath} because maxTotalBytes was reached.`);
-        continue;
-      }
-
-      selectedFiles.push(fileContent);
-      totalBytes = nextBytes;
+      candidateFiles.push(fileContent);
     }
   };
 
   if (selectedSet.size > 0) {
+    let totalBytes = 0;
     for (const path of selectedSet) {
       const fullPath = ensureInsideRoot(rootDir, path);
       const fileStat = await stat(fullPath);
@@ -277,14 +269,54 @@ export const selectRepositoryFiles = async ({
       }
 
       selectedFiles.push(fileContent);
+      selectionReasons.push({
+        path,
+        reason: "Explicitly requested for repository context.",
+        score: 100
+      });
       totalBytes = nextBytes;
     }
   } else {
     await walk(scopedRoot);
+    const ranked = rankRepositoryContextFiles({
+      files: candidateFiles,
+      scope,
+      errorLog
+    });
+    let totalBytes = 0;
+
+    for (const file of ranked.rankedFiles) {
+      if (totalBytes >= maxTotalBytes) {
+        warnings.push("Maximum repository context size reached.");
+        continue;
+      }
+
+      const nextBytes = totalBytes + Buffer.byteLength(file.content, "utf8");
+      if (nextBytes > maxTotalBytes) {
+        warnings.push(`Skipping ${file.path} because maxTotalBytes was reached.`);
+        continue;
+      }
+
+      selectedFiles.push(file);
+      totalBytes = nextBytes;
+    }
+
+    const selectedPaths = new Set(selectedFiles.map((file) => file.path));
+    selectionReasons = ranked.selectionReasons.filter((entry) =>
+      selectedPaths.has(entry.path)
+    );
+    for (const summary of summaries) {
+      if (selectedPaths.has(summary.path)) {
+        summary.selected = true;
+        summary.reason =
+          selectionReasons.find((entry) => entry.path === summary.path)?.reason;
+      }
+    }
   }
 
   return {
     files: summaries,
+    selectionReasons,
     selectedFiles,
     warnings
   };

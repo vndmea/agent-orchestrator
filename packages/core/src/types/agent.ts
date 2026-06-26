@@ -76,6 +76,17 @@ export interface WorkerCapabilityProfile {
   expiresAt?: string;
   suiteName?: string;
   suiteVersion?: string;
+  evaluationSummary?: WorkerEvaluationSummary;
+}
+
+export interface WorkerEvaluationSummary {
+  suiteName: string;
+  suiteVersion: string;
+  sampleCount: number;
+  passedCount: number;
+  failedCount: number;
+  confidenceBand: "low" | "medium" | "high";
+  knownFailureModes: string[];
 }
 
 export interface WorkerInterviewTask {

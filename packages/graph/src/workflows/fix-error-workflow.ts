@@ -70,7 +70,8 @@ export const runFixErrorWorkflow = async (
       : "");
   const repositoryContext = await buildRepositoryContextPack(context, {
     rootDir: context.rootDir,
-    scope: input.scope
+    scope: input.scope,
+    errorLog
   });
   const validationReport = await runRepositoryValidation(context, {
     typecheck: input.validate?.typecheck,

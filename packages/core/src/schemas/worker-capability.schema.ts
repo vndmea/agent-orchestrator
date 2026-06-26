@@ -38,6 +38,16 @@ export const WorkerRoutingPolicySchema = z.object({
   allowDomainTasks: z.boolean()
 });
 
+export const WorkerEvaluationSummarySchema = z.object({
+  suiteName: z.string().min(1),
+  suiteVersion: z.string().min(1),
+  sampleCount: z.number().int().nonnegative(),
+  passedCount: z.number().int().nonnegative(),
+  failedCount: z.number().int().nonnegative(),
+  confidenceBand: z.enum(["low", "medium", "high"]),
+  knownFailureModes: z.array(z.string())
+});
+
 export const WorkerCapabilityProfileSchema = z.object({
   workerId: z.string().min(1),
   provider: z.string().min(1),
@@ -52,7 +62,8 @@ export const WorkerCapabilityProfileSchema = z.object({
   evaluatedAt: z.string().datetime(),
   expiresAt: z.string().datetime().optional(),
   suiteName: z.string().min(1).optional(),
-  suiteVersion: z.string().min(1).optional()
+  suiteVersion: z.string().min(1).optional(),
+  evaluationSummary: WorkerEvaluationSummarySchema.optional()
 });
 
 export const WorkerInterviewTaskSchema = z.object({
@@ -84,3 +95,25 @@ export const WorkerEvaluationSuiteSchema = z.object({
   name: z.string().min(1),
   tasks: z.array(WorkerInterviewTaskSchema)
 });
+
+export const WorkerBenchmarkFixtureResultSchema = z.object({
+  fixtureId: z.string().min(1),
+  title: z.string().min(1),
+  passed: z.boolean(),
+  score: z.number().min(0).max(1),
+  findings: z.array(z.string()),
+  rawOutput: z.unknown()
+});
+
+export const WorkerBenchmarkResultSchema = z.object({
+  workerId: z.string().min(1),
+  suiteName: z.string().min(1),
+  suiteVersion: z.string().min(1),
+  fixtureResults: z.array(WorkerBenchmarkFixtureResultSchema),
+  evaluationSummary: WorkerEvaluationSummarySchema
+});
+
+export type WorkerBenchmarkFixtureResult = z.infer<
+  typeof WorkerBenchmarkFixtureResultSchema
+>;
+export type WorkerBenchmarkResult = z.infer<typeof WorkerBenchmarkResultSchema>;

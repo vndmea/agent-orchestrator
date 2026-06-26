@@ -13,6 +13,7 @@ import {
   TaskPlanSchema,
   TaskSessionSchema,
   ValidationReportSchema,
+  WorkerBenchmarkResultSchema,
   WorkerCapabilityProfileSchema,
   WorkerRegistrationSchema,
   WorkerRegistrySchema,
@@ -139,7 +140,47 @@ describe("core schemas", () => {
         evaluatedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
         suiteName: "default-worker-onboarding-suite",
-        suiteVersion: "1"
+        suiteVersion: "1",
+        evaluationSummary: {
+          suiteName: "coding-v1",
+          suiteVersion: "1",
+          sampleCount: 4,
+          passedCount: 3,
+          failedCount: 1,
+          confidenceBand: "medium",
+          knownFailureModes: ["validation-honesty: optimistic apply"]
+        }
+      })
+    ).not.toThrow();
+  });
+
+  it("parses worker benchmark results", () => {
+    expect(() =>
+      WorkerBenchmarkResultSchema.parse({
+        workerId: "mock:gpt-5.4-mini",
+        suiteName: "coding-v1",
+        suiteVersion: "1",
+        fixtureResults: [
+          {
+            fixtureId: "type-error-fix",
+            title: "Type Error Fix",
+            passed: true,
+            score: 0.9,
+            findings: [],
+            rawOutput: {
+              analysis: "good"
+            }
+          }
+        ],
+        evaluationSummary: {
+          suiteName: "coding-v1",
+          suiteVersion: "1",
+          sampleCount: 1,
+          passedCount: 1,
+          failedCount: 0,
+          confidenceBand: "high",
+          knownFailureModes: []
+        }
       })
     ).not.toThrow();
   });

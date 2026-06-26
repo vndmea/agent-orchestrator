@@ -50,7 +50,8 @@ export const runPatchProposalWorkflow = async (
     input.repositoryContext ??
     await buildRepositoryContextPack(context, {
       rootDir: context.rootDir,
-      scope: input.scope
+      scope: input.scope,
+      errorLog: input.errorLog
     });
   const warnings: string[] = [];
   const workerModelResolution = input.workerId

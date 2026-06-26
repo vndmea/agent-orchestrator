@@ -29,11 +29,18 @@ export const GitDiffSummarySchema = z.object({
   truncated: z.boolean()
 });
 
+export const SelectionReasonSchema = z.object({
+  path: z.string(),
+  reason: z.string(),
+  score: z.number()
+});
+
 export const RepositoryContextPackSchema = z.object({
   rootDir: z.string(),
   scope: z.string().optional(),
   files: z.array(RepositoryFileSummarySchema),
   selectedFiles: z.array(RepositoryFileContentSchema),
+  selectionReasons: z.array(SelectionReasonSchema).default([]),
   packageMetadata: PackageMetadataSchema.optional(),
   gitDiff: GitDiffSummarySchema.optional(),
   warnings: z.array(z.string()),
@@ -45,3 +52,4 @@ export type RepositoryFileContent = z.infer<typeof RepositoryFileContentSchema>;
 export type RepositoryFileSummary = z.infer<typeof RepositoryFileSummarySchema>;
 export type PackageMetadata = z.infer<typeof PackageMetadataSchema>;
 export type GitDiffSummary = z.infer<typeof GitDiffSummarySchema>;
+export type SelectionReason = z.infer<typeof SelectionReasonSchema>;

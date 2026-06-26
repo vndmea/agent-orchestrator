@@ -10,6 +10,7 @@ import { selectRepositoryFiles } from "./file-selection.js";
 export interface BuildRepositoryContextOptions {
   diffBase?: string;
   diffHead?: string;
+  errorLog?: string;
   files?: string[];
   ignoredPaths?: string[];
   includeDiff?: boolean;
@@ -26,6 +27,7 @@ export const buildRepositoryContextPack = async (
   const fileSelection = await selectRepositoryFiles({
     rootDir: options.rootDir,
     scope: options.scope,
+    errorLog: options.errorLog,
     files: options.files,
     ignoredPaths: options.ignoredPaths ?? context.contextBudget.ignoredPaths,
     maxFileBytes: options.maxFileBytes ?? context.contextBudget.maxFileBytes,
@@ -48,6 +50,7 @@ export const buildRepositoryContextPack = async (
     scope: options.scope,
     files: fileSelection.files,
     selectedFiles: fileSelection.selectedFiles,
+    selectionReasons: fileSelection.selectionReasons,
     packageMetadata,
     gitDiff,
     warnings: fileSelection.warnings,

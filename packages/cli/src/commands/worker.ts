@@ -1,7 +1,11 @@
 import type { Command } from "commander";
 
 import { resolveExecutionContext } from "@agent-orchestrator/core";
-import { runWorkerInterviewWorkflow } from "@agent-orchestrator/graph";
+import {
+  runWorkerBenchmarkWorkflow,
+  runWorkerInterviewWorkflow,
+  saveWorkerBenchmarkArtifact
+} from "@agent-orchestrator/graph";
 import {
   deriveWorkerRegistrationId,
   getWorkerRegistration,
@@ -193,6 +197,87 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
             {
               ...result,
               persistence: saveResult
+            },
+            null,
+            2
+          )
+        );
+      }
+    );
+
+  worker
+    .command("benchmark")
+    .description("Run a coding benchmark suite for a worker model and optionally persist the artifact.")
+    .requiredOption("--suite <suite>", "Benchmark suite name")
+    .option("--worker <workerId>", "Optional worker profile id")
+    .option("--provider <provider>", "Override worker provider")
+    .option("--model <model>", "Override worker model")
+    .option("--base-url <url>", "Override worker base URL")
+    .option("--save", "Persist the resulting benchmark artifact", false)
+    .action(
+      async (options: {
+        baseUrl?: string;
+        model?: string;
+        provider?: string;
+        save: boolean;
+        suite: string;
+        worker?: string;
+      }) => {
+        if (options.suite !== "coding-v1") {
+          throw new Error(`Unsupported benchmark suite: ${options.suite}`);
+        }
+
+        const context = await resolveExecutionContext();
+        const hasModelOverride =
+          Boolean(options.provider) || Boolean(options.model) || Boolean(options.baseUrl);
+        const registeredWorker = options.worker
+          ? await getWorkerRegistration(context.rootDir, options.worker)
+          : null;
+        const resolved = registeredWorker
+          ? await resolveWorkerModel({
+              context,
+              workerId: options.worker
+            })
+          : null;
+
+        if (options.worker && !registeredWorker && !hasModelOverride) {
+          throw new Error(`Worker ${options.worker} is not registered.`);
+        }
+
+        const modelConfig = resolved?.modelConfig ?? {
+          ...context.workerModel,
+          ...(options.provider ? { provider: options.provider } : {}),
+          ...(options.model ? { model: options.model } : {}),
+          ...(options.baseUrl ? { baseURL: options.baseUrl } : {})
+        };
+        const result = await runWorkerBenchmarkWorkflow({
+          context,
+          suite: "coding-v1",
+          workerId: resolved?.workerId ?? options.worker,
+          modelConfig
+        });
+        const persistence = options.save
+          ? await saveWorkerBenchmarkArtifact(context, result, true)
+          : null;
+        const existingProfile = await getWorkerProfile(context.rootDir, result.workerId);
+        const profilePersistence =
+          options.save && existingProfile
+            ? await saveWorkerProfile(
+                context,
+                {
+                  ...existingProfile,
+                  evaluationSummary: result.evaluationSummary
+                },
+                true
+              )
+            : null;
+
+        io.write(
+          JSON.stringify(
+            {
+              ...result,
+              persistence,
+              profilePersistence
             },
             null,
             2
