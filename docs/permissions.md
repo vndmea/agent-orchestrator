@@ -5,10 +5,10 @@
 ## Permission Layers
 
 - `read-only`: repository reads, diff inspection, task/status/report reads, and validation planning.
-- `session-write`: local task artifacts under `.ao/runs/<taskId>`.
+- `session-write`: local task artifacts under `aoStorageDir/runs/<taskId>`.
 - `project-write`: repository file writes when a command explicitly supports them.
 - `patch-apply`: the second gate for mutating source files through patch application.
-- `audit-write`: local audit events under `.ao/audit`.
+- `audit-write`: local audit events under `aoStorageDir/audit`.
 
 ## Default Behavior
 
@@ -19,7 +19,7 @@
 
 ## Gates
 
-- `--allow-write-session` allows `.ao/runs` persistence only.
+- `--allow-write-session` allows `aoStorageDir/runs` persistence only.
 - `--allow-write` allows commands with write support to modify local managed files or repository files, depending on the command.
 - `--confirm-apply` is required in addition to `--allow-write` before `patch apply` can touch project files.
 
@@ -28,18 +28,28 @@ Patch apply stays explicitly two-step:
 1. generate and inspect a proposal
 2. apply only with `--allow-write --confirm-apply`
 
-## What Writes Under `.ao`
+## User-Scoped AO Storage
+
+By default, local AO state is stored under:
+
+```text
+~/.ao/workspaces/<workspace-id>/
+```
+
+`AO_HOME_DIR` overrides the `~/.ao` root. `AO_ROOT_DIR` or explicit `--root` flags affect which repository path maps to `<workspace-id>`.
+
+## What Writes Under `aoStorageDir`
 
 Local-managed artifacts include:
 
-- `.ao/config.json`
-- `.ao/workers.json`
-- `.ao/worker-profiles.json`
-- `.ao/worker-benchmarks/`
-- `.ao/runs/`
-- `.ao/audit/`
+- `config.json`
+- `workers.json`
+- `worker-profiles.json`
+- `worker-benchmarks/`
+- `runs/`
+- `audit/`
 
-`benchmark` artifacts are local `.ao` artifacts, not project source files.
+`benchmark` artifacts are local AO artifacts, not project source files.
 
 ## What Can Modify Project Files
 
@@ -50,6 +60,6 @@ Local-managed artifacts include:
 
 ## Cleanup Scope
 
-- `ao cleanup runs` only removes local task-session artifacts under `.ao/runs`.
-- `ao cleanup audit` only removes local audit artifacts under `.ao/audit`.
+- `ao cleanup runs` only removes local task-session artifacts under `aoStorageDir/runs`.
+- `ao cleanup audit` only removes local audit artifacts under `aoStorageDir/audit`.
 - Cleanup commands do not touch project source files.

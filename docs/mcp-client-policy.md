@@ -6,7 +6,7 @@ Policy for MCP clients integrating with agent-orchestrator:
 - Treat `nextRecommendedActions` as the primary machine-readable hint for follow-up calls.
 - Do not bypass `dry-run`, `allowWrite`, `allowDirtyWorktree`, or `confirmApply`.
 - Do not assume a proposed patch is safe to apply until `patchInspection.ok === true` and a human has reviewed it.
-- Always surface `.ao/runs` report paths or `ao_get_task_report` output to the operator before write actions.
+- Always surface `aoStorageDir/runs` report paths or `ao_get_task_report` output to the operator before write actions.
 
 Recommended patterns:
 

@@ -38,11 +38,13 @@ ao mcp serve --root ${workspaceFolder}
 ao mcp list-tools
 ```
 
+For the current workspace-checkout install path, read every `ao ...` example in this document as `pnpm exec ao ...` from the repository root unless you have already linked or published the CLI separately.
+
 Writes remain in dry-run mode unless a command explicitly enables repository writes with `--allow-write`.
 
-`--allow-write-session` is narrower than `--allow-write`: it only permits local task artifacts under `.ao/runs`, not project file writes.
+`--allow-write-session` is narrower than `--allow-write`: it only permits local task artifacts under `aoStorageDir/runs`, not project file writes.
 
-For MCP clients that launch `ao` outside the active repository, use `ao mcp serve --root <workspace-path>` or set `AO_ROOT_DIR` so tools resolve `.ao/`, git state, and repository files against the intended workspace.
+For MCP clients that launch `ao` outside the active repository, use `ao mcp serve --root <workspace-path>` or set `AO_ROOT_DIR` so tools resolve AO storage, git state, and repository files against the intended workspace.
 
 ## Review Commands
 
@@ -60,7 +62,7 @@ For MCP clients that launch `ao` outside the active repository, use `ao mcp serv
 
 ## Task Sessions
 
-Task sessions keep local state under `.ao/runs/<taskId>`:
+Task sessions keep local state under `~/.ao/workspaces/<workspace-id>/runs/<taskId>` by default:
 
 ```bash
 ao task start \
@@ -99,12 +101,12 @@ ao task resume <taskId> --apply-patch --allow-write --confirm-apply
 Benchmark artifacts are persisted under:
 
 ```text
-.ao/worker-benchmarks/<workerId>/coding-v1.json
+~/.ao/workspaces/<workspace-id>/worker-benchmarks/<workerId>/coding-v1.json
 ```
 
 ## DeepSeek / OpenAI-Compatible Notes
 
-Use `apiKeyEnvVar` rather than committing raw API keys into `.ao/config.json` or repository files.
+Use `apiKeyEnvVar` rather than committing raw API keys into `config.json` or repository files.
 
 For DeepSeek-compatible workers:
 
