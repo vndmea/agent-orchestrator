@@ -244,8 +244,25 @@ export class PatchGenerationWorker {
       config: routed.config,
       schema: PatchProposalSchema,
       prompt: [
-        "Return JSON matching the PatchProposal schema.",
+        "Return only valid JSON matching the PatchProposal schema.",
+        "Do not include markdown, explanations, reasoning text, or code fences.",
+        "Use exactly these top-level keys:",
+        "- id: string",
+        "- title: string",
+        "- summary: string",
+        "- rationale: string[]",
+        "- unifiedDiff: string",
+        "- files: Array<{ path: string; changeType: \"add\" | \"modify\" | \"delete\"; summary: string; riskLevel: \"low\" | \"medium\" | \"high\"; beforeHash?: string; afterHash?: string }>",
+        "- risks: string[]",
+        "- validationPlan: string[]",
+        "- generatedAt: ISO-8601 datetime string",
+        "- source: { workflow: string; workerId?: string; scope?: string; taskId?: string }",
+        "Do not omit any required field.",
         "Do not claim the patch has already been applied.",
+        "The unifiedDiff field must contain a valid unified diff string starting with 'diff --git'.",
+        "The files field must be a JSON array, not a sentence or object.",
+        "The rationale, risks, and validationPlan fields must all be JSON arrays of strings.",
+        `Example valid JSON shape:\n${JSON.stringify(candidateProposal, null, 2)}`,
         `Goal: ${input.goal}`,
         input.scope ? `Scope: ${input.scope}` : "Scope: repository-wide",
         input.errorLog ? `Error log:\n${input.errorLog}` : "Error log: not provided",
@@ -262,7 +279,7 @@ export class PatchGenerationWorker {
         workerId: input.workerId,
         capability: this.capability.name
       },
-      maxAttempts: 1
+      maxAttempts: 2
     });
 
     return {
