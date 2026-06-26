@@ -101,8 +101,11 @@ ao task resume <taskId> --apply-patch --allow-write --confirm-apply
 Benchmark artifacts are persisted under:
 
 ```text
-~/.ao/workspaces/<workspace-id>/worker-benchmarks/<workerId>/coding-v1.json
+~/.ao/workspaces/<workspace-id>/worker-benchmarks/<sanitized-worker-id>/coding-v1.json
 ```
+
+The persisted directory name uses a filesystem-safe worker id. Example:
+`openai-compatible:deepseek-v4-flash` becomes `openai-compatible_deepseek-v4-flash`.
 
 ## DeepSeek / OpenAI-Compatible Notes
 

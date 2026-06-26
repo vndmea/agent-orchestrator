@@ -8,6 +8,7 @@ Use this document when qualifying DeepSeek through the OpenAI-compatible worker 
 - API key env var: `DEEPSEEK_API_KEY`
 - Primary base URL: `https://api.deepseek.com`
 - Compatibility base URL worth testing in some clients: `https://api.deepseek.com/v1`
+- Verified worker models in the 2026-06-26 internal trial: `deepseek-v4-flash`, `deepseek-v4-pro`
 
 ## Recommended Registration
 
@@ -39,7 +40,12 @@ Expected files:
 
 - `workers.json`
 - `worker-profiles.json`
-- `worker-benchmarks/openai-compatible:deepseek-v4-flash/coding-v1.json`
+- `worker-benchmarks/<sanitized-worker-id>/coding-v1.json`
+
+`<sanitized-worker-id>` is the filesystem-safe form of the worker id. Example:
+
+- worker id: `openai-compatible:deepseek-v4-flash`
+- persisted path segment: `openai-compatible_deepseek-v4-flash`
 
 ## Health Checks
 

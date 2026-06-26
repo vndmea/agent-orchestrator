@@ -31,6 +31,6 @@ How to read task artifacts:
 Worker evaluation layers:
 
 - `ao worker interview --save` establishes onboarding trust and baseline routing limits.
-- `ao worker benchmark --suite coding-v1 --save` records coding benchmark results under `aoStorageDir/worker-benchmarks/<workerId>/coding-v1.json`.
+- `ao worker benchmark --suite coding-v1 --save` records coding benchmark results under `aoStorageDir/worker-benchmarks/<sanitized-worker-id>/coding-v1.json`.
 - `ao worker benchmark --suite coding-v1 --save --update-profile-capabilities` is the explicit step that can enable `patch-generation` on an existing persisted profile when the benchmark passes the required fixtures.
 - Benchmark results alone do not bypass patch inspection, dry-run apply, `allowWrite`, or `confirmApply`.
