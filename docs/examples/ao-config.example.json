@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "leaderModel": {
+    "provider": "mock",
+    "model": "gpt-5.4"
+  },
+  "workerModel": {
+    "provider": "openai-compatible",
+    "model": "deepseek-v4-flash",
+    "baseURL": "https://api.deepseek.com",
+    "apiKeyEnvVar": "DEEPSEEK_API_KEY"
+  },
+  "safety": {
+    "dryRun": true,
+    "allowWrite": false,
+    "allowedCommands": [
+      "git",
+      "node",
+      "pnpm"
+    ]
+  },
+  "context": {
+    "maxFileBytes": 20000,
+    "maxTotalBytes": 120000,
+    "ignoredPaths": [
+      "node_modules",
+      ".git",
+      "dist",
+      "build",
+      "coverage",
+      ".turbo",
+      ".next"
+    ]
+  },
+  "sessions": {
+    "retentionDays": 30,
+    "maxStoredSessions": 100
+  }
+}

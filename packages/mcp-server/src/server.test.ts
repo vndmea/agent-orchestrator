@@ -1,5 +1,5 @@
 import { execFile as execFileCallback } from "node:child_process";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -29,7 +29,8 @@ import {
   aoStartTaskTool,
   aoToolDefinitions,
   aoUnregisterWorkerTool,
-  aoValidateRepositoryTool
+  aoValidateRepositoryTool,
+  mcpToolCatalog
 } from "@agent-orchestrator/mcp-server";
 
 const execFile = promisify(execFileCallback);
@@ -201,38 +202,34 @@ const createProfile = () => ({
   suiteVersion: "1"
 });
 
+const extractCodeBulletList = (markdown: string, heading: string): string[] => {
+  const headingPattern = new RegExp(`^## ${heading}\\r?\\n([\\s\\S]*?)(?=^## |\\Z)`, "m");
+  const sectionMatch = markdown.match(headingPattern);
+
+  if (!sectionMatch) {
+    throw new Error(`Heading not found: ${heading}`);
+  }
+
+  return sectionMatch[1]
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- `") && line.endsWith("`"))
+    .map((line) => line.slice(3, -1));
+};
+
 describe("mcp tool registration", () => {
   it("registers the expected MCP tool names", () => {
-    expect(aoToolDefinitions.map((tool) => tool.name)).toEqual([
-      "ao_plan",
-      "ao_run_workflow",
-      "ao_run_leader_worker",
-      "ao_propose_patch",
-      "ao_inspect_patch",
-      "ao_apply_patch",
-      "ao_review_repository",
-      "ao_review_diff",
-      "ao_review_files",
-      "ao_validate_repository",
-      "ao_fix_error",
-      "ao_start_task",
-      "ao_resume_task",
-      "ao_get_task_status",
-      "ao_list_tasks",
-      "ao_get_task_report",
-      "ao_list_models",
-      "ao_list_workflows",
-      "ao_list_tools",
-      "ao_list_audit_events",
-      "ao_register_worker",
-      "ao_unregister_worker",
-      "ao_list_worker_registry",
-      "ao_get_worker_registration",
-      "ao_interview_worker",
-      "ao_list_workers",
-      "ao_get_worker_profile",
-      "ao_doctor"
-    ]);
+    expect(aoToolDefinitions.map((tool) => tool.name)).toEqual(
+      mcpToolCatalog.map((tool) => tool.name)
+    );
+  });
+
+  it("keeps docs/mcp-server.md exposed tools in sync with the catalog", async () => {
+    const markdown = await readFile(new URL("../../../docs/mcp-server.md", import.meta.url), "utf8");
+
+    expect(extractCodeBulletList(markdown, "Exposed Tools")).toEqual(
+      mcpToolCatalog.map((tool) => tool.name)
+    );
   });
 
   it("lists configured models", async () => {
