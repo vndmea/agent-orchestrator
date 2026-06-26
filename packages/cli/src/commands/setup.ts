@@ -1,95 +1,649 @@
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { dirname, join, relative } from "node:path";
+
 import type { Command } from "commander";
 
-import { resolveExecutionContext, runDoctor } from "@agent-orchestrator/core";
-import { createWorkerProfileDoctorChecks } from "@agent-orchestrator/models";
+import {
+  AgentError,
+  AoConfigSchema,
+  loadAoConfig,
+  resolveExecutionContext,
+  runDoctor,
+  writeAuditEvent,
+  type AoConfig,
+  type ExecutionContext,
+  type ModelConfig
+} from "@agent-orchestrator/core";
+import { runWorkerInterviewWorkflow } from "@agent-orchestrator/graph";
+import {
+  createWorkerProfileDoctorChecks,
+  deriveWorkerRegistrationId,
+  getWorkerProfileStorePath,
+  getWorkerRegistryPath,
+  readPersistedWorkerProfiles,
+  readWorkerRegistry,
+  saveWorkerProfile,
+  saveWorkerRegistration
+} from "@agent-orchestrator/models";
 
 import type { CliIo } from "../index.js";
+
+type SetupStepStatus =
+  | "blocked"
+  | "completed"
+  | "dry-run"
+  | "needs-input"
+  | "skipped";
+
+interface SetupStepResult {
+  command?: string;
+  details?: Record<string, unknown>;
+  id: string;
+  path?: string;
+  status: SetupStepStatus;
+  summary: string;
+}
+
+interface SetupResult {
+  minimalSuccessPath: string[];
+  mode: "execute" | "dry-run";
+  recommendedActions: string[];
+  recommendedEntrypoints: Array<{
+    command: string;
+    description: string;
+    toolName?: string;
+  }>;
+  recommendedEnv: string[];
+  rootDir: string;
+  status: string;
+  steps: SetupStepResult[];
+  summary: string;
+}
+
+interface SetupOptions {
+  allowWrite: boolean;
+  disableValidationAutoDiscover: boolean;
+  interviewWorker: boolean;
+  leaderApiKeyEnvVar?: string;
+  leaderBaseUrl?: string;
+  leaderModel?: string;
+  leaderProvider?: string;
+  lintScript: string[];
+  registerWorker: boolean;
+  testScript: string[];
+  typecheckScript: string[];
+  workerApiKeyEnvVar?: string;
+  workerBaseUrl?: string;
+  workerId?: string;
+  workerModel?: string;
+  workerProvider?: string;
+}
+
+const exists = async (path: string): Promise<boolean> => {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const collect = (value: string, previous: string[]): string[] => [
+  ...previous,
+  value
+];
+
+const unique = (values: Array<string | undefined>): string[] =>
+  Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+
+const relativePath = (rootDir: string, path: string): string =>
+  relative(rootDir, path).replaceAll("\\", "/");
+
+const mergeModelConfig = (
+  existing: AoConfig["leaderModel"] | AoConfig["workerModel"] | undefined,
+  updates: {
+    apiKeyEnvVar?: string;
+    baseURL?: string;
+    model?: string;
+    provider?: string;
+  }
+) => {
+  const hasUpdate =
+    Boolean(updates.provider) ||
+    Boolean(updates.model) ||
+    Boolean(updates.baseURL) ||
+    Boolean(updates.apiKeyEnvVar);
+
+  if (!existing && !hasUpdate) {
+    return undefined;
+  }
+
+  return {
+    ...(existing ?? {}),
+    ...(updates.provider ? { provider: updates.provider } : {}),
+    ...(updates.model ? { model: updates.model } : {}),
+    ...(updates.baseURL ? { baseURL: updates.baseURL } : {}),
+    ...(updates.apiKeyEnvVar ? { apiKeyEnvVar: updates.apiKeyEnvVar } : {})
+  };
+};
+
+const buildDesiredConfig = (
+  existing: AoConfig,
+  options: SetupOptions
+): AoConfig =>
+  AoConfigSchema.parse({
+    ...existing,
+    version: 1,
+    leaderModel: mergeModelConfig(existing.leaderModel, {
+      provider: options.leaderProvider,
+      model: options.leaderModel,
+      baseURL: options.leaderBaseUrl,
+      apiKeyEnvVar: options.leaderApiKeyEnvVar
+    }),
+    workerModel: mergeModelConfig(existing.workerModel, {
+      provider: options.workerProvider,
+      model: options.workerModel,
+      baseURL: options.workerBaseUrl,
+      apiKeyEnvVar: options.workerApiKeyEnvVar
+    }),
+    validation: {
+      ...existing.validation,
+      autoDiscover: options.disableValidationAutoDiscover
+        ? false
+        : existing.validation.autoDiscover,
+      scripts: {
+        typecheck:
+          options.typecheckScript.length > 0
+            ? unique(options.typecheckScript)
+            : existing.validation.scripts.typecheck,
+        lint:
+          options.lintScript.length > 0
+            ? unique(options.lintScript)
+            : existing.validation.scripts.lint,
+        test:
+          options.testScript.length > 0
+            ? unique(options.testScript)
+            : existing.validation.scripts.test
+      }
+    }
+  });
+
+const writeManagedJson = async (
+  context: ExecutionContext,
+  path: string,
+  value: unknown,
+  allowWrite: boolean,
+  action: string
+): Promise<{ mode: "execute" | "dry-run"; path: string; changed: boolean }> => {
+  const evaluation = context.writePolicy.evaluate(path, allowWrite);
+
+  if (!evaluation.allowed || evaluation.mode === "blocked") {
+    throw new AgentError("WRITE_BLOCKED", evaluation.reason, {
+      path: evaluation.normalizedPath
+    });
+  }
+
+  const content = JSON.stringify(value, null, 2);
+  const alreadyExists = await exists(evaluation.normalizedPath);
+  const existingContent = alreadyExists
+    ? await readFile(evaluation.normalizedPath, "utf8")
+    : null;
+  const changed = existingContent !== content;
+
+  if (evaluation.mode === "dry-run") {
+    return {
+      mode: "dry-run",
+      path: evaluation.normalizedPath,
+      changed
+    };
+  }
+
+  if (changed) {
+    await mkdir(dirname(evaluation.normalizedPath), { recursive: true });
+    await writeFile(evaluation.normalizedPath, content, "utf8");
+  }
+
+  await writeAuditEvent(
+    context,
+    {
+      actor: "cli",
+      action,
+      mode: "execute",
+      inputSummary: evaluation.normalizedPath,
+      outputSummary: changed
+        ? `${action} updated ${evaluation.normalizedPath}.`
+        : `${action} left ${evaluation.normalizedPath} unchanged.`,
+      warnings: [],
+      errors: [],
+      metadata: {
+        path: evaluation.normalizedPath,
+        changed
+      }
+    },
+    true
+  );
+
+  return {
+    mode: "execute",
+    path: evaluation.normalizedPath,
+    changed
+  };
+};
+
+const ensureDirectory = async (
+  context: ExecutionContext,
+  path: string,
+  allowWrite: boolean
+): Promise<{ mode: "execute" | "dry-run"; path: string; changed: boolean }> => {
+  const evaluation = context.writePolicy.evaluate(path, allowWrite);
+
+  if (!evaluation.allowed || evaluation.mode === "blocked") {
+    throw new AgentError("WRITE_BLOCKED", evaluation.reason, {
+      path: evaluation.normalizedPath
+    });
+  }
+
+  const changed = !(await exists(evaluation.normalizedPath));
+
+  if (evaluation.mode === "dry-run") {
+    return {
+      mode: "dry-run",
+      path: evaluation.normalizedPath,
+      changed
+    };
+  }
+
+  if (changed) {
+    await mkdir(evaluation.normalizedPath, { recursive: true });
+  }
+
+  return {
+    mode: "execute",
+    path: evaluation.normalizedPath,
+    changed
+  };
+};
+
+const resolveSetupWorkerModel = (
+  context: ExecutionContext,
+  desiredConfig: AoConfig
+): ModelConfig => ({
+  ...context.workerModel,
+  ...(desiredConfig.workerModel ?? {})
+});
+
+const resolveSetupWorkerId = (
+  options: SetupOptions,
+  modelConfig: ModelConfig
+): string => options.workerId ?? deriveWorkerRegistrationId(modelConfig);
+
+const buildValidationSummary = (options: SetupOptions): string => {
+  const mappings = [
+    options.typecheckScript.length > 0
+      ? `typecheck -> ${options.typecheckScript.join(", ")}`
+      : null,
+    options.lintScript.length > 0
+      ? `lint -> ${options.lintScript.join(", ")}`
+      : null,
+    options.testScript.length > 0
+      ? `test -> ${options.testScript.join(", ")}`
+      : null
+  ].filter((value): value is string => Boolean(value));
+
+  if (mappings.length === 0 && !options.disableValidationAutoDiscover) {
+    return "Validation script mappings were left unchanged.";
+  }
+
+  if (mappings.length === 0 && options.disableValidationAutoDiscover) {
+    return "Validation auto-discovery will be disabled without adding explicit script mappings.";
+  }
+
+  return `Validation mappings prepared: ${mappings.join("; ")}.`;
+};
 
 export const registerSetupCommand = (program: Command, io: CliIo): void => {
   program
     .command("setup")
-    .description("Show the guided onboarding path for making this workspace ready for ao tasks.")
-    .action(async () => {
-      const context = await resolveExecutionContext();
-      const report = await runDoctor(context, {
-        additionalChecks: await createWorkerProfileDoctorChecks(context)
-      });
-      const setupSteps = [
-        {
-          id: "bind-workspace",
-          status: report.workspaceBinding.matchesCallerWorkingDirectory
-            ? "ready"
-            : "needs-review",
-          summary: report.workspaceBinding.matchesCallerWorkingDirectory
-            ? `ao is bound to the current workspace: ${report.activeRootDir}`
-            : `ao is bound to ${report.activeRootDir} instead of ${report.workspaceBinding.callerWorkingDirectory}`,
-          command: "ao doctor"
-        },
-        {
-          id: "configure-models",
-          status:
-            report.checks.some((check) => check.name === "leader-api-key" && check.status !== "pass") ||
-            report.checks.some((check) => check.name === "worker-api-key" && check.status !== "pass")
-              ? "needs-review"
-              : "ready",
-          summary:
-            "Confirm the leader and worker model configuration, plus API keys or local client access.",
-          command: "ao doctor"
-        },
-        {
-          id: "register-worker",
-          status:
-            report.checks.some((check) => check.name === "worker-registry" && check.status === "pass")
-              ? "ready"
-              : "needs-review",
-          summary:
-            "Register a worker only if you need explicit worker selection beyond the default fallback worker.",
-          command: "ao worker register --provider <provider> --model <model> --allow-write"
-        },
-        {
-          id: "interview-worker",
-          status:
-            report.checks.some(
-              (check) =>
-                (check.name === "default-worker-profile" ||
-                  check.name === "registered-worker-profile") &&
-                check.status === "pass"
-            )
-              ? "ready"
-              : "needs-review",
-          summary:
-            "Persist a worker interview so ao can route tasks with less guesswork.",
-          command: "ao worker interview --save"
-        },
-        {
-          id: "map-validation",
-          status:
-            report.checks.some(
-              (check) => check.name === "validation-scripts" && check.status === "pass"
-            )
-              ? "ready"
-              : "needs-review",
-          summary:
-            "Map or auto-discover validation scripts so ao can prove results deterministically.",
-          command:
-            "Edit .ao/config.json validation.scripts, then rerun `ao doctor`."
+    .description("Guide and optionally apply the local setup steps needed before ao task workflows feel reliable.")
+    .option("--leader-provider <provider>", "Leader provider")
+    .option("--leader-model <model>", "Leader model")
+    .option("--leader-base-url <url>", "Leader base URL")
+    .option("--leader-api-key-env-var <name>", "Leader API key env var")
+    .option("--worker-provider <provider>", "Worker provider")
+    .option("--worker-model <model>", "Worker model")
+    .option("--worker-base-url <url>", "Worker base URL")
+    .option("--worker-api-key-env-var <name>", "Worker API key env var")
+    .option("--worker-id <workerId>", "Explicit worker id used for register/interview")
+    .option("--register-worker", "Register the configured worker in .ao/workers.json", false)
+    .option("--interview-worker", "Run worker onboarding interview and persist the profile when allowed", false)
+    .option("--typecheck-script <name>", "Add or replace the typecheck script mapping", collect, [])
+    .option("--lint-script <name>", "Add or replace the lint script mapping", collect, [])
+    .option("--test-script <name>", "Add or replace the test script mapping", collect, [])
+    .option("--disable-validation-auto-discover", "Turn off validation script auto-discovery", false)
+    .option("--allow-write", "Persist .ao setup changes", false)
+    .action(async (options: SetupOptions) => {
+      const context = await resolveExecutionContext({
+        cliOverrides: {
+          allowWrite: options.allowWrite,
+          dryRun: !options.allowWrite
         }
-      ];
+      });
+      const steps: SetupStepResult[] = [];
+      const configResult = await loadAoConfig(context.rootDir);
+      const desiredConfig = buildDesiredConfig(configResult.config, options);
+      const registryState = await readWorkerRegistry(context.rootDir);
+      const profileState = await readPersistedWorkerProfiles(context.rootDir);
+      const aoDir = join(context.rootDir, ".ao");
+      const auditDir = join(aoDir, "audit");
+      const runsDir = join(aoDir, "runs");
+      const configPath = join(aoDir, "config.json");
+      const registryPath = getWorkerRegistryPath(context.rootDir);
+      const profilesPath = getWorkerProfileStorePath(context.rootDir);
 
-      io.write(
-        JSON.stringify(
-          {
-            rootDir: report.activeRootDir,
-            status: report.status,
-            summary: report.summary,
-            setupSteps,
-            minimalSuccessPath: report.minimalSuccessPath,
-            recommendedEntrypoints: report.recommendedEntrypoints,
-            recommendedActions: report.recommendedActions.slice(0, 5)
-          },
-          null,
-          2
-        )
+      const aoDirResult = await ensureDirectory(context, aoDir, options.allowWrite);
+      const auditDirResult = await ensureDirectory(context, auditDir, options.allowWrite);
+      const runsDirResult = await ensureDirectory(context, runsDir, options.allowWrite);
+
+      steps.push({
+        id: "workspace-scaffold",
+        status: options.allowWrite ? "completed" : "dry-run",
+        summary: options.allowWrite
+          ? "Ensured .ao workspace directories exist for audit logs and task runs."
+          : "Would ensure .ao workspace directories exist for audit logs and task runs.",
+        details: {
+          aoDir: relativePath(context.rootDir, aoDirResult.path),
+          auditDir: relativePath(context.rootDir, auditDirResult.path),
+          runsDir: relativePath(context.rootDir, runsDirResult.path)
+        }
+      });
+
+      const configWrite = await writeManagedJson(
+        context,
+        configPath,
+        desiredConfig,
+        options.allowWrite,
+        "setup-write-config"
       );
+      steps.push({
+        id: "configure-models",
+        status: configWrite.mode === "execute" ? "completed" : "dry-run",
+        path: relativePath(context.rootDir, configWrite.path),
+        summary:
+          configWrite.changed
+            ? configWrite.mode === "execute"
+              ? "Updated .ao/config.json with the requested model and validation settings."
+              : "Would update .ao/config.json with the requested model and validation settings."
+            : ".ao/config.json already matches the requested model and validation settings.",
+        details: {
+          replacedInvalidConfig: Boolean(configResult.error),
+          leaderModel: desiredConfig.leaderModel,
+          workerModel: desiredConfig.workerModel
+        }
+      });
+
+      if (registryState.error) {
+        steps.push({
+          id: "worker-registry-store",
+          status: "blocked",
+          path: relativePath(context.rootDir, registryPath),
+          summary:
+            "Existing worker registry is invalid. Fix or replace it before setup can manage worker registrations safely.",
+          command: "ao doctor",
+          details: {
+            error: registryState.error
+          }
+        });
+      } else {
+        const registryWrite = await writeManagedJson(
+          context,
+          registryPath,
+          {
+            version: 1,
+            workers: registryState.workers
+          },
+          options.allowWrite,
+          "setup-write-worker-registry"
+        );
+        steps.push({
+          id: "worker-registry-store",
+          status: registryWrite.mode === "execute" ? "completed" : "dry-run",
+          path: relativePath(context.rootDir, registryWrite.path),
+          summary:
+            registryState.exists
+              ? "Worker registry store is ready."
+              : registryWrite.mode === "execute"
+                ? "Created an empty worker registry store."
+                : "Would create an empty worker registry store.",
+          details: {
+            workerCount: registryState.workers.length
+          }
+        });
+      }
+
+      if (profileState.error) {
+        steps.push({
+          id: "worker-profile-store",
+          status: "blocked",
+          path: relativePath(context.rootDir, profilesPath),
+          summary:
+            "Existing worker profile store is invalid. Fix it before setup tries to persist interviewed profiles.",
+          command: "ao doctor",
+          details: {
+            error: profileState.error
+          }
+        });
+      } else {
+        const profileWrite = await writeManagedJson(
+          context,
+          profilesPath,
+          profileState.profiles,
+          options.allowWrite,
+          "setup-write-worker-profiles"
+        );
+        steps.push({
+          id: "worker-profile-store",
+          status: profileWrite.mode === "execute" ? "completed" : "dry-run",
+          path: relativePath(context.rootDir, profileWrite.path),
+          summary:
+            profileState.exists
+              ? "Worker profile store is ready."
+              : profileWrite.mode === "execute"
+                ? "Created an empty worker profile store."
+                : "Would create an empty worker profile store.",
+          details: {
+            profileCount: profileState.profiles.length
+          }
+        });
+      }
+
+      steps.push({
+        id: "map-validation",
+        status:
+          options.allowWrite &&
+          (options.typecheckScript.length > 0 ||
+            options.lintScript.length > 0 ||
+            options.testScript.length > 0 ||
+            options.disableValidationAutoDiscover)
+            ? "completed"
+            : options.typecheckScript.length > 0 ||
+                options.lintScript.length > 0 ||
+                options.testScript.length > 0 ||
+                options.disableValidationAutoDiscover
+              ? "dry-run"
+              : "skipped",
+        command: "ao doctor",
+        summary: buildValidationSummary(options),
+        details: {
+          validation: desiredConfig.validation
+        }
+      });
+
+      const workerModel = resolveSetupWorkerModel(context, desiredConfig);
+      const workerId = resolveSetupWorkerId(options, workerModel);
+
+      if (options.registerWorker) {
+        if (registryState.error) {
+          steps.push({
+            id: "register-worker",
+            status: "blocked",
+            summary:
+              "Worker registration was requested, but the registry store is invalid.",
+            command: "ao doctor"
+          });
+        } else {
+          const registrationResult = await saveWorkerRegistration(
+            context,
+            {
+              workerId,
+              provider: workerModel.provider,
+              model: workerModel.model,
+              baseURL: workerModel.baseURL,
+              apiKeyEnvVar:
+                desiredConfig.workerModel?.apiKeyEnvVar ??
+                options.workerApiKeyEnvVar,
+              enabled: true,
+              tags: ["setup"],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            },
+            options.allowWrite
+          );
+          steps.push({
+            id: "register-worker",
+            status: registrationResult.mode === "execute" ? "completed" : "dry-run",
+            path: relativePath(context.rootDir, registrationResult.path),
+            summary:
+              registrationResult.mode === "execute"
+                ? `Registered worker ${workerId}.`
+                : `Would register worker ${workerId}.`,
+            command: "ao worker registry list",
+            details: {
+              workerId,
+              provider: workerModel.provider,
+              model: workerModel.model
+            }
+          });
+        }
+      } else {
+        steps.push({
+          id: "register-worker",
+          status: "skipped",
+          summary:
+            "Worker registration was skipped. This is fine unless you want explicit worker routing beyond the default worker.",
+          command:
+            "ao worker register --provider <provider> --model <model> --allow-write"
+        });
+      }
+
+      if (options.interviewWorker) {
+        if (profileState.error) {
+          steps.push({
+            id: "interview-worker",
+            status: "blocked",
+            summary:
+              "Worker interview was requested, but the profile store is invalid.",
+            command: "ao doctor"
+          });
+        } else {
+          const interviewResult = await runWorkerInterviewWorkflow({
+            context,
+            workerId,
+            modelConfig: workerModel
+          });
+
+          if (!interviewResult.persistenceAdvice.canPersist) {
+            steps.push({
+              id: "interview-worker",
+              status: "blocked",
+              summary: interviewResult.persistenceAdvice.reason,
+              command: "ao worker interview --save",
+              details: {
+                recommendedActions:
+                  interviewResult.persistenceAdvice.recommendedActions,
+                warnings: interviewResult.warnings
+              }
+            });
+          } else if (options.allowWrite) {
+            const profileSave = await saveWorkerProfile(
+              context,
+              interviewResult.profile,
+              true
+            );
+            steps.push({
+              id: "interview-worker",
+              status: "completed",
+              path: relativePath(context.rootDir, profileSave.path),
+              summary: `Interviewed and persisted worker profile ${workerId}.`,
+              command: "ao worker profile",
+              details: {
+                workerId,
+                profileStatus: interviewResult.profile.status,
+                supportedTaskTypes: interviewResult.profile.supportedTaskTypes
+              }
+            });
+          } else {
+            steps.push({
+              id: "interview-worker",
+              status: "dry-run",
+              path: relativePath(context.rootDir, profilesPath),
+              summary:
+                `Would persist interviewed worker profile ${workerId} after rerunning with --allow-write.`,
+              command: "ao worker interview --save",
+              details: {
+                workerId,
+                profileStatus: interviewResult.profile.status,
+                supportedTaskTypes: interviewResult.profile.supportedTaskTypes
+              }
+            });
+          }
+        }
+      } else {
+        steps.push({
+          id: "interview-worker",
+          status: "skipped",
+          summary:
+            "Worker interview was skipped. Run it when you want persisted routing confidence instead of default fallback behavior.",
+          command: "ao worker interview --save"
+        });
+      }
+
+      const finalContext = await resolveExecutionContext({
+        rootDir: context.rootDir
+      });
+      const finalDoctor = await runDoctor(finalContext, {
+        additionalChecks: await createWorkerProfileDoctorChecks(finalContext)
+      });
+
+      steps.push({
+        id: "readiness-summary",
+        status:
+          finalDoctor.status === "ready"
+            ? "completed"
+            : finalDoctor.status === "degraded"
+              ? "needs-input"
+              : "blocked",
+        command: "ao doctor",
+        summary: finalDoctor.summary,
+        details: {
+          capabilities: finalDoctor.capabilities
+        }
+      });
+
+      const result: SetupResult = {
+        mode: options.allowWrite ? "execute" : "dry-run",
+        rootDir: context.rootDir,
+        status: finalDoctor.status,
+        summary: finalDoctor.summary,
+        steps,
+        recommendedEnv: unique([
+          desiredConfig.leaderModel?.apiKeyEnvVar,
+          desiredConfig.workerModel?.apiKeyEnvVar
+        ]).map((name) => `export ${name}=...`),
+        minimalSuccessPath: finalDoctor.minimalSuccessPath,
+        recommendedEntrypoints: finalDoctor.recommendedEntrypoints,
+        recommendedActions: finalDoctor.recommendedActions.slice(0, 6)
+      };
+
+      io.write(JSON.stringify(result, null, 2));
     });
 };

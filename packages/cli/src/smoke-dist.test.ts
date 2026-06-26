@@ -16,6 +16,20 @@ const withTempCwd = async (
   await callback(rootDir);
 };
 
+const listToolNames = (stdout: string): string[] => {
+  const parsed = JSON.parse(stdout) as
+    | Array<{ name: string }>
+    | {
+        groups?: Array<{
+          tools: Array<{ name: string }>;
+        }>;
+      };
+
+  return Array.isArray(parsed)
+    ? parsed.map((tool) => tool.name)
+    : (parsed.groups ?? []).flatMap((group) => group.tools.map((tool) => tool.name));
+};
+
 describe("cli dist smoke", () => {
   it("runs the built cli entrypoint without network access", async () => {
     await withTempCwd(async (rootDir) => {
@@ -32,11 +46,8 @@ describe("cli dist smoke", () => {
       const tools = await execFile("node", [distCliPath, "mcp", "list-tools"], {
         cwd: rootDir
       });
-      expect(
-        (JSON.parse(tools.stdout) as Array<{ name: string }>).some(
-          (tool) => tool.name === "ao_start_task"
-        )
-      ).toBe(true);
+      const toolNames = listToolNames(tools.stdout);
+      expect(toolNames).toContain("ao_start_task");
 
       const config = await execFile("node", [distCliPath, "mcp", "config"], {
         cwd: rootDir

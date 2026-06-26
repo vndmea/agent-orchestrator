@@ -43,6 +43,9 @@ const withTempCwd = async (
   }
 };
 
+const parseLastJson = <T>(output: string[]): T =>
+  JSON.parse(output.at(-1) ?? "{}") as T;
+
 const writeProfiles = async (rootDir: string, profiles: unknown[]): Promise<void> => {
   const aoDir = join(rootDir, ".ao");
   await mkdir(aoDir, { recursive: true });
@@ -387,9 +390,90 @@ describe("cli parsing", () => {
 
       await cli.parseAsync(["node", "ao", "setup"]);
 
-      expect(output.join("\n")).toContain("\"minimalSuccessPath\"");
-      expect(output.join("\n")).toContain("\"recommendedEntrypoints\"");
-      expect(output.join("\n")).toContain("\"setupSteps\"");
+      const result = parseLastJson<{
+        minimalSuccessPath: string[];
+        recommendedEntrypoints: Array<{ command: string }>;
+        steps: Array<{ id: string }>;
+      }>(output);
+
+      expect(result.minimalSuccessPath.length).toBeGreaterThan(0);
+      expect(result.recommendedEntrypoints.length).toBeGreaterThan(0);
+      expect(result.steps.some((step) => step.id === "readiness-summary")).toBe(true);
+    });
+  });
+
+  it("can apply setup, register a worker, and persist an interviewed profile", async () => {
+    await withTempCwd(async (rootDir) => {
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "setup",
+        "--leader-provider",
+        "mock",
+        "--leader-model",
+        "setup-leader",
+        "--worker-provider",
+        "mock",
+        "--worker-model",
+        "setup-worker",
+        "--register-worker",
+        "--interview-worker",
+        "--typecheck-script",
+        "check-types",
+        "--lint-script",
+        "lint:ci",
+        "--allow-write"
+      ]);
+
+      const result = parseLastJson<{
+        mode: string;
+        steps: Array<{ id: string; status: string }>;
+      }>(output);
+
+      expect(result.mode).toBe("execute");
+      expect(
+        result.steps.some(
+          (step) => step.id === "register-worker" && step.status === "completed"
+        )
+      ).toBe(true);
+      expect(
+        result.steps.some(
+          (step) => step.id === "interview-worker" && step.status === "completed"
+        )
+      ).toBe(true);
+
+      const savedConfig = JSON.parse(
+        await readFile(join(rootDir, ".ao", "config.json"), "utf8")
+      ) as {
+        workerModel?: { model?: string };
+        validation?: {
+          scripts?: {
+            lint?: string[];
+            typecheck?: string[];
+          };
+        };
+      };
+      const savedRegistry = JSON.parse(
+        await readFile(join(rootDir, ".ao", "workers.json"), "utf8")
+      ) as {
+        workers: Array<{ workerId: string }>;
+      };
+      const savedProfiles = JSON.parse(
+        await readFile(join(rootDir, ".ao", "worker-profiles.json"), "utf8")
+      ) as Array<{ workerId: string }>;
+
+      expect(savedConfig.workerModel?.model).toBe("setup-worker");
+      expect(savedConfig.validation?.scripts?.typecheck).toContain("check-types");
+      expect(savedConfig.validation?.scripts?.lint).toContain("lint:ci");
+      expect(savedRegistry.workers.some((worker) => worker.workerId === "mock:setup-worker")).toBe(
+        true
+      );
+      expect(savedProfiles.some((profile) => profile.workerId === "mock:setup-worker")).toBe(
+        true
+      );
     });
   });
 

@@ -1,5 +1,6 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ZodError } from "zod";
 
 import { AgentError, resolveExecutionContext } from "@agent-orchestrator/core";
 
@@ -79,8 +80,9 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
 export const toStructuredContent = (result: unknown): Record<string, unknown> =>
   isPlainObject(result) ? result : { result };
 
-const toUserFacingToolError = (error: unknown): Error => {
+export const formatUserFacingToolErrorMessage = (error: unknown): string => {
   const message = error instanceof Error ? error.message : String(error);
+  const normalizedMessage = message.toLowerCase();
 
   if (error instanceof AgentError) {
     const userMessage =
@@ -94,12 +96,45 @@ const toUserFacingToolError = (error: unknown): Error => {
               ? "ao refused to write because the current safety mode does not allow that path yet."
               : "ao reached the tool, but the request could not be completed cleanly.";
 
-    return new Error(`${userMessage} Technical details: ${message}`);
+    return `${userMessage} Technical details: ${message}`;
   }
 
-  return new Error(
-    `ao reached the tool, but it failed unexpectedly. Technical details: ${message}`
-  );
+  if (error instanceof ZodError) {
+    return `The service is connected, but the request or response shape does not match the expected schema. Technical details: ${message}`;
+  }
+
+  if (
+    normalizedMessage.includes("expected record") &&
+    normalizedMessage.includes("received array")
+  ) {
+    return `The service is connected, but this response format is incompatible with the current client expectation. Technical details: ${message}`;
+  }
+
+  if (
+    (normalizedMessage.includes("config.json") ||
+      normalizedMessage.includes(".ao/") ||
+      normalizedMessage.includes("configuration")) &&
+    (normalizedMessage.includes("invalid") ||
+      normalizedMessage.includes("missing") ||
+      normalizedMessage.includes("parse"))
+  ) {
+    return `The service is connected, but ao found a local configuration problem in this workspace. Technical details: ${message}`;
+  }
+
+  if (
+    normalizedMessage.includes("api key") ||
+    normalizedMessage.includes("401") ||
+    normalizedMessage.includes("unauthorized") ||
+    normalizedMessage.includes("forbidden")
+  ) {
+    return `The service is connected, but the configured model credentials were rejected or are incomplete. Technical details: ${message}`;
+  }
+
+  return `ao reached the tool, but it failed unexpectedly. Technical details: ${message}`;
+};
+
+const toUserFacingToolError = (error: unknown): Error => {
+  return new Error(formatUserFacingToolErrorMessage(error));
 };
 
 export interface AoMcpServerOptions {

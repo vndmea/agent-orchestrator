@@ -41,6 +41,16 @@ const withTempCwd = async (
 const parseLastJson = <T>(output: string[]): T =>
   JSON.parse(output.at(-1) ?? "{}") as T;
 
+const listToolNames = (output: string[]): string[] => {
+  const parsed = parseLastJson<
+    Array<{ name: string }> | { groups?: Array<{ tools: Array<{ name: string }> }> }
+  >(output);
+
+  return Array.isArray(parsed)
+    ? parsed.map((tool) => tool.name)
+    : (parsed.groups ?? []).flatMap((group) => group.tools.map((tool) => tool.name));
+};
+
 describe("cli smoke", () => {
   it("renders help and basic local commands without network access", async () => {
     await withTempCwd(async () => {
@@ -57,7 +67,7 @@ describe("cli smoke", () => {
       expect(parseLastJson<Array<{ role: string }>>(output).some((item) => item.role === "leader")).toBe(true);
 
       await cli.parseAsync(["node", "ao", "mcp", "list-tools"]);
-      expect(parseLastJson<Array<{ name: string }>>(output).some((item) => item.name === "ao_start_task")).toBe(true);
+      expect(listToolNames(output)).toContain("ao_start_task");
 
       await cli.parseAsync(["node", "ao", "mcp", "config"]);
       expect(parseLastJson<{ mcpServers: Record<string, unknown> }>(output).mcpServers["agent-orchestrator"]).toBeTruthy();

@@ -5,8 +5,10 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
+  AgentError,
   PatchProposalSchema,
   type TaskSession
 } from "@agent-orchestrator/core";
@@ -38,6 +40,7 @@ import {
   aoRunLeaderWorkerTool,
   aoStartTaskTool,
   aoToolDefinitions,
+  formatUserFacingToolErrorMessage,
   toStructuredContent,
   aoUnregisterWorkerTool,
   aoValidateRepositoryTool,
@@ -299,6 +302,42 @@ describe("mcp tool registration", () => {
       ok: true,
       tool: "ao_doctor"
     });
+  });
+
+  it("formats known agent errors into user-facing MCP messages", () => {
+    expect(
+      formatUserFacingToolErrorMessage(
+        new AgentError("TASK_ARTIFACT_NOT_FOUND", "artifact report.md is missing")
+      )
+    ).toContain("artifact is not registered");
+  });
+
+  it("explains schema mismatches in user language", () => {
+    const schemaResult = z
+      .object({
+        structuredContent: z.record(z.string(), z.unknown())
+      })
+      .safeParse({
+        structuredContent: []
+      });
+
+    expect(schemaResult.success).toBe(false);
+
+    if (schemaResult.success) {
+      throw new Error("Expected schema mismatch.");
+    }
+
+    expect(formatUserFacingToolErrorMessage(schemaResult.error)).toContain(
+      "request or response shape does not match the expected schema"
+    );
+  });
+
+  it("explains record-versus-array compatibility failures in user language", () => {
+    expect(
+      formatUserFacingToolErrorMessage(
+        new Error("structuredContent expected record, received array")
+      )
+    ).toContain("response format is incompatible");
   });
 
   it("manages worker registry through MCP tools", async () => {
