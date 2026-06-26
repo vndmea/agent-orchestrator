@@ -169,12 +169,6 @@ const TASK_STEP_LABELS: Record<TaskStepId, string> = {
   "patch-applied": "Patch applied"
 };
 
-const LEGACY_STEP_IDS: Record<string, TaskStepId> = {
-  review: "reviewed",
-  "propose-patch": "patch-proposed",
-  "apply-patch": "patch-applied"
-};
-
 const buildDefaultValidation = (
   validation: TaskSessionValidationOptions | undefined
 ): Required<TaskSessionValidationOptions> => ({
@@ -190,11 +184,6 @@ const normalizeStepId = (value: string | undefined): TaskStepId | undefined => {
 
   if (STEP_IDS.includes(value as TaskStepId)) {
     return value as TaskStepId;
-  }
-
-  const legacyStepId = LEGACY_STEP_IDS[value];
-  if (legacyStepId) {
-    return legacyStepId;
   }
 
   throw new AgentError("TASK_STEP_INVALID", `Unknown task step: ${value}`, {

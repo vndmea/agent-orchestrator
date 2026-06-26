@@ -859,42 +859,6 @@ describe("cli parsing", () => {
     });
   }, 15_000);
 
-  it("initializes local ao scaffolding", async () => {
-    await withTempCwd(async () => {
-      const { io, output } = createIo();
-      const cli = buildCli(io);
-
-      await cli.parseAsync([
-        "node",
-        "ao",
-        "init",
-        "--leader-provider",
-        "litellm",
-        "--leader-model",
-        "qwen3-coder",
-        "--leader-api-key-env-var",
-        "LITELLM_API_KEY"
-      ]);
-      expect(output.at(-1)).toContain("\"mode\": \"dry-run\"");
-      expect(output.at(-1)).toContain("config.json");
-
-      await cli.parseAsync([
-        "node",
-        "ao",
-        "init",
-        "--leader-provider",
-        "litellm",
-        "--leader-model",
-        "qwen3-coder",
-        "--leader-api-key-env-var",
-        "LITELLM_API_KEY",
-        "--allow-write"
-      ]);
-      expect(output.at(-1)).toContain("\"mode\": \"execute\"");
-      expect(output.at(-1)).toContain("config.json");
-    });
-  });
-
   it("runs task session lifecycle commands", async () => {
     await withTempCwd(async (rootDir) => {
       await writeWorkspaceFixture(rootDir);

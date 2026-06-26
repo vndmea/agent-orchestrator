@@ -9,7 +9,7 @@ import {
 
 import { runSafeCommand } from "../shell/safe-command.js";
 
-const IGNORED_LOCAL_PREFIXES = [".ao/", "tmp/"] as const;
+const IGNORED_LOCAL_PREFIXES = ["tmp/"] as const;
 
 const normalizeGitPath = (path: string): string =>
   path.replaceAll("\\", "/").replace(/^\.\/+/u, "");

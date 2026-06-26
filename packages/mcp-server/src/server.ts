@@ -112,8 +112,6 @@ export const formatUserFacingToolErrorMessage = (error: unknown): string => {
 
   if (
     (normalizedMessage.includes("config.json") ||
-      normalizedMessage.includes("/.ao/") ||
-      normalizedMessage.includes("\\.ao\\") ||
       normalizedMessage.includes("workspaces") ||
       normalizedMessage.includes("configuration")) &&
     (normalizedMessage.includes("invalid") ||

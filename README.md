@@ -97,8 +97,6 @@ Legacy repository-local `.ao/` directories are unsupported and ignored by curren
 - `audit/`
 - `runs/`
 
-`ao init` remains available as a lower-level bootstrap command, but `ao setup` is the primary onboarding entrypoint.
-
 ## CLI usage
 
 ```bash
@@ -400,7 +398,7 @@ If you want different endpoints for leader and worker traffic, use the model-spe
 - File writes require explicit policy allowance.
 - Shell execution is allowlisted.
 - Read-only git inspection commands such as `git diff` can still execute inside dry-run so review workflows keep working without enabling writes.
-- `ao setup`, `ao init`, `ao cleanup`, worker registry writes, and task session persistence remain local-only inside AO-managed storage.
+- `ao setup`, `ao cleanup`, worker registry writes, and task session persistence remain local-only inside AO-managed storage.
 - Repository reads stay inside the repo root and block secret-like files such as `.env` and private keys.
 - Dedicated review and fix flows return structured JSON and do not apply patches.
 - Patch proposal, inspection, and apply are separated to keep write actions reviewable.

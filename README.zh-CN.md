@@ -94,8 +94,6 @@ pnpm exec ao mcp config
 - `audit/`
 - `runs/`
 
-`ao init` 仍然保留为更底层的初始化命令，但新用户入口应以 `ao setup` 为主。
-
 ## CLI 用法
 
 ```bash
@@ -395,7 +393,7 @@ pnpm example:leader-worker-basic
 - 文件写入需要显式的策略授权。
 - Shell 执行通过 allowlist 控制。
 - `git diff` 这类只读 git 检查命令即使在 dry-run 下也允许执行，因此 review workflow 不需要开启写权限。
-- `ao setup`、`ao init`、`ao cleanup`、worker registry 写入和 task session 持久化都只作用于 AO 本地存储。
+- `ao setup`、`ao cleanup`、worker registry 写入和 task session 持久化都只作用于 AO 本地存储。
 - 仓库读取必须留在 repo root 内，并会阻止 `.env`、私钥等 secret-like 文件进入上下文。
 - 专用 review / fix 流程只返回结构化 JSON，不会自动应用 patch。
 - patch proposal / inspection / apply 被显式拆开，保证写入动作始终可审查。

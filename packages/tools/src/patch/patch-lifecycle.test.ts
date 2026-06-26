@@ -34,7 +34,7 @@ const createGitRoot = async (): Promise<string> => {
     ),
     "utf8"
   );
-  await writeFile(join(rootDir, ".gitignore"), ".ao\ntmp\n", "utf8");
+  await writeFile(join(rootDir, ".gitignore"), "tmp\n", "utf8");
   await writeFile(join(rootDir, "demo.ts"), "export const value = 1;\n", "utf8");
   await execFile("git", ["init"], { cwd: rootDir });
   await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
@@ -285,11 +285,11 @@ describe("patch lifecycle tools", () => {
     expect(result.dirtyWorktree?.untrackedFiles).toContain("notes.txt");
   });
 
-  it("ignores .ao artifacts but can explicitly allow other dirty changes", async () => {
+  it("ignores tmp artifacts but can explicitly allow other dirty changes", async () => {
     const rootDir = await createGitRoot();
     const proposal = await createValidProposal(rootDir);
-    await mkdir(join(rootDir, ".ao", "runs", "task-1"), { recursive: true });
-    await writeFile(join(rootDir, ".ao", "runs", "task-1", "session.json"), "{}", "utf8");
+    await mkdir(join(rootDir, "tmp", "task-1"), { recursive: true });
+    await writeFile(join(rootDir, "tmp", "task-1", "session.json"), "{}", "utf8");
     await writeFile(join(rootDir, "notes.txt"), "local change\n", "utf8");
 
     const blocked = await applyPatchProposal(createContext(rootDir), proposal, {
@@ -300,7 +300,7 @@ describe("patch lifecycle tools", () => {
       allowDirtyWorktree: true
     });
 
-    expect(blocked.dirtyWorktree?.ignoredFiles).toContain(".ao/runs/task-1/session.json");
+    expect(blocked.dirtyWorktree?.ignoredFiles).toContain("tmp/task-1/session.json");
     expect(blocked.dirtyWorktree?.untrackedFiles).toContain("notes.txt");
     expect(allowed.mode).toBe("dry-run");
     expect(allowed.warnings).toContain(
