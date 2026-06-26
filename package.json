@@ -4,6 +4,7 @@
   "private": true,
   "description": "TypeScript agent orchestration server for multi-model engineering workflows via CLI and MCP.",
   "type": "module",
+  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=22"
   },
