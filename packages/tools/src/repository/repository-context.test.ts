@@ -108,6 +108,60 @@ describe("repository context pack", () => {
     ).rejects.toThrow("escapes the repository root");
   });
 
+  it("allows explicit files that stay inside the provided scope", async () => {
+    const rootDir = await createRootDir();
+
+    await writeText(rootDir, "packages/pkg/src/index.ts", "export const value = 1;\n");
+    await writeText(rootDir, "packages/pkg/src/helper.ts", "export const helper = true;\n");
+
+    const result = await selectRepositoryFiles({
+      rootDir,
+      scope: "packages/pkg",
+      files: ["packages/pkg/src/index.ts", "packages/pkg/src/helper.ts"]
+    });
+
+    expect(result.selectedFiles).toHaveLength(2);
+    expect(result.selectedFiles.every((file) => file.path.startsWith("packages/pkg/"))).toBe(true);
+  });
+
+  it("blocks explicit files outside the provided scope with a stable error code", async () => {
+    const rootDir = await createRootDir();
+
+    await writeText(rootDir, "packages/pkg/src/index.ts", "export const value = 1;\n");
+    await writeText(rootDir, "packages/other/src/hidden.ts", "export const hidden = true;\n");
+
+    await expect(
+      selectRepositoryFiles({
+        rootDir,
+        scope: "packages/pkg",
+        files: ["packages/other/src/hidden.ts"]
+      })
+    ).rejects.toMatchObject({
+      code: "REPOSITORY_SCOPE_BLOCKED",
+      details: {
+        path: "packages/other/src/hidden.ts",
+        scope: "packages/pkg"
+      }
+    });
+  });
+
+  it("still blocks root escapes before applying scope checks", async () => {
+    const rootDir = await createRootDir();
+
+    await expect(
+      selectRepositoryFiles({
+        rootDir,
+        scope: "packages/pkg",
+        files: ["../outside.txt"]
+      })
+    ).rejects.toMatchObject({
+      code: "REPOSITORY_PATH_BLOCKED",
+      details: {
+        path: "../outside.txt"
+      }
+    });
+  });
+
   it("uses context budget defaults from execution context", async () => {
     const rootDir = await createRootDir();
     const context = createExecutionContextFromEnv(undefined, {

@@ -5,6 +5,7 @@ import {
   type PatchInspection,
   type PatchProposal,
   type RepositoryContextPack,
+  type ValidationReport,
   resolveExecutionContext,
   writeAuditEvent
 } from "@agent-orchestrator/core";
@@ -33,6 +34,7 @@ export interface PatchProposalWorkflowInput {
   requireProfile?: boolean;
   reviewResult?: unknown;
   scope?: string;
+  validationReport?: ValidationReport;
   workerId?: string;
 }
 
@@ -129,6 +131,7 @@ export const runPatchProposalWorkflow = async (
     repositoryContext,
     reviewResult: input.reviewResult,
     scope: input.scope,
+    validationReport: input.validationReport,
     workerId,
     workerProfile
   });

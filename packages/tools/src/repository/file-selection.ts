@@ -155,6 +155,27 @@ export const isRepositoryPathInsideScope = (
   );
 };
 
+const ensureInsideScope = (
+  rootDir: string,
+  path: string,
+  scope?: string
+): string => {
+  const normalized = ensureInsideRoot(rootDir, path);
+
+  if (!scope || isRepositoryPathInsideScope(rootDir, normalized, scope)) {
+    return normalized;
+  }
+
+  throw new AgentError(
+    "REPOSITORY_SCOPE_BLOCKED",
+    `Path ${path} is outside the allowed repository scope ${scope}.`,
+    {
+      path: toRelativePath(rootDir, normalized),
+      scope
+    }
+  );
+};
+
 export const readScopedRepositoryFile = async (
   rootDir: string,
   path: string,
@@ -206,7 +227,7 @@ export const selectRepositoryFiles = async ({
   let selectionReasons: SelectionReason[] = [];
 
   const selectedSet = new Set(
-    (files ?? []).map((file) => toRelativePath(rootDir, ensureInsideRoot(rootDir, file)))
+    (files ?? []).map((file) => toRelativePath(rootDir, ensureInsideScope(rootDir, file, scope)))
   );
   const candidateFiles: RepositoryFileContent[] = [];
 
@@ -253,7 +274,7 @@ export const selectRepositoryFiles = async ({
   if (selectedSet.size > 0) {
     let totalBytes = 0;
     for (const path of selectedSet) {
-      const fullPath = ensureInsideRoot(rootDir, path);
+      const fullPath = ensureInsideScope(rootDir, path, scope);
       const fileStat = await stat(fullPath);
       summaries.push({
         path,

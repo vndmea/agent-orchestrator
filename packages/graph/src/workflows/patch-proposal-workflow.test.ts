@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createExecutionContextFromEnv,
+  type ValidationReport,
   WorkerCapabilityProfileSchema
 } from "@agent-orchestrator/core";
 import {
@@ -141,6 +142,49 @@ describe("patch proposal workflow", () => {
     expect(applyResult.errors).toContain(
       "Patch proposal is a fallback placeholder and must not be applied."
     );
+
+    invokeStructuredSpy.mockRestore();
+  });
+
+  it("passes validation reports through to structured patch generation", async () => {
+    const rootDir = await createWorkspace();
+    const validationReport: ValidationReport = {
+      ok: false,
+      warnings: ["typecheck still failing"],
+      checks: [
+        {
+          name: "typecheck",
+          command: "pnpm typecheck",
+          status: "failure",
+          stderr: "TS2304: Cannot find name 'missingValue'."
+        }
+      ]
+    };
+    let capturedPrompt = "";
+    const invokeStructuredSpy = vi
+      .spyOn(models, "invokeStructured")
+      .mockImplementation(async (request) => {
+        capturedPrompt = request.prompt;
+        return {
+          ok: true,
+          data: request.mockResponse,
+          rawText: JSON.stringify(request.mockResponse),
+          raw: request.mockResponse,
+          attempts: 1,
+          errors: []
+        };
+      });
+
+    await runPatchProposalWorkflow({
+      context: createContext(rootDir),
+      goal: "Fix the failing typecheck",
+      scope: "packages/core",
+      validationReport
+    });
+
+    expect(capturedPrompt).toContain("Validation report:");
+    expect(capturedPrompt).toContain("pnpm typecheck");
+    expect(capturedPrompt).toContain("missingValue");
 
     invokeStructuredSpy.mockRestore();
   });

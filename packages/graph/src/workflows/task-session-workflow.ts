@@ -683,6 +683,7 @@ const executePatchProposalStep = async (input: {
   goal: string;
   reviewResult: ReviewWorkflowOutput;
   session: TaskSession;
+  validationReport?: ValidationReport;
   workerId?: string;
 }): Promise<PatchProposalWorkflowOutput> => {
   const proposalStep = getStep(input.session, "patch-proposed");
@@ -699,6 +700,7 @@ const executePatchProposalStep = async (input: {
       input.fixResult?.repositoryContext ?? input.reviewResult.repositoryContext,
     reviewResult: input.reviewResult,
     workerId: input.workerId,
+    validationReport: input.validationReport,
     requireProfile: input.session.requireProfile
   });
   const proposalPath = await persistArtifact(
@@ -938,6 +940,11 @@ export const runTaskSessionWorkflow = async (
     finalizeStep(getStep(session, "fix-planned"), "skipped");
   }
 
+  const repositoryContext =
+    fixResult?.repositoryContext ?? reviewResult.repositoryContext;
+  const validationReport =
+    fixResult?.validationReport ?? reviewResult.validationReport;
+
   if (input.proposePatch || input.inspectPatch) {
     patchResult = await executePatchProposalStep({
       context: resolved.context,
@@ -946,6 +953,7 @@ export const runTaskSessionWorkflow = async (
       fixResult,
       goal: input.goal,
       errorLog: input.errorLog,
+      validationReport,
       workerId: resolved.requestedWorkerId,
       allowWriteSession
     });
@@ -977,11 +985,6 @@ export const runTaskSessionWorkflow = async (
   } else {
     finalizeStep(getStep(session, "patch-applied"), "skipped");
   }
-
-  const repositoryContext =
-    fixResult?.repositoryContext ?? reviewResult.repositoryContext;
-  const validationReport =
-    fixResult?.validationReport ?? reviewResult.validationReport;
   const finalStatus = resolveFinalStatus({
     applyPatchRequested: input.applyPatch ?? false,
     patchApplyResult,
@@ -1131,6 +1134,7 @@ export const resumeTaskSessionWorkflow = async (
       fixResult,
       goal: session.goal,
       errorLog: options.errorLog,
+      validationReport,
       workerId: options.requestedWorkerId,
       allowWriteSession: input.allowWriteSession ?? false
     });

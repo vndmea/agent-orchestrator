@@ -165,7 +165,8 @@ export const runFixErrorWorkflow = async (
           ? `Fix issues within ${input.scope}`
           : "Fix the supplied repository issue",
         repositoryContext,
-        scope: input.scope
+        scope: input.scope,
+        validationReport
       })
     : undefined;
 
