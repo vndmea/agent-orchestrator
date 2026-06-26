@@ -2,6 +2,8 @@
 
 Default behavior is conservative.
 
+For the concrete permission model and write gates, see `docs/permissions.md`.
+
 - File writes stay in dry-run mode unless policy explicitly allows them.
 - Shell execution uses an allowlist.
 - Worker outputs require leader review before final acceptance.

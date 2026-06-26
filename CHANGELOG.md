@@ -10,6 +10,8 @@ The current internal trial line follows semantic-style version labels even while
 
 - Trial runbook for internal onboarding, worker evaluation, and task session execution.
 - Example AO config under `docs/examples/ao-config.example.json`.
+- Installation guide for the current workspace-based internal-trial path.
+- Permission model document covering dry-run, session writes, repository writes, patch apply gates, and local audit artifacts.
 - Expanded MCP and CLI documentation aligned with current command and tool names.
 - Interview diagnostics that distinguish provider invocation failures from completed worker evaluations.
 - Summary-first MCP/CLI output shaping and a minimal task artifact reader for persisted `.ao/runs` artifacts.
@@ -17,6 +19,7 @@ The current internal trial line follows semantic-style version labels even while
 ### Changed
 
 - Documented internal trial evidence requirements, config safety expectations, and current MCP tool surface.
+- `patch propose` now supports the same summary/full output controls as other high-level CLI and MCP workflow entrypoints.
 - `worker interview --save` now skips persistence when provider access fails and returns re-interview guidance instead of saving a misleading blocked profile.
 - Validation reports now include compact diagnostic summaries so MCP and CLI clients can stay within tighter context budgets.
 

@@ -2,6 +2,9 @@
 
 The CLI entrypoint is `ao`.
 
+For the verified internal-trial install path, see `docs/install.md`.
+For write gates and local artifact boundaries, see `docs/permissions.md`.
+
 ## Core Commands
 
 ```bash
@@ -46,6 +49,7 @@ Writes remain in dry-run mode unless a command explicitly enables repository wri
 
 - `ao fix error` analyzes an inline error log or `--error-log-file` and returns a structured fix plan.
 - `ao patch propose` generates a reviewable patch proposal without applying changes.
+- `ao patch propose --summary --max-bytes 4000` prints a smaller proposal summary while `--full` preserves the entire workflow payload.
 - `ao patch inspect` is the safety gate for a stored proposal or raw diff import.
 - `ao patch apply` requires both `--allow-write` and `--confirm-apply` before repository writes are permitted.
 

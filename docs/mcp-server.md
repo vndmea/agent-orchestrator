@@ -50,6 +50,7 @@ Use `ao_start_task` as the default high-level entrypoint for coding flows, and f
 - Internal trial workflow: start with `docs/trial-runbook.md`.
 - MCP client integration: start with `ao_start_task`, `ao_resume_task`, and `ao_get_task_report`.
 - Command/operator detail: refer to `docs/cli.md`.
+- Workspace install and launch: refer to `docs/install.md`.
 
 ## Artifact-Oriented Usage
 
@@ -65,7 +66,7 @@ Typical artifacts include:
 
 Use `ao_read_task_artifact` for the minimum safe artifact-read path when a task response only returns refs.
 
-Task-oriented MCP tools default to summary-oriented responses. Use these optional fields when the client needs more or less detail:
+Task-oriented MCP tools, including `ao_propose_patch`, default to summary-oriented responses. Use these optional fields when the client needs more or less detail:
 
 - `detailLevel`: `summary` or `full`
 - `includeArtifactRefs`: include or suppress persisted artifact refs

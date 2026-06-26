@@ -68,9 +68,9 @@ This repository targets actively maintained Node.js LTS releases only. Use Node 
 node --version
 pnpm install
 pnpm build
-pnpm cli -- doctor
-ao init --allow-write
-ao doctor
+pnpm exec ao doctor
+pnpm exec ao init --allow-write
+pnpm exec ao doctor
 pnpm typecheck
 pnpm test
 ```
@@ -78,10 +78,12 @@ pnpm test
 ## First run
 
 ```bash
-ao init --allow-write
-ao doctor
-ao mcp config
+pnpm exec ao init --allow-write
+pnpm exec ao doctor
+pnpm exec ao mcp config
 ```
+
+Internal-trial installation and MCP launch guidance lives in `docs/install.md`.
 
 `ao init` creates local-only scaffolding under `.ao/`:
 
@@ -282,6 +284,8 @@ ao task resume <taskId> \
 
 Session persistence is separate from repository writes. `--allow-write-session` only permits `.ao/runs` artifacts. It does not enable patch apply.
 
+See `docs/permissions.md` for the full write-gate model.
+
 ## MCP server usage
 
 Start the stdio server:
@@ -400,6 +404,8 @@ If you want different endpoints for leader and worker traffic, use the model-spe
 - Workers must pass onboarding evaluation before they should receive production tasks.
 - Workers that fail structured output or reliability checks are limited or blocked.
 - Secrets are expected from environment variables and should never be logged.
+
+See `docs/permissions.md` for the concrete permission layers and write-gate examples.
 
 ## Dist smoke
 

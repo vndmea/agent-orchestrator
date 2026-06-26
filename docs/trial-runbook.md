@@ -7,6 +7,8 @@ Supporting templates:
 - Trial evidence template: `docs/examples/internal-trial-evidence-template.md`
 - RC checklist: `docs/internal-trial-rc-matrix.md`
 - Branch protection / required checks: `docs/repository-governance.md`
+- Install path: `docs/install.md`
+- Permission model: `docs/permissions.md`
 
 ## Prerequisites
 
@@ -20,6 +22,7 @@ Supporting templates:
 ```bash
 pnpm install
 pnpm build
+pnpm exec ao doctor
 pnpm smoke
 pnpm smoke:dist
 pnpm typecheck
@@ -30,8 +33,8 @@ pnpm test
 ## Local Setup
 
 ```bash
-ao init --allow-write
-ao doctor
+pnpm exec ao init --allow-write
+pnpm exec ao doctor
 ```
 
 Recommended next checks:
@@ -46,6 +49,8 @@ Recommended next checks:
 - `--allow-write-session`: allows `.ao/runs/<taskId>` artifact persistence only.
 - `--allow-write`: allows repository writes when the command supports them.
 - `--confirm-apply`: the second explicit gate for patch application. `--allow-write` alone is not enough.
+
+Dry-run does not create audit files by default for ordinary evaluation paths. Audit artifacts are local `.ao/audit` writes.
 
 Patch apply remains two-step:
 
