@@ -50,11 +50,11 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
   },
   {
     name: "ao_start_task",
-    description: "Start a local task session and persist reviewable artifacts under .ao/runs when allowed."
+    description: "Recommended high-level coding task entrypoint that starts a local task session, persists reviewable artifacts, and returns next recommended actions."
   },
   {
     name: "ao_resume_task",
-    description: "Resume a stored local task session, skipping successful steps unless told otherwise."
+    description: "Resume a stored local task session, skipping successful steps unless told otherwise, and return updated next recommended actions."
   },
   {
     name: "ao_get_task_status",

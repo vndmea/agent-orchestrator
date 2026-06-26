@@ -84,6 +84,7 @@ export interface ResumeTaskSessionWorkflowInput {
 export interface TaskSessionWorkflowOutput {
   fixResult?: FixErrorWorkflowOutput;
   mode: "execute" | "dry-run";
+  nextRecommendedActions: NextRecommendedAction[];
   patchApplyResult?: PatchApplyResult;
   patchInspection?: PatchInspection;
   patchProposal?: PatchProposal;
@@ -94,6 +95,14 @@ export interface TaskSessionWorkflowOutput {
   sessionPath: string;
   validationReport?: ValidationReport;
   workerId: string;
+}
+
+export interface NextRecommendedAction {
+  action: "inspect_patch" | "dry_run_apply" | "manual_review" | "confirm_apply";
+  reason: string;
+  command?: string;
+  toolName?: string;
+  toolArgs?: Record<string, unknown>;
 }
 
 interface ResolvedTaskContext {
@@ -345,6 +354,122 @@ const buildSessionReport = (input: {
     patchInspection: input.patchInspection,
     patchApplyResult: input.patchApplyResult
   });
+
+const buildNextRecommendedActions = (input: {
+  patchApplyResult?: PatchApplyResult;
+  patchInspection?: PatchInspection;
+  patchProposal?: PatchProposal;
+  session: TaskSession;
+}): NextRecommendedAction[] => {
+  const reportAction: NextRecommendedAction = {
+    action: "manual_review",
+    reason: "Read the persisted task report before taking the next step.",
+    command: `ao task report ${input.session.taskId}`,
+    toolName: "ao_get_task_report",
+    toolArgs: {
+      taskId: input.session.taskId
+    }
+  };
+
+  if (input.patchInspection && !input.patchInspection.ok) {
+    return [
+      {
+        ...reportAction,
+        reason:
+          "Patch inspection blocked the proposal. Review blocked paths and warnings before regenerating or editing the patch."
+      }
+    ];
+  }
+
+  if (input.patchApplyResult?.recovery) {
+    return [
+      {
+        ...reportAction,
+        reason:
+          "Patch application succeeded but validation failed. Review the recovery guidance before making any further repository changes."
+      }
+    ];
+  }
+
+  if (input.patchApplyResult && !input.patchApplyResult.applied) {
+    if (
+      input.patchApplyResult.errors.some((error) =>
+        error.includes("--confirm-apply")
+      )
+    ) {
+      return [
+        reportAction,
+        {
+          action: "confirm_apply",
+          reason:
+            "The stored patch passed earlier gates but still requires explicit confirmation before writes are allowed.",
+          command:
+            `ao task resume ${input.session.taskId} --from-step patch-applied --apply-patch --allow-write --confirm-apply`,
+          toolName: "ao_resume_task",
+          toolArgs: {
+            taskId: input.session.taskId,
+            fromStep: "patch-applied",
+            applyPatch: true,
+            allowWrite: true,
+            confirmApply: true
+          }
+        }
+      ];
+    }
+
+    return [
+      {
+        ...reportAction,
+        reason:
+          "Patch application was blocked by a safety gate. Review the report and resolve the blocking condition before retrying."
+      }
+    ];
+  }
+
+  if (
+    input.patchProposal &&
+    input.patchInspection?.ok &&
+    !input.patchApplyResult
+  ) {
+    return [
+      {
+        ...reportAction,
+        reason:
+          "A reviewed patch proposal is ready for manual inspection before any apply attempt."
+      },
+      {
+        action: "dry_run_apply",
+        reason:
+          "Dry-run the stored patch proposal first so deterministic checks can fail safely without repository writes.",
+        command:
+          `ao task resume ${input.session.taskId} --from-step patch-applied --apply-patch`,
+        toolName: "ao_resume_task",
+        toolArgs: {
+          taskId: input.session.taskId,
+          fromStep: "patch-applied",
+          applyPatch: true
+        }
+      },
+      {
+        action: "confirm_apply",
+        reason:
+          "Only after manual review, rerun with explicit write gates to apply the stored patch proposal.",
+        command:
+          `ao task resume ${input.session.taskId} --from-step patch-applied --apply-patch --allow-write --confirm-apply`,
+        toolName: "ao_resume_task",
+        toolArgs: {
+          taskId: input.session.taskId,
+          fromStep: "patch-applied",
+          applyPatch: true,
+          allowWrite: true,
+          confirmApply: true
+        }
+      }
+    ];
+  }
+
+  return [reportAction];
+};
 
 const resolveFinalStatus = (input: {
   applyPatchRequested: boolean;
@@ -879,10 +1004,17 @@ export const runTaskSessionWorkflow = async (
     patchInspection: patchResult?.inspection,
     patchApplyResult
   });
+  const nextRecommendedActions = buildNextRecommendedActions({
+    session,
+    patchProposal: patchResult?.proposal,
+    patchInspection: patchResult?.inspection,
+    patchApplyResult
+  });
   await persistReport(resolved.context, session, report, allowWriteSession);
 
   return {
     mode: sessionCreate.mode,
+    nextRecommendedActions,
     session,
     sessionPath: sessionCreate.path,
     workerId: resolved.workerId,
@@ -1037,6 +1169,12 @@ export const resumeTaskSessionWorkflow = async (
     patchInspection,
     patchApplyResult
   });
+  const nextRecommendedActions = buildNextRecommendedActions({
+    session,
+    patchProposal,
+    patchInspection,
+    patchApplyResult
+  });
   await persistReport(
     resolved.context,
     session,
@@ -1061,6 +1199,7 @@ export const resumeTaskSessionWorkflow = async (
       input.allowWriteSession && !resolved.context.dryRun
         ? "execute"
         : "dry-run",
+    nextRecommendedActions,
     session,
     sessionPath: getTaskSessionPath(resolved.context.rootDir, session.taskId),
     workerId: resolved.workerId,

@@ -88,6 +88,7 @@ describe("task session workflow", () => {
     expect(result.session.status).toBe("completed");
     expect(result.repositoryContext?.scope).toBe("packages/core");
     expect(result.validationReport?.checks[0]?.status).toBe("dry-run");
+    expect(result.nextRecommendedActions[0]?.action).toBe("manual_review");
   });
 
   it("persists separate artifacts and report when session writes are allowed", async () => {
@@ -130,6 +131,7 @@ describe("task session workflow", () => {
     expect(result.patchProposal?.id).toBeTruthy();
     expect(result.patchInspection).toBeDefined();
     expect(result.fixResult?.rootCauseAnalysis).toContain("error log");
+    expect(result.nextRecommendedActions[0]?.action).toBe("manual_review");
     expect(persisted?.artifacts["repository-context.json"]).toContain(".ao");
     expect(persisted?.artifacts["review-result.json"]).toContain(".ao");
     expect(persisted?.artifacts["validation-report.json"]).toContain(".ao");
@@ -158,6 +160,7 @@ describe("task session workflow", () => {
 
     expect(result.patchApplyResult?.mode).toBe("blocked");
     expect(result.session.status).toBe("blocked");
+    expect(result.nextRecommendedActions[0]?.action).toBe("manual_review");
   });
 
   it("resumes from patch application steps without rerunning successful review", async () => {

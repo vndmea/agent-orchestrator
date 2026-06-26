@@ -25,7 +25,7 @@ export const aoResumeTaskTool: AoToolDefinition<
   Awaited<ReturnType<typeof resumeTaskSessionWorkflow>>
 > = {
   name: "ao_resume_task",
-  description: "Resume a stored local task session, skipping successful steps unless told otherwise.",
+  description: "Resume a stored local task session, skip successful steps unless told otherwise, and return updated next recommended actions.",
   inputSchema,
   execute: async (args) => {
     const context = await resolveExecutionContext({
