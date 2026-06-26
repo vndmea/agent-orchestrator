@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { AgentResultSchema } from "./agent-result.schema.js";
 import { AgentTaskSchema, AgentRoleSchema } from "./agent-task.schema.js";
-import { WorkerCapabilityProfileSchema } from "./worker-capability.schema.js";
+import {
+  WorkerCapabilityProfileSchema,
+  WorkerTaskTypeSchema
+} from "./worker-capability.schema.js";
 
 export const TaskPlanStepSchema = z.object({
   id: z.string().min(1),
@@ -15,6 +18,21 @@ export const TaskPlanStepSchema = z.object({
 export const TaskPlanSchema = z.object({
   summary: z.string().min(1),
   steps: z.array(TaskPlanStepSchema),
+  plannedWorkerTasks: z.array(
+    z.object({
+      id: z.string().min(1),
+      taskType: WorkerTaskTypeSchema,
+      goal: z.string().min(1),
+      scope: z.string().optional(),
+      riskLevel: z.enum(["low", "medium", "high"]),
+      expectedArtifactType: z.enum([
+        "summary",
+        "review",
+        "patch-plan",
+        "test-plan"
+      ])
+    })
+  ).default([]),
   workerAssignmentProposal: z.array(z.string()),
   risks: z.array(z.string()),
   validationStrategy: z.array(z.string())

@@ -2,10 +2,10 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { AgentError, createExecutionContextFromEnv } from "@agent-orchestrator/core";
-import { runLeaderWorkerWorkflow } from "@agent-orchestrator/graph";
+import { LeaderAgent, runLeaderWorkerWorkflow } from "@agent-orchestrator/graph";
 
 const createRootDir = async (): Promise<string> =>
   mkdtemp(join(tmpdir(), "ao-leader-worker-"));
@@ -289,5 +289,68 @@ describe("leader-worker workflow with persisted profiles", () => {
       result.state.workerResults.some((workerResult) => workerResult.agentId === "worker.codegen")
     ).toBe(false);
     expect(result.state.warnings.join("\n")).toContain("not qualified for codegen");
+    expect(
+      result.state.workerResults.some((workerResult) => workerResult.agentId === "worker.summarize")
+    ).toBe(true);
+  });
+
+  it("skips worker dispatch when the plan has no plannedWorkerTasks", async () => {
+    const rootDir = await createRootDir();
+    await writeProfiles(rootDir, [createProfile()]);
+    const planSpy = vi
+      .spyOn(LeaderAgent.prototype, "createPlan")
+      .mockResolvedValue({
+        summary: "No worker tasks",
+        steps: [],
+        plannedWorkerTasks: [],
+        workerAssignmentProposal: [],
+        risks: [],
+        validationStrategy: []
+      });
+
+    const result = await runLeaderWorkerWorkflow({
+      context: createContext(rootDir),
+      goal: "Review this repository",
+      requireProfile: true
+    });
+
+    expect(result.state.workerResults).toHaveLength(0);
+    expect(result.state.warnings.join("\n")).toContain("plannedWorkerTasks");
+    planSpy.mockRestore();
+  });
+
+  it("warns when the plan includes a known but unregistered worker task type", async () => {
+    const rootDir = await createRootDir();
+    await writeProfiles(rootDir, [createProfile()]);
+    const planSpy = vi
+      .spyOn(LeaderAgent.prototype, "createPlan")
+      .mockResolvedValue({
+        summary: "Use log analysis",
+        steps: [],
+        plannedWorkerTasks: [
+          {
+            id: "log-analysis",
+            taskType: "log-analysis",
+            goal: "Analyze the failure log",
+            riskLevel: "low",
+            expectedArtifactType: "summary"
+          }
+        ],
+        workerAssignmentProposal: [],
+        risks: [],
+        validationStrategy: []
+      });
+
+    const result = await runLeaderWorkerWorkflow({
+      context: createContext(rootDir),
+      goal: "Review this repository",
+      requireProfile: true
+    });
+
+    expect(result.state.workerResults).toHaveLength(0);
+    expect(result.state.warnings.join("\n")).toContain(
+      "No registered worker implementation is available for planned task type log-analysis."
+    );
+    planSpy.mockRestore();
   });
 });

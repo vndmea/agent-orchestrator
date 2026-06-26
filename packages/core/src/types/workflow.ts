@@ -1,5 +1,5 @@
 import type { AgentResult } from "./result.js";
-import type { WorkerCapabilityProfile } from "./agent.js";
+import type { WorkerCapabilityProfile, WorkerTaskType } from "./agent.js";
 import type { AgentTask } from "./task.js";
 
 export interface TaskPlanStep {
@@ -13,9 +13,19 @@ export interface TaskPlanStep {
 export interface TaskPlan {
   summary: string;
   steps: TaskPlanStep[];
+  plannedWorkerTasks: PlannedWorkerTask[];
   workerAssignmentProposal: string[];
   risks: string[];
   validationStrategy: string[];
+}
+
+export interface PlannedWorkerTask {
+  id: string;
+  taskType: WorkerTaskType;
+  goal: string;
+  scope?: string;
+  riskLevel: "low" | "medium" | "high";
+  expectedArtifactType: "summary" | "review" | "patch-plan" | "test-plan";
 }
 
 export interface ReviewSummary {

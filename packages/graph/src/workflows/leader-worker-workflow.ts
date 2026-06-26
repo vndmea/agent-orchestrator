@@ -4,6 +4,7 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type {
   AgentTask,
   ExecutionContext,
+  PlannedWorkerTask,
   ToolExecutionResult,
   WorkerCapabilityProfile,
   WorkflowState
@@ -161,6 +162,15 @@ export const runLeaderWorkerWorkflow = async (
   };
 
   const initialState = createInitialWorkflowState(task);
+  const workerRegistry = new Map<
+    PlannedWorkerTask["taskType"],
+    SummarizeWorker | CodegenWorker | TestWorker | ReviewWorker
+  >([
+    ["summarization", summarizeWorker],
+    ["codegen", codegenWorker],
+    ["test-generation", testWorker],
+    ["review-lite", reviewWorker]
+  ]);
 
   const runEligibleWorkers = async (
     state: WorkflowState
@@ -177,50 +187,57 @@ export const runLeaderWorkerWorkflow = async (
       };
     }
 
-    const workerDefinitions = [
-      {
-        taskType: "summarization" as const,
-        agent: summarizeWorker
-      },
-      {
-        taskType: "codegen" as const,
-        agent: codegenWorker
-      },
-      {
-        taskType: "test-generation" as const,
-        agent: testWorker
-      },
-      {
-        taskType: "review-lite" as const,
-        agent: reviewWorker
-      }
-    ];
-
     const warnings = [...state.warnings];
-    const executions = workerDefinitions
-      .filter(({ taskType }) => {
-        const eligibility = assessWorkerTaskEligibility(profile, taskType);
+    const plannedWorkerTasks = state.plan?.plannedWorkerTasks ?? [];
 
-        if (!eligibility.allowed) {
-          warnings.push(eligibility.reason);
-          return false;
-        }
+    if (plannedWorkerTasks.length === 0) {
+      return {
+        workerResults: [],
+        warnings: [
+          ...warnings,
+          "Leader plan did not schedule any plannedWorkerTasks, so worker execution was skipped."
+        ]
+      };
+    }
 
-        if (eligibility.requiresLeaderReview) {
-          warnings.push(
-            `Worker ${profile.workerId} is allowed for ${taskType}, but leader review is required.`
-          );
-        }
+    const executions = plannedWorkerTasks.flatMap((plannedTask) => {
+      const agent = workerRegistry.get(plannedTask.taskType);
+      if (!agent) {
+        warnings.push(
+          `No registered worker implementation is available for planned task type ${plannedTask.taskType}.`
+        );
+        return [];
+      }
 
-        return true;
-      })
-      .map(async ({ agent }) =>
+      const eligibility = assessWorkerTaskEligibility(profile, plannedTask.taskType);
+      if (!eligibility.allowed) {
+        warnings.push(eligibility.reason);
+        return [];
+      }
+
+      if (eligibility.requiresLeaderReview) {
+        warnings.push(
+          `Worker ${profile.workerId} is allowed for ${plannedTask.taskType}, but leader review is required.`
+        );
+      }
+
+      return [
         agent.execute({
-          task: state.task,
-          scope: input.scope,
-          workerProfile: profile
+          task: {
+            ...state.task,
+            goal: plannedTask.goal
+          },
+          plannedTask,
+          scope: plannedTask.scope ?? input.scope,
+          workerProfile: profile,
+          notes: [
+            `Planned task id: ${plannedTask.id}`,
+            `Expected artifact: ${plannedTask.expectedArtifactType}`,
+            `Risk level: ${plannedTask.riskLevel}`
+          ]
         })
-      );
+      ];
+    });
 
     return {
       workerResults: await Promise.all(executions),

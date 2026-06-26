@@ -49,6 +49,60 @@ const createDefaultPlan = (task: AgentTask): TaskPlan => ({
       validation: ["Escalate to human review when confidence is low or writes are risky."]
     }
   ],
+  plannedWorkerTasks: [
+    {
+      id: "summarize-context",
+      taskType: "summarization",
+      goal: `Summarize the repository context for: ${task.goal}`,
+      scope:
+        typeof task.input === "object" &&
+        task.input !== null &&
+        typeof (task.input as { scope?: unknown }).scope === "string"
+          ? ((task.input as { scope?: string }).scope)
+          : undefined,
+      riskLevel: "low",
+      expectedArtifactType: "summary"
+    },
+    {
+      id: "draft-implementation",
+      taskType: "codegen",
+      goal: `Draft a safe implementation plan for: ${task.goal}`,
+      scope:
+        typeof task.input === "object" &&
+        task.input !== null &&
+        typeof (task.input as { scope?: unknown }).scope === "string"
+          ? ((task.input as { scope?: string }).scope)
+          : undefined,
+      riskLevel: "medium",
+      expectedArtifactType: "patch-plan"
+    },
+    {
+      id: "plan-tests",
+      taskType: "test-generation",
+      goal: `Propose deterministic validation for: ${task.goal}`,
+      scope:
+        typeof task.input === "object" &&
+        task.input !== null &&
+        typeof (task.input as { scope?: unknown }).scope === "string"
+          ? ((task.input as { scope?: string }).scope)
+          : undefined,
+      riskLevel: "low",
+      expectedArtifactType: "test-plan"
+    },
+    {
+      id: "review-risks",
+      taskType: "review-lite",
+      goal: `Review likely implementation risks for: ${task.goal}`,
+      scope:
+        typeof task.input === "object" &&
+        task.input !== null &&
+        typeof (task.input as { scope?: unknown }).scope === "string"
+          ? ((task.input as { scope?: string }).scope)
+          : undefined,
+      riskLevel: "medium",
+      expectedArtifactType: "review"
+    }
+  ],
   workerAssignmentProposal: [
     "summarize-worker for context compression",
     "codegen-worker for candidate implementation ideas",
@@ -102,7 +156,11 @@ export class LeaderAgent {
       config: routed.config,
       schema: TaskPlanSchema,
       systemPrompt: LEADER_SYSTEM_PROMPT,
-      prompt: `Create a plan for: ${task.goal}`,
+      prompt: [
+        `Create a plan for: ${task.goal}`,
+        "Return summary, steps, risks, validationStrategy, workerAssignmentProposal, and plannedWorkerTasks.",
+        "plannedWorkerTasks must be the exact worker tasks to execute."
+      ].join("\n"),
       mockResponse: fallbackPlan,
       metadata: {
         taskId: task.id

@@ -10,6 +10,7 @@ import {
   PatchInspectionSchema,
   PatchProposalSchema,
   RepositoryContextPackSchema,
+  TaskPlanSchema,
   TaskSessionSchema,
   ValidationReportSchema,
   WorkerCapabilityProfileSchema,
@@ -87,6 +88,26 @@ describe("core schemas", () => {
         errors: []
       })
     ).not.toThrow();
+  });
+
+  it("defaults plannedWorkerTasks to an empty list when older plan payloads are parsed", () => {
+    const plan = TaskPlanSchema.parse({
+      summary: "Plan work",
+      steps: [
+        {
+          id: "step-1",
+          title: "Inspect",
+          description: "Inspect the code",
+          assignedRole: "leader",
+          validation: ["Read target files"]
+        }
+      ],
+      workerAssignmentProposal: ["summarize-worker"],
+      risks: [],
+      validationStrategy: ["Run tests"]
+    });
+
+    expect(plan.plannedWorkerTasks).toEqual([]);
   });
 
   it("parses worker capability profiles", () => {

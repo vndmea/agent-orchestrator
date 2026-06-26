@@ -2,6 +2,7 @@ import type {
   AgentResult,
   AgentTask,
   ExecutionContext,
+  PlannedWorkerTask,
   WorkerCapability,
   WorkerCapabilityProfile
 } from "@agent-orchestrator/core";
@@ -10,6 +11,7 @@ import type { ZodType } from "zod";
 
 export interface WorkerExecutionInput {
   notes?: string[];
+  plannedTask?: PlannedWorkerTask;
   scope?: string;
   task: AgentTask;
   workerProfile?: WorkerCapabilityProfile | null;

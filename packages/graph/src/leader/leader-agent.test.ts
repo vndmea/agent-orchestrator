@@ -78,6 +78,15 @@ describe("LeaderAgent structured outputs", () => {
                 validation: ["Read target files"]
               }
             ],
+            plannedWorkerTasks: [
+              {
+                id: "summarize-context",
+                taskType: "summarization",
+                goal: "Summarize the repository context",
+                riskLevel: "low",
+                expectedArtifactType: "summary"
+              }
+            ],
             workerAssignmentProposal: ["summarize-worker"],
             risks: ["Needs review"],
             validationStrategy: ["Run tests"]
@@ -90,6 +99,7 @@ describe("LeaderAgent structured outputs", () => {
 
     expect(plan.summary).toBe("Provider-authored plan");
     expect(plan.steps).toHaveLength(1);
+    expect(plan.plannedWorkerTasks).toHaveLength(1);
   });
 
   it("falls back to the default plan and appends a validation risk", async () => {
@@ -114,6 +124,7 @@ describe("LeaderAgent structured outputs", () => {
 
     expect(plan.summary).toContain("Coordinate leader and worker agents");
     expect(plan.risks.some((risk) => risk.includes("Structured leader plan output failed validation"))).toBe(true);
+    expect(plan.plannedWorkerTasks.length).toBeGreaterThan(0);
   });
 
   it("uses parsed provider output for review decisions", async () => {
