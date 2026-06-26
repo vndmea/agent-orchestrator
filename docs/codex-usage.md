@@ -14,6 +14,7 @@ When to require a profile:
 
 - Set `requireProfile=true` when routing higher-risk coding tasks to a specific worker.
 - Leave `requireProfile` unset for exploratory or low-risk dry-run analysis when profile coverage is not mandatory.
+- For `patch-generation`, treat a persisted profile plus benchmark-qualified capability update as the preferred path before delegating real patch proposal work.
 
 When to propose but not apply:
 
@@ -26,3 +27,10 @@ How to read task artifacts:
 - `.ao/runs/<taskId>/report.md` is the fastest human-readable summary.
 - `patch-proposal.json`, `patch-inspection.json`, and `patch-apply-result.json` contain the structured patch lifecycle.
 - `validation-report.json` and `fix-result.json` explain deterministic failures and recovery guidance.
+
+Worker evaluation layers:
+
+- `ao worker interview --save` establishes onboarding trust and baseline routing limits.
+- `ao worker benchmark --suite coding-v1 --save` records coding benchmark results under `.ao/worker-benchmarks/<workerId>/coding-v1.json`.
+- `ao worker benchmark --suite coding-v1 --save --update-profile-capabilities` is the explicit step that can enable `patch-generation` on an existing persisted profile when the benchmark passes the required fixtures.
+- Benchmark results alone do not bypass patch inspection, dry-run apply, `allowWrite`, or `confirmApply`.

@@ -19,3 +19,7 @@ Client expectations:
 - `ao_start_task` and `ao_resume_task` are thin orchestration wrappers; the structured artifacts remain the source of truth.
 - `requireProfile=true` should be used when a client needs explicit worker qualification before delegated coding work.
 - Recovery guidance from `patchApplyResult.recovery` must be shown verbatim or faithfully summarized when validation fails after apply.
+- Worker onboarding and coding qualification are separate signals:
+  - Interviewed profiles establish baseline routing safety.
+  - Benchmarks update `evaluationSummary`.
+  - Only an explicit capability update path should promote `patch-generation` on a persisted profile.
