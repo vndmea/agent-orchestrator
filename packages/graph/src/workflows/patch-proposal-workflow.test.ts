@@ -163,16 +163,16 @@ describe("patch proposal workflow", () => {
     let capturedPrompt = "";
     const invokeStructuredSpy = vi
       .spyOn(models, "invokeStructured")
-      .mockImplementation(async (request) => {
+      .mockImplementation((request) => {
         capturedPrompt = request.prompt;
-        return {
+        return Promise.resolve({
           ok: true,
           data: request.mockResponse,
           rawText: JSON.stringify(request.mockResponse),
           raw: request.mockResponse,
           attempts: 1,
           errors: []
-        };
+        });
       });
 
     await runPatchProposalWorkflow({
