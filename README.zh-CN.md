@@ -83,6 +83,7 @@ pnpm exec ao mcp config
 ```
 
 当前 internal-trial 安装路径下，除非特别说明，下面所有 `ao ...` 示例都等价于在仓库根目录执行 `pnpm exec ao ...`。
+当前官方内部交付形态见 `docs/distribution.md`。
 
 当前版本不会读取仓库内旧 `.ao/` 目录；旧路径不受支持，也不会被兼容处理。
 

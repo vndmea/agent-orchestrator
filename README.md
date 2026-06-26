@@ -84,6 +84,7 @@ pnpm exec ao mcp config
 ```
 
 Internal-trial installation and MCP launch guidance lives in `docs/install.md`.
+The current official internal distribution shape is documented in `docs/distribution.md`.
 
 Unless noted otherwise, read every `ao ...` example below as `pnpm exec ao ...` from the repository root for the current internal-trial install path.
 

@@ -31,3 +31,4 @@ Before enabling required checks, confirm the exact check label shown in the repo
 - Keep the internal trial RC matrix in `docs/internal-trial-rc-matrix.md` with links to evidence.
 - Keep one sanitized evidence record per real worker trial using `docs/examples/internal-trial-evidence-template.md`.
 - Re-check required check names after workflow/job renames or matrix changes.
+- Treat `docs/distribution.md` as the source of truth for the approved internal distribution shape.
