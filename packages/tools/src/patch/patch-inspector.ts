@@ -86,8 +86,12 @@ const isPlaceholderProposal = (proposal: PatchProposal): boolean =>
 
 export async function inspectPatch(
   context: ExecutionContext,
-  proposal: PatchProposal
+  proposal: PatchProposal,
+  options: {
+    scope?: string;
+  } = {}
 ): Promise<PatchInspection> {
+  void options;
   await Promise.resolve();
   const blockedReasons: string[] = [];
   const warnings: string[] = [];

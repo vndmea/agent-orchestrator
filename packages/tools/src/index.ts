@@ -6,6 +6,7 @@ export * from "./patch/patch-inspector.js";
 export * from "./patch/patch-parser.js";
 export * from "./repository/file-selection.js";
 export * from "./repository/git-diff.js";
+export * from "./repository/git-status.js";
 export * from "./repository/package-metadata.js";
 export * from "./repository/repository-context.js";
 export * from "./repository/validation.js";

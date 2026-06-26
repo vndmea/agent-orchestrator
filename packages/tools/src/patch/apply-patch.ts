@@ -1,11 +1,13 @@
-import { createExecutionContextFromEnv, type ExecutionContext, type PatchApplyResult, type PatchInspection, type PatchProposal, type ValidationReport, PatchApplyResultSchema, writeAuditEvent } from "@agent-orchestrator/core";
+import { createExecutionContextFromEnv, type DirtyWorktree, type ExecutionContext, type PatchApplyResult, type PatchInspection, type PatchProposal, type ValidationReport, PatchApplyResultSchema, writeAuditEvent } from "@agent-orchestrator/core";
 
 import { inspectPatch } from "./patch-inspector.js";
+import { hasBlockingDirtyWorktree, readDirtyWorktree } from "../repository/git-status.js";
 import { runRepositoryValidation } from "../repository/validation.js";
 import { runSafeCommand } from "../shell/safe-command.js";
 
 export interface ApplyPatchOptions {
   allowWrite?: boolean;
+  allowDirtyWorktree?: boolean;
   confirmApply?: boolean;
   dryRun?: boolean;
   runValidation?: {
@@ -13,6 +15,7 @@ export interface ApplyPatchOptions {
     test?: boolean;
     typecheck?: boolean;
   };
+  scope?: string;
 }
 
 const createCommandContext = (
@@ -37,11 +40,13 @@ const buildResult = ({
   applied,
   proposal,
   inspection,
+  dirtyWorktree,
   validationReport,
   warnings = [],
   errors = []
 }: {
   applied: boolean;
+  dirtyWorktree?: DirtyWorktree;
   errors?: string[];
   inspection: PatchInspection;
   mode: PatchApplyResult["mode"];
@@ -55,6 +60,7 @@ const buildResult = ({
     patchId: proposal.id,
     touchedFiles: inspection.files.map((file) => file.path),
     inspection,
+    dirtyWorktree,
     validationReport,
     warnings,
     errors
@@ -65,6 +71,7 @@ const auditPatchAction = async (
   mode: "blocked" | "dry-run" | "execute",
   proposal: PatchProposal,
   inspection: PatchInspection,
+  dirtyWorktree: DirtyWorktree | undefined,
   warnings: string[],
   errors: string[]
 ): Promise<void> => {
@@ -83,6 +90,7 @@ const auditPatchAction = async (
     warnings,
     errors,
     metadata: {
+      dirtyWorktree,
       inspection,
       patchId: proposal.id,
       touchedFiles: inspection.files.map((file) => file.path)
@@ -95,7 +103,10 @@ export async function applyPatchProposal(
   proposal: PatchProposal,
   options: ApplyPatchOptions
 ): Promise<PatchApplyResult> {
-  const inspection = await inspectPatch(context, proposal);
+  const inspection = await inspectPatch(context, proposal, {
+    scope: options.scope
+  });
+  const dirtyWorktree = await readDirtyWorktree(context);
 
   if (!inspection.ok) {
     const result = buildResult({
@@ -103,6 +114,7 @@ export async function applyPatchProposal(
       applied: false,
       proposal,
       inspection,
+      dirtyWorktree,
       errors: inspection.blockedReasons
     });
     await auditPatchAction(
@@ -110,6 +122,30 @@ export async function applyPatchProposal(
       "blocked",
       proposal,
       inspection,
+      dirtyWorktree,
+      result.warnings,
+      result.errors
+    );
+    return result;
+  }
+
+  if (hasBlockingDirtyWorktree(dirtyWorktree) && !options.allowDirtyWorktree) {
+    const result = buildResult({
+      mode: "blocked",
+      applied: false,
+      proposal,
+      inspection,
+      dirtyWorktree,
+      errors: [
+        "Dirty worktree detected. Re-run with --allow-dirty-worktree only after reviewing local changes."
+      ]
+    });
+    await auditPatchAction(
+      context,
+      "blocked",
+      proposal,
+      inspection,
+      dirtyWorktree,
       result.warnings,
       result.errors
     );
@@ -117,6 +153,10 @@ export async function applyPatchProposal(
   }
 
   const commandContext = createCommandContext(context, Boolean(options.allowWrite));
+  const dirtyWarnings =
+    hasBlockingDirtyWorktree(dirtyWorktree) && options.allowDirtyWorktree
+      ? ["Dirty worktree allowed explicitly; manual review required."]
+      : [];
   const dryRunRequested = options.dryRun === true || !options.allowWrite;
   if (dryRunRequested) {
     const checkResult = await runSafeCommand(
@@ -135,6 +175,7 @@ export async function applyPatchProposal(
         applied: false,
         proposal,
         inspection,
+        dirtyWorktree,
         errors: [checkResult.stderr || "git apply --check failed."]
       });
       await auditPatchAction(
@@ -142,6 +183,7 @@ export async function applyPatchProposal(
         "blocked",
         proposal,
         inspection,
+        dirtyWorktree,
         result.warnings,
         result.errors
       );
@@ -152,13 +194,16 @@ export async function applyPatchProposal(
       mode: "dry-run",
       applied: false,
       proposal,
-      inspection
+      inspection,
+      dirtyWorktree,
+      warnings: dirtyWarnings
     });
     await auditPatchAction(
       context,
       "dry-run",
       proposal,
       inspection,
+      dirtyWorktree,
       result.warnings,
       result.errors
     );
@@ -171,6 +216,7 @@ export async function applyPatchProposal(
       applied: false,
       proposal,
       inspection,
+      dirtyWorktree,
       errors: ["Patch application requires --confirm-apply."]
     });
     await auditPatchAction(
@@ -178,6 +224,7 @@ export async function applyPatchProposal(
       "blocked",
       proposal,
       inspection,
+      dirtyWorktree,
       result.warnings,
       result.errors
     );
@@ -196,6 +243,7 @@ export async function applyPatchProposal(
       applied: false,
       proposal,
       inspection,
+      dirtyWorktree,
       errors: [applyResult.stderr || "git apply failed."]
     });
     await auditPatchAction(
@@ -203,6 +251,7 @@ export async function applyPatchProposal(
       "blocked",
       proposal,
       inspection,
+      dirtyWorktree,
       result.warnings,
       result.errors
     );
@@ -222,13 +271,14 @@ export async function applyPatchProposal(
       : undefined;
   const warnings =
     validationReport && !validationReport.ok
-      ? ["Patch applied but validation failed; manual review required."]
-      : [];
+      ? [...dirtyWarnings, "Patch applied but validation failed; manual review required."]
+      : dirtyWarnings;
   const result = buildResult({
     mode: "execute",
     applied: true,
     proposal,
     inspection,
+    dirtyWorktree,
     validationReport,
     warnings
   });
@@ -237,6 +287,7 @@ export async function applyPatchProposal(
     "execute",
     proposal,
     inspection,
+    dirtyWorktree,
     result.warnings,
     result.errors
   );

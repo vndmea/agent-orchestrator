@@ -43,14 +43,17 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
   patch
     .command("inspect")
     .argument("<patchFile>", "Patch proposal file")
-    .action(async (patchFile: string) => {
+    .option("--scope <scope>", "Restrict inspection to a repository scope")
+    .action(async (patchFile: string, options: { scope?: string }) => {
       const context = await resolveExecutionContext({
         cliOverrides: {
           dryRun: false
         }
       });
       const proposal = await parsePatchProposalFile(patchFile, context.rootDir);
-      const inspection = await inspectPatch(context, proposal);
+      const inspection = await inspectPatch(context, proposal, {
+        scope: options.scope
+      });
 
       io.write(
         JSON.stringify(
@@ -69,7 +72,9 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
     .argument("<patchFile>", "Patch proposal file")
     .option("--dry-run", "Run git apply --check without modifying files", false)
     .option("--allow-write", "Allow patch application", false)
+    .option("--allow-dirty-worktree", "Allow patch apply when the git worktree is dirty", false)
     .option("--confirm-apply", "Confirm patch application", false)
+    .option("--scope <scope>", "Restrict patch application to a repository scope")
     .option("--typecheck", "Run typecheck after apply", false)
     .option("--lint", "Run lint after apply", false)
     .option("--test", "Run tests after apply", false)
@@ -78,9 +83,11 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
         patchFile: string,
         options: {
           allowWrite: boolean;
+          allowDirtyWorktree: boolean;
           confirmApply: boolean;
           dryRun: boolean;
           lint: boolean;
+          scope?: string;
           test: boolean;
           typecheck: boolean;
         }
@@ -95,7 +102,9 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
         const result = await applyPatchProposal(context, proposal, {
           dryRun: options.dryRun,
           allowWrite: options.allowWrite,
+          allowDirtyWorktree: options.allowDirtyWorktree,
           confirmApply: options.confirmApply,
+          scope: options.scope,
           runValidation: {
             typecheck: options.typecheck,
             lint: options.lint,

@@ -47,6 +47,7 @@ export interface TaskSessionValidationOptions {
 }
 
 export interface TaskSessionWorkflowInput {
+  allowDirtyWorktree?: boolean;
   allowWrite?: boolean;
   allowWriteSession?: boolean;
   applyPatch?: boolean;
@@ -65,6 +66,7 @@ export interface TaskSessionWorkflowInput {
 }
 
 export interface ResumeTaskSessionWorkflowInput {
+  allowDirtyWorktree?: boolean;
   allowWrite?: boolean;
   allowWriteSession?: boolean;
   applyPatch?: boolean;
@@ -618,6 +620,7 @@ const executePatchProposalStep = async (input: {
 };
 
 const executePatchApplyStep = async (input: {
+  allowDirtyWorktree?: boolean;
   allowWrite?: boolean;
   allowWriteSession: boolean;
   confirmApply?: boolean;
@@ -629,6 +632,7 @@ const executePatchApplyStep = async (input: {
   const step = getStep(input.session, "patch-applied");
   markStepRunning(step);
   const applyResult = await applyPatchProposal(input.context, input.patchProposal, {
+    allowDirtyWorktree: input.allowDirtyWorktree,
     allowWrite: input.allowWrite,
     confirmApply: input.confirmApply,
     dryRun: !input.allowWrite,
@@ -835,6 +839,7 @@ export const runTaskSessionWorkflow = async (
     }
 
     patchApplyResult = await executePatchApplyStep({
+      allowDirtyWorktree: input.allowDirtyWorktree,
       context: resolved.context,
       session,
       patchProposal: proposal,
@@ -1010,6 +1015,7 @@ export const resumeTaskSessionWorkflow = async (
     }
 
     patchApplyResult = await executePatchApplyStep({
+      allowDirtyWorktree: input.allowDirtyWorktree,
       context: resolved.context,
       session,
       patchProposal,

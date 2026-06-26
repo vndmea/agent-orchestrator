@@ -30,11 +30,13 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
     .option("--inspect-patch", "Persist patch inspection details", false)
     .option("--apply-patch", "Attempt gated patch application", false)
     .option("--allow-write", "Allow repository writes for patch apply", false)
+    .option("--allow-dirty-worktree", "Allow patch apply when the git worktree is dirty", false)
     .option("--confirm-apply", "Confirm patch application", false)
     .option("--allow-write-session", "Persist session files under .ao/runs", false)
     .action(
       async (options: {
         allowWrite: boolean;
+        allowDirtyWorktree: boolean;
         allowWriteSession: boolean;
         applyPatch: boolean;
         confirmApply: boolean;
@@ -79,6 +81,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
           inspectPatch: options.inspectPatch,
           applyPatch: options.applyPatch,
           allowWrite: options.allowWrite,
+          allowDirtyWorktree: options.allowDirtyWorktree,
           confirmApply: options.confirmApply,
           allowWriteSession: options.allowWriteSession
         });
@@ -107,6 +110,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
     .option("--inspect-patch", "Persist patch inspection details", false)
     .option("--apply-patch", "Attempt gated patch application", false)
     .option("--allow-write", "Allow repository writes for patch apply", false)
+    .option("--allow-dirty-worktree", "Allow patch apply when the git worktree is dirty", false)
     .option("--confirm-apply", "Confirm patch application", false)
     .option("--allow-write-session", "Persist session files under .ao/runs", false)
     .action(
@@ -114,6 +118,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
         taskId: string,
         options: {
           allowWrite: boolean;
+          allowDirtyWorktree: boolean;
           allowWriteSession: boolean;
           applyPatch: boolean;
           confirmApply: boolean;
@@ -146,6 +151,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
           runFix: options.runFix,
           applyPatch: options.applyPatch,
           allowWrite: options.allowWrite,
+          allowDirtyWorktree: options.allowDirtyWorktree,
           confirmApply: options.confirmApply,
           allowWriteSession: options.allowWriteSession
         });

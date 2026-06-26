@@ -6,7 +6,8 @@ import { inspectPatch } from "@agent-orchestrator/tools";
 import type { AoToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
-  patchProposal: z.unknown()
+  patchProposal: z.unknown(),
+  scope: z.string().optional()
 });
 
 export const aoInspectPatchTool: AoToolDefinition<
@@ -24,6 +25,8 @@ export const aoInspectPatchTool: AoToolDefinition<
     });
     const proposal = PatchProposalSchema.parse(args.patchProposal);
 
-    return inspectPatch(context, proposal);
+    return inspectPatch(context, proposal, {
+      scope: args.scope
+    });
   }
 };

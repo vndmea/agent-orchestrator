@@ -40,12 +40,21 @@ export const PatchInspectionSchema = z.object({
   })
 });
 
+export const DirtyWorktreeSchema = z.object({
+  ignoredFiles: z.array(z.string()),
+  stagedFiles: z.array(z.string()),
+  modifiedFiles: z.array(z.string()),
+  untrackedFiles: z.array(z.string()),
+  rawStatus: z.array(z.string())
+});
+
 export const PatchApplyResultSchema = z.object({
   mode: z.enum(["dry-run", "execute", "blocked"]),
   applied: z.boolean(),
   patchId: z.string().optional(),
   touchedFiles: z.array(z.string()),
   inspection: PatchInspectionSchema,
+  dirtyWorktree: DirtyWorktreeSchema.optional(),
   validationReport: ValidationReportSchema.optional(),
   warnings: z.array(z.string()),
   errors: z.array(z.string())
@@ -54,4 +63,5 @@ export const PatchApplyResultSchema = z.object({
 export type PatchFileChange = z.infer<typeof PatchFileChangeSchema>;
 export type PatchProposal = z.infer<typeof PatchProposalSchema>;
 export type PatchInspection = z.infer<typeof PatchInspectionSchema>;
+export type DirtyWorktree = z.infer<typeof DirtyWorktreeSchema>;
 export type PatchApplyResult = z.infer<typeof PatchApplyResultSchema>;

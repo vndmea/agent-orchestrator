@@ -20,6 +20,7 @@ const inputSchema = z.object({
   inspectPatch: z.boolean().optional(),
   applyPatch: z.boolean().optional(),
   allowWrite: z.boolean().optional(),
+  allowDirtyWorktree: z.boolean().optional(),
   confirmApply: z.boolean().optional(),
   allowWriteSession: z.boolean().optional()
 });
@@ -61,6 +62,7 @@ export const aoStartTaskTool: AoToolDefinition<
       inspectPatch: args.inspectPatch,
       applyPatch: args.applyPatch,
       allowWrite: args.allowWrite,
+      allowDirtyWorktree: args.allowDirtyWorktree,
       confirmApply: args.confirmApply,
       allowWriteSession: args.allowWriteSession
     });

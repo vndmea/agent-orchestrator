@@ -15,6 +15,7 @@ const inputSchema = z.object({
   inspectPatch: z.boolean().optional(),
   applyPatch: z.boolean().optional(),
   allowWrite: z.boolean().optional(),
+  allowDirtyWorktree: z.boolean().optional(),
   confirmApply: z.boolean().optional(),
   allowWriteSession: z.boolean().optional()
 });
@@ -49,6 +50,7 @@ export const aoResumeTaskTool: AoToolDefinition<
       runFix: args.runFix,
       applyPatch: args.applyPatch,
       allowWrite: args.allowWrite,
+      allowDirtyWorktree: args.allowDirtyWorktree,
       confirmApply: args.confirmApply,
       allowWriteSession: args.allowWriteSession
     });
