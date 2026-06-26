@@ -89,6 +89,7 @@ describe("runRepositoryValidation", () => {
         test: true,
         scope: "packages/pkg"
       });
+      const lintCheck = result.checks.find((check) => check.name === "lint");
 
       expect(result.checks).toEqual(
         expect.arrayContaining([
@@ -100,16 +101,16 @@ describe("runRepositoryValidation", () => {
           expect.objectContaining({
             name: "lint",
             status: "failure",
-            exitCode: 1,
-            diagnosticSummary: expect.objectContaining({
-              previewLines: expect.arrayContaining(["lint failed"])
-            })
+            exitCode: 1
           }),
           expect.objectContaining({
             name: "test",
             status: "success"
           })
         ])
+      );
+      expect(lintCheck?.diagnosticSummary?.previewLines).toEqual(
+        expect.arrayContaining(["lint failed"])
       );
       expect(result.ok).toBe(false);
     },

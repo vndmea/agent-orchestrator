@@ -9,7 +9,6 @@ import type {
   ModelConfig,
   WorkerCapabilityProfile,
   WorkerInterviewDiagnostics,
-  WorkerInterviewFailureKind,
   WorkerInterviewPersistenceAdvice,
   WorkerEvaluationScore,
   WorkerEvaluationSuite,
@@ -602,7 +601,7 @@ const createTaskResult = async (
         ? invocation.errors
         : ["Worker interview execution failed."],
       rawOutput: invocation.raw ?? invocation.rawText,
-      failureKind: invocation.failureKind as WorkerInterviewFailureKind
+      failureKind: invocation.failureKind
     };
   }
 
