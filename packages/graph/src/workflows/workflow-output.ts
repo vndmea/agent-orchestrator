@@ -7,6 +7,7 @@ import {
 } from "@agent-orchestrator/core";
 
 import type { FixErrorWorkflowOutput } from "./fix-error-workflow.js";
+import type { PatchProposalWorkflowOutput } from "./patch-proposal-workflow.js";
 import type { ReviewWorkflowOutput } from "./review-workflow.js";
 import type { TaskSessionWorkflowOutput } from "./task-session-workflow.js";
 
@@ -110,6 +111,43 @@ export const formatReviewWorkflowOutput = (
     },
     validation: summarizeValidationReport(output.validationReport, options?.maxBytes),
     workerReviewStatus: output.workerReviewResult?.status ?? "not-run"
+  };
+};
+
+export const formatPatchProposalWorkflowOutput = (
+  output: PatchProposalWorkflowOutput,
+  options?: WorkflowOutputOptions
+): PatchProposalWorkflowOutput | Record<string, unknown> => {
+  if (isFull(options)) {
+    return output;
+  }
+
+  const files = output.inspection.files.length > 0
+    ? output.inspection.files
+    : output.proposal.files;
+
+  return {
+    proposalId: output.proposal.id,
+    title: output.proposal.title,
+    summary: truncateText(output.proposal.summary, options?.maxBytes ?? 1_500),
+    workerId: output.proposal.source.workerId,
+    scope: output.proposal.source.scope,
+    changedFiles: files.map((file) => ({
+      path: file.path,
+      changeType: file.changeType,
+      riskLevel: file.riskLevel,
+      summary: file.summary
+    })),
+    inspection: {
+      ok: output.inspection.ok,
+      blockedReasons: output.inspection.blockedReasons,
+      warningCount: output.inspection.warnings.length,
+      stats: output.inspection.stats
+    },
+    risks: output.proposal.risks,
+    validationPlan: output.proposal.validationPlan,
+    warnings: output.warnings,
+    diffPreview: truncateText(output.proposal.unifiedDiff, options?.maxBytes)
   };
 };
 

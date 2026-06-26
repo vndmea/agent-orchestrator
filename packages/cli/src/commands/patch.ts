@@ -7,14 +7,15 @@ import {
   readRepositoryFile,
   writeRepositoryFile
 } from "@agent-orchestrator/tools";
-import { runPatchProposalWorkflow } from "@agent-orchestrator/graph";
+import {
+  formatPatchProposalWorkflowOutput,
+  runPatchProposalWorkflow
+} from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
+import { resolveWorkflowOutputOptions, writeJson } from "../output.js";
 
-const parsePatchProposalFile = async (
-  patchFile: string,
-  rootDir: string
-) => {
+const parsePatchProposalFile = async (patchFile: string, rootDir: string) => {
   const contents = await readRepositoryFile(patchFile, rootDir, 240_000);
 
   try {
@@ -126,15 +127,21 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
     .option("--require-profile", "Require a persisted worker profile", false)
     .option("--output <path>", "Optional patch proposal output path")
     .option("--allow-write-output", "Allow writing the output file", false)
+    .option("--summary", "Print a summary instead of the full workflow output", false)
+    .option("--full", "Force the full workflow output", false)
+    .option("--max-bytes <bytes>", "Limit preview fields in summary output", Number)
     .action(
       async (options: {
         allowWriteOutput: boolean;
         errorLog?: string;
         errorLogFile?: string;
+        full: boolean;
         goal?: string;
+        maxBytes?: number;
         output?: string;
         requireProfile: boolean;
         scope?: string;
+        summary: boolean;
         worker?: string;
       }) => {
         const context = await resolveExecutionContext();
@@ -161,7 +168,10 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
           );
         }
 
-        io.write(serialized);
+        writeJson(
+          io,
+          formatPatchProposalWorkflowOutput(result, resolveWorkflowOutputOptions(options))
+        );
       }
     );
 };

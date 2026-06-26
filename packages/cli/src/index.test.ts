@@ -891,7 +891,23 @@ describe("cli parsing", () => {
         "--goal",
         "Fix typecheck",
         "--scope",
-        "packages/core"
+        "packages/core",
+        "--summary"
+      ]);
+      const proposedSummary = JSON.parse(output.at(-1) ?? "{}") as Record<string, unknown>;
+      expect(proposedSummary.proposalId).toBeTypeOf("string");
+      expect(proposedSummary).not.toHaveProperty("proposal");
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "patch",
+        "propose",
+        "--goal",
+        "Fix typecheck",
+        "--scope",
+        "packages/core",
+        "--full"
       ]);
       expect(output.at(-1)).toContain("\"proposal\"");
 

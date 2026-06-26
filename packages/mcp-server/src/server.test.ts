@@ -386,7 +386,16 @@ describe("mcp tool registration", () => {
       const proposed = await aoProposePatchTool.execute({
         goal: "Fix typecheck",
         scope: "packages/core"
-      });
+      }) as Record<string, unknown>;
+      const proposedFull = await aoProposePatchTool.execute({
+        goal: "Fix typecheck",
+        scope: "packages/core",
+        detailLevel: "full"
+      }) as {
+        proposal: {
+          unifiedDiff: string;
+        };
+      };
       const inspected = await aoInspectPatchTool.execute({
         patchProposal: proposal
       });
@@ -398,7 +407,9 @@ describe("mcp tool registration", () => {
         allowWrite: true
       });
 
-      expect(proposed.proposal.unifiedDiff).toContain("diff --git");
+      expect(proposed.proposalId).toBeTypeOf("string");
+      expect(proposed).not.toHaveProperty("proposal");
+      expect(proposedFull.proposal.unifiedDiff).toContain("diff --git");
       expect(inspected.files[0]?.path).toBe("packages/core/src/index.ts");
       expect(dryRunApply.mode).toBe("dry-run");
       expect(blockedApply.mode).toBe("blocked");
