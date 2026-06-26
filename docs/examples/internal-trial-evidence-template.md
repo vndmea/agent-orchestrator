@@ -2,13 +2,18 @@
 
 Use one copy of this template for each real worker end-to-end trial.
 
+Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.ao`, or `<ao-home>` instead of raw operator usernames or machine-specific absolute paths.
+
 ## Run Identity
 
 - Date:
 - Operator:
 - Commit SHA:
+- Runtime trial target:
 - `ao` package version:
 - Workspace root:
+- AO home override:
+- Note if later documentation-only commits differ from the runtime trial target:
 
 ## Worker Configuration
 

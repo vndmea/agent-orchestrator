@@ -196,6 +196,7 @@ Do not keep:
 - raw API keys
 - bearer tokens
 - full sensitive request headers
+- raw operator usernames or machine-specific absolute paths when a sanitized placeholder such as `<workspace-root>` or `%USERPROFILE%\.ao` is enough
 
 ## Rollback Notes
 
