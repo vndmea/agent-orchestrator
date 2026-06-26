@@ -17,11 +17,13 @@ import { registerValidateCommand } from "./commands/validate.js";
 import { registerWorkerCommand } from "./commands/worker.js";
 
 export interface CliIo {
+  outputMode?: "human" | "json";
   error: (message: string) => void;
   write: (message: string) => void;
 }
 
 const defaultIo: CliIo = {
+  outputMode: process.stdout.isTTY ? "human" : "json",
   write: (message) => {
     process.stdout.write(`${message}\n`);
   },

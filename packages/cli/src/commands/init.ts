@@ -10,6 +10,7 @@ import {
 } from "@agent-orchestrator/core";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
 
 interface InitResult {
   created: string[];
@@ -18,6 +19,32 @@ interface InitResult {
   warnings: string[];
   wouldCreate: string[];
 }
+
+const formatInitResult = (result: InitResult): string[] => {
+  const lines: string[] = [
+    result.mode === "execute"
+      ? "Initialized local .ao workspace."
+      : "Dry-run: local .ao workspace would be initialized."
+  ];
+
+  if (result.created.length > 0) {
+    lines.push(`created: ${result.created.join(", ")}`);
+  }
+
+  if (result.wouldCreate.length > 0) {
+    lines.push(`would create: ${result.wouldCreate.join(", ")}`);
+  }
+
+  if (result.recommendedEnv.length > 0) {
+    lines.push(`env: ${result.recommendedEnv.join(", ")}`);
+  }
+
+  if (result.warnings.length > 0) {
+    lines.push(`warnings: ${result.warnings.join(" | ")}`);
+  }
+
+  return lines;
+};
 
 const exists = async (path: string): Promise<boolean> => {
   try {
@@ -227,7 +254,7 @@ export const registerInitCommand = (program: Command, io: CliIo): void => {
           );
         }
 
-        io.write(JSON.stringify(result, null, 2));
+        writeOutput(io, result, formatInitResult(result));
       }
     );
 };

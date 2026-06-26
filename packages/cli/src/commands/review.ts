@@ -7,7 +7,57 @@ import {
 } from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
-import { resolveWorkflowOutputOptions, writeJson } from "../output.js";
+import {
+  isHumanOutput,
+  resolveWorkflowOutputOptions,
+  writeJson,
+  writeText
+} from "../output.js";
+
+const formatReviewSummaryText = (summary: Record<string, unknown>): string[] => {
+  const leaderSummary =
+    typeof summary["leaderSummary"] === "string" ? summary["leaderSummary"] : null;
+  const validation =
+    typeof summary["validation"] === "object" && summary["validation"] !== null
+      ? (summary["validation"] as { summary?: string })
+      : null;
+  const repository =
+    typeof summary["repository"] === "object" && summary["repository"] !== null
+      ? (summary["repository"] as {
+          diffIncluded?: boolean;
+          scope?: string;
+          selectedFileCount?: number;
+          truncatedFileCount?: number;
+          warningCount?: number;
+        })
+      : null;
+  const workerReviewStatus =
+    typeof summary["workerReviewStatus"] === "string"
+      ? summary["workerReviewStatus"]
+      : null;
+
+  const lines: string[] = ["review complete"];
+
+  if (leaderSummary) {
+    lines.push(`leader: ${leaderSummary}`);
+  }
+
+  if (repository) {
+    lines.push(
+      `repository: files=${repository.selectedFileCount ?? 0}, warnings=${repository.warningCount ?? 0}, truncated=${repository.truncatedFileCount ?? 0}, diff=${repository.diffIncluded ? "yes" : "no"}${repository.scope ? `, scope=${repository.scope}` : ""}`
+    );
+  }
+
+  if (validation?.summary) {
+    lines.push(`validation: ${validation.summary}`);
+  }
+
+  if (workerReviewStatus) {
+    lines.push(`worker review: ${workerReviewStatus}`);
+  }
+
+  return lines;
+};
 
 export const registerReviewCommand = (program: Command, io: CliIo): void => {
   const review = program.command("review").description("Review repository context, diffs, or files.");
@@ -47,7 +97,17 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
         }
       });
 
-      writeJson(io, formatReviewWorkflowOutput(result, resolveWorkflowOutputOptions(options)));
+      const formatted = formatReviewWorkflowOutput(
+        result,
+        resolveWorkflowOutputOptions(options)
+      );
+
+      if (isHumanOutput(io) && !options.summary && !options.full) {
+        writeText(io, formatReviewSummaryText(formatted as Record<string, unknown>));
+        return;
+      }
+
+      writeJson(io, formatted);
     });
 
   review
@@ -93,7 +153,17 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
           }
         });
 
-        writeJson(io, formatReviewWorkflowOutput(result, resolveWorkflowOutputOptions(options)));
+        const formatted = formatReviewWorkflowOutput(
+          result,
+          resolveWorkflowOutputOptions(options)
+        );
+
+        if (isHumanOutput(io) && !options.summary && !options.full) {
+          writeText(io, formatReviewSummaryText(formatted as Record<string, unknown>));
+          return;
+        }
+
+        writeJson(io, formatted);
       }
     );
 
@@ -136,7 +206,17 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
           }
         });
 
-        writeJson(io, formatReviewWorkflowOutput(result, resolveWorkflowOutputOptions(options)));
+        const formatted = formatReviewWorkflowOutput(
+          result,
+          resolveWorkflowOutputOptions(options)
+        );
+
+        if (isHumanOutput(io) && !options.summary && !options.full) {
+          writeText(io, formatReviewSummaryText(formatted as Record<string, unknown>));
+          return;
+        }
+
+        writeJson(io, formatted);
       }
     );
 };

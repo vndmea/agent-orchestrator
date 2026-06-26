@@ -10,6 +10,7 @@ import {
 } from "@agent-orchestrator/core";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
 
 interface CleanupResult {
   deleted: string[];
@@ -18,6 +19,28 @@ interface CleanupResult {
   warnings: string[];
   wouldDelete: string[];
 }
+
+const formatCleanupResult = (result: CleanupResult): string[] => {
+  const lines: string[] = [
+    result.mode === "execute"
+      ? `Cleaned ${result.target} artifacts.`
+      : `Dry-run: ${result.target} cleanup preview.`
+  ];
+
+  if (result.deleted.length > 0) {
+    lines.push(`deleted: ${result.deleted.join(", ")}`);
+  }
+
+  if (result.wouldDelete.length > 0) {
+    lines.push(`would delete: ${result.wouldDelete.join(", ")}`);
+  }
+
+  if (result.warnings.length > 0) {
+    lines.push(`warnings: ${result.warnings.join(" | ")}`);
+  }
+
+  return lines;
+};
 
 interface CleanupTargetValidation {
   deletePath?: string;
@@ -203,7 +226,7 @@ const registerCleanupSubcommand = (
           );
         }
 
-        io.write(JSON.stringify(result, null, 2));
+        writeOutput(io, result, formatCleanupResult(result));
       }
     );
 };

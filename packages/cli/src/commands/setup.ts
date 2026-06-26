@@ -27,6 +27,7 @@ import {
 } from "@agent-orchestrator/models";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
 
 type SetupStepStatus =
   | "blocked"
@@ -100,7 +101,7 @@ const relativePath = (rootDir: string, path: string): string =>
   relative(rootDir, path).replaceAll("\\", "/");
 
 const mergeModelConfig = (
-  existing: AoConfig["leaderModel"] | AoConfig["workerModel"] | undefined,
+  existing: AoConfig["leaderModel"],
   updates: {
     apiKeyEnvVar?: string;
     baseURL?: string;
@@ -299,6 +300,49 @@ const buildValidationSummary = (options: SetupOptions): string => {
   }
 
   return `Validation mappings prepared: ${mappings.join("; ")}.`;
+};
+
+const formatSetupResult = (result: SetupResult): string[] => {
+  const blockedSteps = result.steps.filter((step) => step.status === "blocked");
+  const needsInputSteps = result.steps.filter((step) => step.status === "needs-input");
+
+  const lines: string[] = [
+    `ao setup: ${result.status}`,
+    result.summary,
+    `workspace: ${result.rootDir}`,
+    `mode: ${result.mode}`,
+    `steps: ${result.steps
+      .map((step) => `${step.id}=${step.status}`)
+      .join(", ")}`
+  ];
+
+  if (blockedSteps.length > 0) {
+    lines.push(
+      `blocking: ${blockedSteps
+        .slice(0, 3)
+        .map((step) => step.summary)
+        .join(" | ")}`
+    );
+  }
+
+  if (needsInputSteps.length > 0) {
+    lines.push(
+      `attention: ${needsInputSteps
+        .slice(0, 3)
+        .map((step) => step.summary)
+        .join(" | ")}`
+    );
+  }
+
+  if (result.recommendedEnv.length > 0) {
+    lines.push(`env: ${result.recommendedEnv.join(", ")}`);
+  }
+
+  if (result.recommendedActions.length > 0) {
+    lines.push(`next: ${result.recommendedActions.slice(0, 3).join(" | ")}`);
+  }
+
+  return lines;
 };
 
 export const registerSetupCommand = (program: Command, io: CliIo): void => {
@@ -613,6 +657,17 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
       const finalDoctor = await runDoctor(finalContext, {
         additionalChecks: await createWorkerProfileDoctorChecks(finalContext)
       });
+      const readinessSummary: string = finalDoctor.summary;
+      const readinessCapabilities: SetupStepResult["details"] = {
+        capabilities: finalDoctor.capabilities
+      };
+      const resultStatus: SetupResult["status"] = finalDoctor.status;
+      const minimalSuccessPath: SetupResult["minimalSuccessPath"] = [
+        ...finalDoctor.minimalSuccessPath
+      ];
+      const recommendedEntrypoints: SetupResult["recommendedEntrypoints"] = [
+        ...finalDoctor.recommendedEntrypoints
+      ];
 
       steps.push({
         id: "readiness-summary",
@@ -623,27 +678,25 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
               ? "needs-input"
               : "blocked",
         command: "ao doctor",
-        summary: finalDoctor.summary,
-        details: {
-          capabilities: finalDoctor.capabilities
-        }
+        summary: readinessSummary,
+        details: readinessCapabilities
       });
 
       const result: SetupResult = {
         mode: options.allowWrite ? "execute" : "dry-run",
         rootDir: context.rootDir,
-        status: finalDoctor.status,
-        summary: finalDoctor.summary,
+        status: resultStatus,
+        summary: readinessSummary,
         steps,
         recommendedEnv: unique([
           desiredConfig.leaderModel?.apiKeyEnvVar,
           desiredConfig.workerModel?.apiKeyEnvVar
         ]).map((name) => `export ${name}=...`),
-        minimalSuccessPath: finalDoctor.minimalSuccessPath,
-        recommendedEntrypoints: finalDoctor.recommendedEntrypoints,
+        minimalSuccessPath,
+        recommendedEntrypoints,
         recommendedActions: finalDoctor.recommendedActions.slice(0, 6)
       };
 
-      io.write(JSON.stringify(result, null, 2));
+      writeOutput(io, result, formatSetupResult(result));
     });
 };

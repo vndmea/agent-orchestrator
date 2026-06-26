@@ -4,6 +4,7 @@ import { resolveExecutionContext } from "@agent-orchestrator/core";
 import { ModelRouter } from "@agent-orchestrator/models";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
 
 export const registerModelsCommand = (program: Command, io: CliIo): void => {
   const models = program.command("models").description("Inspect configured models.");
@@ -14,6 +15,16 @@ export const registerModelsCommand = (program: Command, io: CliIo): void => {
     .action(async () => {
       const context = await resolveExecutionContext();
       const router = new ModelRouter(context.leaderModel, context.workerModel);
-      io.write(JSON.stringify(router.listModels(), null, 2));
+      const models = router.listModels();
+      writeOutput(
+        io,
+        models,
+        [
+          "configured models",
+          ...models.map(
+            (model) => `${model.role}: ${model.provider}/${model.model}`
+          )
+        ]
+      );
     });
 };

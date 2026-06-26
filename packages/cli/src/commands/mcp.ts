@@ -1,12 +1,12 @@
 import type { Command } from "commander";
 
 import {
-  aoToolDefinitions,
   buildMcpToolCatalogView,
   serveAoMcpServer
 } from "@agent-orchestrator/mcp-server";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
 
 export const registerMcpCommand = (program: Command, io: CliIo): void => {
   const mcp = program.command("mcp").description("Manage the MCP server.");
@@ -34,7 +34,17 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
     .action(() => {
       const catalog = buildMcpToolCatalogView();
 
-      io.write(JSON.stringify(catalog, null, 2));
+      writeOutput(
+        io,
+        catalog,
+        [
+          "mcp tools",
+          ...catalog.groups.map(
+            (group) =>
+              `${group.category}: ${group.tools.map((tool) => tool.name).join(", ")}`
+          )
+        ]
+      );
     });
 
   mcp

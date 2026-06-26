@@ -21,6 +21,125 @@ import {
 } from "@agent-orchestrator/models";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
+
+const formatWorkerList = (
+  title: string,
+  entries: Array<{ model?: string; provider?: string; status?: string; workerId?: string }>
+): string[] => {
+  const lines: string[] = [title];
+
+  if (entries.length > 0) {
+    for (const entry of entries) {
+      lines.push(
+        `${entry.workerId ?? `${entry.provider}:${entry.model}`} (${entry.status ?? "configured"})`
+      );
+    }
+  } else {
+    lines.push("none");
+  }
+
+  return lines;
+};
+
+const formatWorkerRegisterResult = (result: {
+  mode: "execute" | "dry-run";
+  path: string;
+  workerId: string;
+}): string[] => [
+  result.mode === "execute"
+    ? `Registered worker ${result.workerId}.`
+    : `Dry-run: would register worker ${result.workerId}.`,
+  `registry: ${result.path}`
+];
+
+const formatWorkerUnregisterResult = (result: {
+  mode: "execute" | "dry-run";
+  path: string;
+  removed: boolean;
+}): string[] => [
+  result.mode === "execute"
+    ? result.removed
+      ? "Worker unregistered."
+      : "Worker was already absent."
+    : "Dry-run: worker would be unregistered.",
+  `registry: ${result.path}`
+];
+
+const formatWorkerInterviewResult = (result: {
+  persistence?: { mode?: string; path?: string; reason?: string } | null;
+  profile: {
+    status: string;
+    supportedTaskTypes: string[];
+    workerId: string;
+  };
+  warnings: string[];
+}): string[] => {
+  const lines: string[] = [
+    `worker interview: ${result.profile.workerId}`,
+    `status: ${result.profile.status}`
+  ];
+
+  if (result.profile.supportedTaskTypes.length > 0) {
+    lines.push(`supports: ${result.profile.supportedTaskTypes.join(", ")}`);
+  }
+
+  if (result.persistence) {
+    if (result.persistence.mode === "execute") {
+      lines.push(`profile saved: ${result.persistence.path ?? "persisted"}`);
+    } else if (result.persistence.mode === "dry-run") {
+      lines.push(
+        `dry-run: profile would be saved to ${result.persistence.path ?? ".ao/worker-profiles.json"}`
+      );
+    } else {
+      lines.push(result.persistence.reason ?? "profile was not persisted");
+    }
+  }
+
+  if (result.warnings.length > 0) {
+    lines.push(`warnings: ${result.warnings.join(" | ")}`);
+  }
+
+  return lines;
+};
+
+const formatWorkerBenchmarkResult = (result: {
+  capabilityUpdateApplied?: boolean;
+  patchGenerationQualified?: boolean;
+  persistence?: { mode?: string; path?: string } | null;
+  profilePersistence?: { mode?: string; path?: string } | null;
+  suiteName?: string;
+  warnings?: string[];
+  workerId: string;
+}): string[] => {
+  const lines: string[] = [
+    `worker benchmark: ${result.workerId}`,
+    `patch generation qualified: ${result.patchGenerationQualified ? "yes" : "no"}`,
+    `capability update applied: ${result.capabilityUpdateApplied ? "yes" : "no"}`
+  ];
+
+  if (result.suiteName) {
+    lines.push(`suite: ${result.suiteName}`);
+  }
+
+  if (result.persistence) {
+    lines.push(
+      `artifact persistence: ${result.persistence.mode}${result.persistence.path ? ` (${result.persistence.path})` : ""}`
+    );
+  }
+
+  if (result.profilePersistence) {
+    lines.push(
+      `profile persistence: ${result.profilePersistence.mode}${result.profilePersistence.path ? ` (${result.profilePersistence.path})` : ""}`
+    );
+  }
+
+  if (result.warnings && result.warnings.length > 0) {
+    lines.push(`warnings: ${result.warnings.join(" | ")}`);
+  }
+
+  return lines;
+};
 
 export const registerWorkerCommand = (program: Command, io: CliIo): void => {
   const worker = program.command("worker").description("Manage worker onboarding and profiles.");
@@ -81,15 +200,16 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
           options.allowWrite
         );
 
-        io.write(
-          JSON.stringify(
-            {
-              ...result,
-              workerId
-            },
-            null,
-            2
-          )
+        writeOutput(
+          io,
+          {
+            ...result,
+            workerId
+          },
+          formatWorkerRegisterResult({
+            ...result,
+            workerId
+          })
         );
       }
     );
@@ -112,7 +232,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         options.allowWrite
       );
 
-      io.write(JSON.stringify(result, null, 2));
+      writeOutput(io, result, formatWorkerUnregisterResult(result));
     });
 
   const registry = worker
@@ -124,9 +244,8 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .description("List registered worker models.")
     .action(async () => {
       const context = await resolveExecutionContext();
-      io.write(
-        JSON.stringify(await listWorkerRegistrations(context.rootDir), null, 2)
-      );
+      const registrations = await listWorkerRegistrations(context.rootDir);
+      writeOutput(io, registrations, formatWorkerList("worker registry", registrations));
     });
 
   registry
@@ -141,7 +260,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         throw new Error(`No worker registration found for ${workerId}`);
       }
 
-      io.write(JSON.stringify(registration, null, 2));
+      writeOutput(io, registration, formatWorkerList("worker registration", [registration]));
     });
 
   worker
@@ -199,15 +318,16 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
               }
           : null;
 
-        io.write(
-          JSON.stringify(
-            {
-              ...result,
-              persistence: saveResult
-            },
-            null,
-            2
-          )
+        writeOutput(
+          io,
+          {
+            ...result,
+            persistence: saveResult
+          },
+          formatWorkerInterviewResult({
+            ...result,
+            persistence: saveResult
+          })
         );
       }
     );
@@ -295,19 +415,24 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
               )
             : null;
 
-        io.write(
-          JSON.stringify(
-            {
-              ...result,
-              capabilityUpdateApplied: profileUpdate?.capabilityUpdateApplied ?? false,
-              patchGenerationQualified:
-                profileUpdate?.patchGenerationQualified ?? false,
-              persistence,
-              profilePersistence
-            },
-            null,
-            2
-          )
+        writeOutput(
+          io,
+          {
+            ...result,
+            capabilityUpdateApplied: profileUpdate?.capabilityUpdateApplied ?? false,
+            patchGenerationQualified:
+              profileUpdate?.patchGenerationQualified ?? false,
+            persistence,
+            profilePersistence
+          },
+          formatWorkerBenchmarkResult({
+            ...result,
+            capabilityUpdateApplied: profileUpdate?.capabilityUpdateApplied ?? false,
+            patchGenerationQualified:
+              profileUpdate?.patchGenerationQualified ?? false,
+            persistence,
+            profilePersistence
+          })
         );
       }
     );
@@ -317,7 +442,8 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .description("List known worker capability profiles.")
     .action(async () => {
       const context = await resolveExecutionContext();
-      io.write(JSON.stringify(await listWorkerProfiles(context.rootDir), null, 2));
+      const profiles = await listWorkerProfiles(context.rootDir);
+      writeOutput(io, profiles, formatWorkerList("worker profiles", profiles));
     });
 
   worker
@@ -334,6 +460,6 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         throw new Error(`No worker profile found for ${resolvedWorkerId}`);
       }
 
-      io.write(JSON.stringify(profile, null, 2));
+      writeOutput(io, profile, formatWorkerList("worker profile", [profile]));
     });
 };

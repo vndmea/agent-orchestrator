@@ -14,7 +14,87 @@ import {
 } from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
-import { resolveWorkflowOutputOptions, writeJson } from "../output.js";
+import {
+  isHumanOutput,
+  resolveWorkflowOutputOptions,
+  writeJson,
+  writeText
+} from "../output.js";
+
+const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[] => {
+  const taskId = typeof summary["taskId"] === "string" ? summary["taskId"] : "unknown-task";
+  const status = typeof summary["status"] === "string" ? summary["status"] : "unknown";
+  const goal = typeof summary["goal"] === "string" ? summary["goal"] : "";
+  const nextRecommendedActions = Array.isArray(summary["nextRecommendedActions"])
+    ? (summary["nextRecommendedActions"] as string[])
+    : [];
+  const readinessSummary =
+    typeof summary["readinessSummary"] === "string"
+      ? summary["readinessSummary"]
+      : null;
+  const transientNotice =
+    typeof summary["transientNotice"] === "string"
+      ? summary["transientNotice"]
+      : null;
+  const sessionPath =
+    typeof summary["sessionPath"] === "string" ? summary["sessionPath"] : null;
+  const reviewSummary =
+    typeof summary["reviewSummary"] === "string" ? summary["reviewSummary"] : null;
+  const fixSummary =
+    typeof summary["fixSummary"] === "string" ? summary["fixSummary"] : null;
+  const validation =
+    typeof summary["validation"] === "object" && summary["validation"] !== null
+      ? (summary["validation"] as { summary?: string })
+      : null;
+
+  const lines: string[] = [`task ${taskId}: ${status}`];
+
+  if (goal) {
+    lines.push(`goal: ${goal}`);
+  }
+
+  if (readinessSummary) {
+    lines.push(readinessSummary);
+  }
+
+  if (reviewSummary) {
+    lines.push(`review: ${reviewSummary}`);
+  }
+
+  if (fixSummary) {
+    lines.push(`fix: ${fixSummary}`);
+  }
+
+  if (validation?.summary) {
+    lines.push(`validation: ${validation.summary}`);
+  }
+
+  if (sessionPath) {
+    lines.push(`session: ${sessionPath}`);
+  }
+
+  if (transientNotice) {
+    lines.push(`note: ${transientNotice}`);
+  }
+
+  if (nextRecommendedActions.length > 0) {
+    lines.push(`next: ${nextRecommendedActions.slice(0, 3).join(" | ")}`);
+  }
+
+  return lines;
+};
+
+const writeTaskOutput = (
+  io: CliIo,
+  value: Record<string, unknown>
+): void => {
+  if (isHumanOutput(io)) {
+    writeText(io, formatTaskSessionSummaryText(value));
+    return;
+  }
+
+  writeJson(io, value);
+};
 
 export const registerTaskCommand = (program: Command, io: CliIo): void => {
   const task = program.command("task").description("Manage local end-to-end task sessions.");
@@ -99,7 +179,17 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
           allowWriteSession: options.allowWriteSession
         });
 
-        writeJson(io, formatTaskSessionWorkflowOutput(result, resolveWorkflowOutputOptions(options)));
+        const formatted = formatTaskSessionWorkflowOutput(
+          result,
+          resolveWorkflowOutputOptions(options)
+        ) as Record<string, unknown>;
+
+        if (isHumanOutput(io) && !options.summary && !options.full) {
+          writeTaskOutput(io, formatted);
+          return;
+        }
+
+        writeJson(io, formatted);
       }
     );
 
@@ -121,7 +211,17 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
     ) => {
       const context = await resolveExecutionContext();
       const session = await getTaskSessionStatus(context.rootDir, taskId);
-      writeJson(io, formatTaskSessionStatusOutput(session, resolveWorkflowOutputOptions(options)));
+      const formatted = formatTaskSessionStatusOutput(
+        session,
+        resolveWorkflowOutputOptions(options)
+      ) as Record<string, unknown>;
+
+      if (isHumanOutput(io) && !options.summary && !options.full) {
+        writeTaskOutput(io, formatted);
+        return;
+      }
+
+      writeJson(io, formatted);
     });
 
   task
@@ -189,7 +289,17 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
           allowWriteSession: options.allowWriteSession
         });
 
-        writeJson(io, formatTaskSessionWorkflowOutput(result, resolveWorkflowOutputOptions(options)));
+        const formatted = formatTaskSessionWorkflowOutput(
+          result,
+          resolveWorkflowOutputOptions(options)
+        ) as Record<string, unknown>;
+
+        if (isHumanOutput(io) && !options.summary && !options.full) {
+          writeTaskOutput(io, formatted);
+          return;
+        }
+
+        writeJson(io, formatted);
       }
     );
 
@@ -240,6 +350,19 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
         context.rootDir,
         Number.isNaN(limit) ? 50 : limit
       );
-      writeJson(io, formatTaskSessionListOutput(sessions, resolveWorkflowOutputOptions(options)));
+      const formatted = formatTaskSessionListOutput(
+        sessions,
+        resolveWorkflowOutputOptions(options)
+      );
+
+      if (isHumanOutput(io) && !options.summary && !options.full) {
+        const lines = (formatted as Array<Record<string, unknown>>).flatMap((session) =>
+          formatTaskSessionSummaryText(session).concat("")
+        );
+        writeText(io, lines.slice(0, Math.max(0, lines.length - 1)));
+        return;
+      }
+
+      writeJson(io, formatted);
     });
 };

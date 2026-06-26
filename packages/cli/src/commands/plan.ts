@@ -1,9 +1,35 @@
 import type { Command } from "commander";
 
 import { resolveExecutionContext } from "@agent-orchestrator/core";
-import { runPlanningWorkflow } from "@agent-orchestrator/graph";
+import {
+  runPlanningWorkflow,
+  type PlanningWorkflowOutput
+} from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
+
+const formatPlanningResult = (result: PlanningWorkflowOutput): string[] => {
+  const lines: string[] = [
+    "plan created",
+    `goal: ${result.task.goal}`,
+    `steps: ${result.plan.steps.length}`
+  ];
+
+  if (result.riskList.length > 0) {
+    lines.push(`risks: ${result.riskList.join(" | ")}`);
+  }
+
+  if (result.validationStrategy.length > 0) {
+    lines.push(`validation: ${result.validationStrategy.join(" | ")}`);
+  }
+
+  if (result.workerAssignmentProposal.length > 0) {
+    lines.push(`workers: ${result.workerAssignmentProposal.join(" | ")}`);
+  }
+
+  return lines;
+};
 
 export const registerPlanCommand = (program: Command, io: CliIo): void => {
   program
@@ -19,6 +45,6 @@ export const registerPlanCommand = (program: Command, io: CliIo): void => {
         contextFiles: options.contextFile
       });
 
-      io.write(JSON.stringify(result, null, 2));
+      writeOutput(io, result, formatPlanningResult(result));
     });
 };

@@ -6,13 +6,92 @@ import {
 } from "@agent-orchestrator/core";
 import {
   runFixErrorWorkflow,
+  type FixErrorWorkflowOutput,
+  type LeaderWorkerWorkflowOutput,
+  type PlanningWorkflowOutput,
+  type ReviewWorkflowOutput,
   runLeaderWorkerWorkflow,
   runPlanningWorkflow,
   runReviewWorkflow,
+  type WorkerInterviewWorkflowOutput,
   runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
+
+const formatRunResult = (workflow: string, result: unknown): string[] => {
+  switch (workflow) {
+    case "planning-workflow": {
+      const planning = result as PlanningWorkflowOutput;
+      const lines: string[] = [
+        "workflow complete: planning-workflow",
+        `goal: ${planning.task.goal}`,
+        `steps: ${planning.plan.steps.length}`
+      ];
+
+      if (planning.riskList.length > 0) {
+        lines.push(`risks: ${planning.riskList.join(" | ")}`);
+      }
+
+      return lines;
+    }
+    case "leader-worker-workflow": {
+      const leaderWorker = result as LeaderWorkerWorkflowOutput;
+      const lines: string[] = [
+        "workflow complete: leader-worker-workflow",
+        `status: ${leaderWorker.finalResult?.status ?? "unknown"}`
+      ];
+
+      if (typeof leaderWorker.finalResult?.output === "string") {
+        lines.push(`summary: ${leaderWorker.finalResult.output}`);
+      }
+
+      if (leaderWorker.state.workerCapabilityProfile?.workerId) {
+        lines.push(`worker: ${leaderWorker.state.workerCapabilityProfile.workerId}`);
+      }
+
+      if (leaderWorker.state.warnings.length > 0) {
+        lines.push(`warnings: ${leaderWorker.state.warnings.join(" | ")}`);
+      }
+
+      return lines;
+    }
+    case "review-workflow": {
+      const review = result as ReviewWorkflowOutput;
+      return [
+        "workflow complete: review-workflow",
+        `summary: ${review.leaderReview.summary}`,
+        `files: ${review.repositoryContext.selectedFiles.length}`,
+        `validation ok: ${review.validationReport.ok ? "yes" : "no"}`
+      ];
+    }
+    case "fix-error-workflow": {
+      const fix = result as FixErrorWorkflowOutput;
+      return [
+        "workflow complete: fix-error-workflow",
+        `root cause: ${fix.rootCauseAnalysis}`,
+        `validation ok: ${fix.validationReport.ok ? "yes" : "no"}`
+      ];
+    }
+    case "worker-interview-workflow": {
+      const interview = result as WorkerInterviewWorkflowOutput;
+      const lines: string[] = [
+        "workflow complete: worker-interview-workflow",
+        `worker: ${interview.profile.workerId}`,
+        `status: ${interview.profile.status}`
+      ];
+
+      if (interview.warnings.length > 0) {
+        lines.push(`warnings: ${interview.warnings.join(" | ")}`);
+      }
+
+      return lines;
+    }
+    default:
+      return [`workflow complete: ${workflow}`];
+  }
+};
 
 const workflowAliases: Record<string, string> = {
   "leader-worker-basic": "leader-worker-workflow"
@@ -125,7 +204,7 @@ export const registerRunCommand = (program: Command, io: CliIo): void => {
           });
         }
 
-        io.write(JSON.stringify(result, null, 2));
+        writeOutput(io, result, formatRunResult(resolvedWorkflow, result));
       }
     );
 };

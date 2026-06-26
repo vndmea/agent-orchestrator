@@ -11,7 +11,7 @@ import { PatchProposalSchema } from "@agent-orchestrator/core";
 
 const execFile = promisify(execFileCallback);
 
-const createIo = () => {
+const createIo = (outputMode?: "human" | "json") => {
   const output: string[] = [];
   const errors: string[] = [];
 
@@ -19,6 +19,7 @@ const createIo = () => {
     output,
     errors,
     io: {
+      ...(outputMode ? { outputMode } : {}),
       write: (message: string) => {
         output.push(message);
       },
@@ -382,6 +383,19 @@ describe("cli parsing", () => {
     });
   });
 
+  it("renders doctor in compact human mode", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeProfiles(rootDir, [createProfile()]);
+      const { io, output } = createIo("human");
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "ao", "doctor"]);
+
+      expect(output.at(-1)).toContain("ao doctor:");
+      expect(output.at(-1)).not.toContain("\"checks\"");
+    });
+  });
+
   it("runs setup and returns the minimal success path", async () => {
     await withTempCwd(async (rootDir) => {
       await writeProfiles(rootDir, [createProfile()]);
@@ -727,6 +741,19 @@ describe("cli parsing", () => {
     });
   }, 15_000);
 
+  it("renders validation in compact human mode", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      const { io, output } = createIo("human");
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "ao", "validate", "--typecheck"]);
+
+      expect(output.at(-1)).toContain("validation");
+      expect(output.at(-1)).not.toContain("\"checks\"");
+    });
+  });
+
   it("runs validate and fix error commands", async () => {
     await withTempCwd(async (rootDir) => {
       await writeWorkspaceFixture(rootDir);
@@ -916,6 +943,31 @@ describe("cli parsing", () => {
         started.session?.taskId ?? ""
       ]);
       expect(output.at(-1)).toContain("# Task Session Report");
+    });
+  });
+
+  it("renders task start in compact human mode", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      const { io, output } = createIo("human");
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "ao",
+        "task",
+        "start",
+        "--goal",
+        "Review packages/core",
+        "--scope",
+        "packages/core",
+        "--typecheck",
+        "--allow-write-session"
+      ]);
+
+      expect(output.at(-1)).toContain("task ");
+      expect(output.at(-1)).toContain("next:");
+      expect(output.at(-1)).not.toContain("\"taskId\"");
     });
   });
 

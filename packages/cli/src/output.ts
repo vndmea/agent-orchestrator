@@ -20,3 +20,46 @@ export const resolveWorkflowOutputOptions = (
 export const writeJson = (io: CliIo, value: unknown): void => {
   io.write(JSON.stringify(value, null, 2));
 };
+
+export const isHumanOutput = (io: CliIo): boolean => io.outputMode === "human";
+
+export const writeText = (
+  io: CliIo,
+  lines: Array<string | null | undefined> | string
+): void => {
+  let text: string;
+
+  if (Array.isArray(lines)) {
+    const compacted: string[] = [];
+
+    for (const line of lines) {
+      if (typeof line === "string" && line.length > 0) {
+        compacted.push(line);
+      }
+    }
+
+    text = compacted.join("\n");
+  } else {
+    text = lines;
+  }
+
+  io.write(text);
+};
+
+export const writeOutput = (
+  io: CliIo,
+  value: unknown,
+  human: Array<string | null | undefined> | string
+): void => {
+  if (isHumanOutput(io)) {
+    writeText(io, human);
+    return;
+  }
+
+  writeJson(io, value);
+};
+
+export const formatList = (
+  values: string[],
+  emptyMessage: string
+): string => (values.length > 0 ? values.join(", ") : emptyMessage);

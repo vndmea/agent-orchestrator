@@ -7,7 +7,37 @@ import {
 import { runRepositoryValidation } from "@agent-orchestrator/tools";
 
 import type { CliIo } from "../index.js";
-import { writeJson } from "../output.js";
+import { isHumanOutput, writeJson, writeText } from "../output.js";
+
+const formatValidationText = (
+  summary: ReturnType<typeof summarizeValidationReport>
+): string[] => {
+  const validationStatusLine: string = summary.ok
+    ? "validation passed"
+    : "validation did not pass";
+  const validationSummary: string = summary.summary;
+  const failedChecks: string[] = summary.failedChecks;
+  const notConfiguredChecks: string[] = summary.notConfiguredChecks;
+  const dryRunChecks: string[] = summary.dryRunChecks;
+  const lines: string[] = [
+    validationStatusLine,
+    validationSummary
+  ];
+
+  if (failedChecks.length > 0) {
+    lines.push(`failed: ${failedChecks.join(", ")}`);
+  }
+
+  if (notConfiguredChecks.length > 0) {
+    lines.push(`not configured: ${notConfiguredChecks.join(", ")}`);
+  }
+
+  if (dryRunChecks.length > 0) {
+    lines.push(`dry-run only: ${dryRunChecks.join(", ")}`);
+  }
+
+  return lines;
+};
 
 export const registerValidateCommand = (program: Command, io: CliIo): void => {
   program
@@ -39,7 +69,14 @@ export const registerValidateCommand = (program: Command, io: CliIo): void => {
           test: options.test
         });
 
-        writeJson(io, options.summary ? summarizeValidationReport(result, options.maxBytes) : result);
+        const summary = summarizeValidationReport(result, options.maxBytes);
+
+        if (isHumanOutput(io) && !options.summary) {
+          writeText(io, formatValidationText(summary));
+          return;
+        }
+
+        writeJson(io, options.summary ? summary : result);
       }
     );
 };

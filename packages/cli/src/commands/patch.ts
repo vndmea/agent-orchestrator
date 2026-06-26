@@ -13,7 +13,119 @@ import {
 } from "@agent-orchestrator/graph";
 
 import type { CliIo } from "../index.js";
-import { resolveWorkflowOutputOptions, writeJson } from "../output.js";
+import {
+  isHumanOutput,
+  resolveWorkflowOutputOptions,
+  writeJson,
+  writeOutput,
+  writeText
+} from "../output.js";
+
+const formatPatchInspectResult = (result: {
+  inspection: {
+    blockedReasons: string[];
+    ok: boolean;
+    warnings: string[];
+  };
+  proposal: {
+    id: string;
+    title: string;
+  };
+}): string[] => {
+  const lines: string[] = [
+    `patch ${result.proposal.id}: ${result.proposal.title}`,
+    result.inspection.ok ? "inspection passed" : "inspection blocked"
+  ];
+
+  if (result.inspection.blockedReasons.length > 0) {
+    lines.push(`blocked: ${result.inspection.blockedReasons.join(" | ")}`);
+  }
+
+  if (result.inspection.warnings.length > 0) {
+    lines.push(`warnings: ${result.inspection.warnings.join(" | ")}`);
+  }
+
+  return lines;
+};
+
+const formatPatchApplyResult = (result: {
+  applied?: boolean;
+  mode?: string;
+  reason?: string;
+}): string[] => {
+  const lines: string[] = [
+    result.applied ? "patch applied" : `patch ${result.mode ?? "check"} completed`
+  ];
+
+  if (result.reason) {
+    lines.push(result.reason);
+  }
+
+  return lines;
+};
+
+const toDisplayText = (value: unknown, fallback: string): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  return fallback;
+};
+
+const formatPatchProposalSummaryText = (summary: Record<string, unknown>): string[] => {
+  const changedFiles = Array.isArray(summary["changedFiles"])
+    ? (summary["changedFiles"] as Array<{ path?: string }>)
+    : [];
+  const inspection =
+    typeof summary["inspection"] === "object" && summary["inspection"] !== null
+      ? (summary["inspection"] as { blockedReasons?: string[]; ok?: boolean })
+      : null;
+  const warnings = Array.isArray(summary["warnings"])
+    ? (summary["warnings"] as string[])
+    : [];
+  const proposalId = toDisplayText(summary["proposalId"], "unknown");
+  const title = toDisplayText(summary["title"], "");
+
+  const lines: string[] = [
+    `patch proposal ${proposalId}: ${title}`.trim(),
+    `changed files: ${changedFiles.length}`
+  ];
+
+  if (typeof summary["summary"] === "string") {
+    lines.push(summary["summary"]);
+  }
+
+  if (changedFiles.length > 0) {
+    lines.push(
+      `files: ${changedFiles
+        .slice(0, 5)
+        .map((file) => file.path ?? "unknown")
+        .join(", ")}`
+    );
+  }
+
+  if (inspection) {
+    lines.push(`inspection: ${inspection.ok ? "ok" : "blocked"}`);
+  }
+
+  if (inspection?.blockedReasons && inspection.blockedReasons.length > 0) {
+    lines.push(`blocked: ${inspection.blockedReasons.join(" | ")}`);
+  }
+
+  if (warnings.length > 0) {
+    lines.push(`warnings: ${warnings.join(" | ")}`);
+  }
+
+  return lines;
+};
 
 const parsePatchProposalFile = async (patchFile: string, rootDir: string) => {
   const contents = await readRepositoryFile(patchFile, rootDir, 240_000);
@@ -56,15 +168,16 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
         scope: options.scope
       });
 
-      io.write(
-        JSON.stringify(
-          {
-            proposal,
-            inspection
-          },
-          null,
-          2
-        )
+      writeOutput(
+        io,
+        {
+          proposal,
+          inspection
+        },
+        formatPatchInspectResult({
+          proposal,
+          inspection
+        })
       );
     });
 
@@ -113,7 +226,7 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
           }
         });
 
-        io.write(JSON.stringify(result, null, 2));
+        writeOutput(io, result, formatPatchApplyResult(result));
       }
     );
 
@@ -168,10 +281,17 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
           );
         }
 
-        writeJson(
-          io,
-          formatPatchProposalWorkflowOutput(result, resolveWorkflowOutputOptions(options))
+        const formatted = formatPatchProposalWorkflowOutput(
+          result,
+          resolveWorkflowOutputOptions(options)
         );
+
+        if (isHumanOutput(io) && !options.summary && !options.full) {
+          writeText(io, formatPatchProposalSummaryText(formatted as Record<string, unknown>));
+          return;
+        }
+
+        writeJson(io, formatted);
       }
     );
 };

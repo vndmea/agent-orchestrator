@@ -3,6 +3,7 @@ import type { Command } from "commander";
 import { listAuditEvents, resolveExecutionContext } from "@agent-orchestrator/core";
 
 import type { CliIo } from "../index.js";
+import { writeOutput } from "../output.js";
 
 export const registerAuditCommand = (program: Command, io: CliIo): void => {
   const audit = program.command("audit").description("Inspect local audit events.");
@@ -19,6 +20,18 @@ export const registerAuditCommand = (program: Command, io: CliIo): void => {
         Number.isNaN(limit) ? 50 : limit
       );
 
-      io.write(JSON.stringify(events, null, 2));
+      writeOutput(
+        io,
+        events,
+        [
+          "audit events",
+          ...(events.length > 0
+            ? events.map(
+                (event) =>
+                  `${event.timestamp} ${event.action} [${event.mode}] ${event.outputSummary}`
+              )
+            : ["none"])
+        ]
+      );
     });
 };
