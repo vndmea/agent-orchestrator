@@ -20,15 +20,15 @@ import {
   resolveWorkerProfile
 } from "@agent-orchestrator/models";
 
-import { LeaderAgent } from "../leader/leader-agent.js";
-import { createInitialWorkflowState } from "../leader/leader-state.js";
+import { OrchestratorAgent } from "../orchestrator/orchestrator-agent.js";
+import { createInitialOrchestratorState } from "../orchestrator/orchestrator-state.js";
 import { CodegenWorker } from "../workers/codegen-worker.js";
 import { ReviewWorker } from "../workers/review-worker.js";
 import { SummarizeWorker } from "../workers/summarize-worker.js";
 import { TestWorker } from "../workers/test-worker.js";
 import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 
-export interface LeaderWorkerWorkflowInput {
+export interface OrchestratorWorkerWorkflowInput {
   context?: ExecutionContext;
   goal: string;
   requireProfile?: boolean;
@@ -37,12 +37,12 @@ export interface LeaderWorkerWorkflowInput {
   workerId?: string;
 }
 
-export interface LeaderWorkerWorkflowOutput {
+export interface OrchestratorWorkerWorkflowOutput {
   finalResult: WorkflowState["finalResult"];
   state: WorkflowState;
 }
 
-const LeaderWorkerState = Annotation.Root({
+const OrchestratorWorkerState = Annotation.Root({
   task: Annotation<WorkflowState["task"]>(),
   plan: Annotation<WorkflowState["plan"]>(),
   workerResults: Annotation<WorkflowState["workerResults"]>(),
@@ -128,9 +128,9 @@ const buildProfileWarnings = (
         ...profile.warnings
       ];
 
-export const runLeaderWorkerWorkflow = async (
-  input: LeaderWorkerWorkflowInput
-): Promise<LeaderWorkerWorkflowOutput> => {
+export const runOrchestratorWorkerWorkflow = async (
+  input: OrchestratorWorkerWorkflowInput
+): Promise<OrchestratorWorkerWorkflowOutput> => {
   const context = input.context ?? await resolveExecutionContext();
   const workerModelResolution = await resolveWorkerModel({
     context,
@@ -144,9 +144,9 @@ export const runLeaderWorkerWorkflow = async (
     actor: "workflow",
     action: "start",
     mode: context.dryRun ? "dry-run" : "execute",
-    workflow: "leader-worker-workflow",
+    workflow: "orchestrator-worker-workflow",
     inputSummary: input.goal,
-    outputSummary: "Leader-worker workflow started.",
+    outputSummary: "Orchestrator-worker workflow started.",
     warnings: [],
     errors: [],
     metadata: {
@@ -156,7 +156,7 @@ export const runLeaderWorkerWorkflow = async (
       workerId: workerModelResolution.workerId
     }
   });
-  const leader = new LeaderAgent(context);
+  const orchestrator = new OrchestratorAgent(context);
   const summarizeWorker = new SummarizeWorker(workerContext);
   const codegenWorker = new CodegenWorker(workerContext);
   const testWorker = new TestWorker(workerContext);
@@ -168,18 +168,18 @@ export const runLeaderWorkerWorkflow = async (
       scope: input.scope
     },
     constraints: [
-      "Leader must review worker output before final acceptance.",
+      "The orchestrator must review worker output before final acceptance.",
       "Dry-run mode applies unless writes are explicitly allowed."
     ],
     expectedOutput: "Structured final result",
     assignedRole: "leader",
     priority: "high",
     metadata: {
-      workflow: "leader-worker-workflow"
+      workflow: "orchestrator-worker-workflow"
     }
   };
 
-  const initialState = createInitialWorkflowState(task);
+  const initialState = createInitialOrchestratorState(task);
   const workerRegistry = new Map<
     PlannedWorkerTask["taskType"],
     SummarizeWorker | CodegenWorker | TestWorker | ReviewWorker
@@ -213,7 +213,7 @@ export const runLeaderWorkerWorkflow = async (
         workerResults: [],
         warnings: [
           ...warnings,
-          "Leader plan did not schedule any plannedWorkerTasks, so worker execution was skipped."
+          "The orchestrator plan did not schedule any plannedWorkerTasks, so worker execution was skipped."
         ]
       };
     }
@@ -235,7 +235,7 @@ export const runLeaderWorkerWorkflow = async (
 
       if (eligibility.requiresLeaderReview) {
         warnings.push(
-          `Worker ${profile.workerId} is allowed for ${plannedTask.taskType}, but leader review is required.`
+          `Worker ${profile.workerId} is allowed for ${plannedTask.taskType}, but orchestrator review is required.`
         );
       }
 
@@ -263,10 +263,10 @@ export const runLeaderWorkerWorkflow = async (
     };
   };
 
-  const app = new StateGraph(LeaderWorkerState)
+  const app = new StateGraph(OrchestratorWorkerState)
     .addNode("create_plan", async (state) => ({
       ...state,
-      plan: await leader.createPlan(state.task)
+      plan: await orchestrator.createPlan(state.task)
     }))
     .addNode("interview_worker", async (state) => {
       if (input.workerCapabilityProfile) {
@@ -333,7 +333,7 @@ export const runLeaderWorkerWorkflow = async (
     }))
     .addNode("build_review", (state) => ({
       ...state,
-      review: leader.buildReviewSummary(
+      review: orchestrator.buildReviewSummary(
         state.task,
         state.workerResults,
         state.toolResults
@@ -341,7 +341,7 @@ export const runLeaderWorkerWorkflow = async (
     }))
     .addNode("finalize", async (state) => ({
       ...state,
-      finalResult: await leader.finalize(state)
+      finalResult: await orchestrator.finalize(state)
     }))
     .addEdge(START, "create_plan")
     .addEdge("create_plan", "interview_worker")
@@ -357,9 +357,9 @@ export const runLeaderWorkerWorkflow = async (
     actor: "workflow",
     action: "complete",
     mode: context.dryRun ? "dry-run" : "execute",
-    workflow: "leader-worker-workflow",
+    workflow: "orchestrator-worker-workflow",
     inputSummary: input.goal,
-    outputSummary: `Leader-worker workflow completed with ${state.workerResults.length} worker result(s).`,
+    outputSummary: `Orchestrator-worker workflow completed with ${state.workerResults.length} worker result(s).`,
     warnings: state.warnings,
     errors: state.errors,
     metadata: {

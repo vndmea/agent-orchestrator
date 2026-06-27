@@ -3,14 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createExecutionContextFromEnv, listAuditEvents } from "@agent-orchestrator/core";
-import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
+import { runOrchestratorWorkerWorkflow } from "./orchestrator-worker-workflow.js";
 import { describe, expect, it } from "vitest";
 
 const createRootDir = async () =>
   mkdtemp(join(tmpdir(), "ao-workflow-audit-"));
 
 describe("workflow audit events", () => {
-  it("writes start and completion audit events for leader-worker workflow", async () => {
+  it("writes start and completion audit events for orchestrator-worker workflow", async () => {
     const rootDir = await createRootDir();
     const context = createExecutionContextFromEnv(undefined, {
       allowWrite: true,
@@ -18,7 +18,7 @@ describe("workflow audit events", () => {
       rootDir
     });
 
-    await runLeaderWorkerWorkflow({
+    await runOrchestratorWorkerWorkflow({
       context,
       goal: "Review the repository for workflow regressions"
     });
@@ -29,7 +29,7 @@ describe("workflow audit events", () => {
         (event) =>
           event.actor === "workflow" &&
           event.action === "start" &&
-          event.workflow === "leader-worker-workflow"
+          event.workflow === "orchestrator-worker-workflow"
       )
     ).toBe(true);
     expect(
@@ -37,7 +37,7 @@ describe("workflow audit events", () => {
         (event) =>
           event.actor === "workflow" &&
           event.action === "complete" &&
-          event.workflow === "leader-worker-workflow"
+          event.workflow === "orchestrator-worker-workflow"
       )
     ).toBe(true);
   });

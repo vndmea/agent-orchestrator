@@ -28,7 +28,7 @@ import { aoReviewDiffTool } from "./tools/ao-review-diff.tool.js";
 import { aoReviewFilesTool } from "./tools/ao-review-files.tool.js";
 import { aoReviewRepositoryTool } from "./tools/ao-review-repository.tool.js";
 import { aoResumeTaskTool } from "./tools/ao-resume-task.tool.js";
-import { aoRunHostWorkerTool } from "./tools/ao-run-leader-worker.tool.js";
+import { aoRunHostWorkerTool } from "./tools/ao-run-host-worker.tool.js";
 import { aoStartTaskTool } from "./tools/ao-start-task.tool.js";
 import { aoUnregisterWorkerTool } from "./tools/ao-unregister-worker.tool.js";
 import { aoValidateRepositoryTool } from "./tools/ao-validate-repository.tool.js";

@@ -23,15 +23,15 @@ export type WorkerInterviewFailureKind =
   | "schema-validation";
 export type WorkerStatus = "active" | "limited" | "blocked";
 
-export type LeaderDecisionType =
+export type OrchestratorDecisionType =
   | "approve"
   | "revise"
   | "reject"
   | "human-review";
 
-export interface LeaderDecision {
+export interface OrchestratorDecision {
   taskId: string;
-  decision: LeaderDecisionType;
+  decision: OrchestratorDecisionType;
   reason: string;
   nextActions: string[];
   requiresHumanReview: boolean;

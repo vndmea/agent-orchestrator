@@ -9,11 +9,11 @@ import {
   createExecutionContextFromEnv,
   getAoWorkspaceFilePath
 } from "@agent-orchestrator/core";
-import { LeaderAgent } from "../leader/leader-agent.js";
-import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
+import { OrchestratorAgent } from "../orchestrator/orchestrator-agent.js";
+import { runOrchestratorWorkerWorkflow } from "./orchestrator-worker-workflow.js";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-leader-worker-"));
+  mkdtemp(join(tmpdir(), "ao-orchestrator-worker-"));
 
 const createProfile = (overrides: Record<string, unknown> = {}) => ({
   workerId: "mock:gpt-5.4-mini",
@@ -99,12 +99,12 @@ const createContext = (rootDir: string) =>
     }
   });
 
-describe("leader-worker workflow with persisted profiles", () => {
+describe("orchestrator-worker workflow with persisted profiles", () => {
   it("uses a persisted worker profile when one is available", async () => {
     const rootDir = await createRootDir();
     await writeProfiles(rootDir, [createProfile()]);
 
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository"
     });
@@ -118,7 +118,7 @@ describe("leader-worker workflow with persisted profiles", () => {
   it("runs a fresh interview when no persisted profile exists and requireProfile is false", async () => {
     const rootDir = await createRootDir();
 
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository"
     });
@@ -131,7 +131,7 @@ describe("leader-worker workflow with persisted profiles", () => {
     const rootDir = await createRootDir();
     await writeRegistry(rootDir, [createRegistration()]);
 
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository",
       workerId: "mock:registered-worker"
@@ -147,7 +147,7 @@ describe("leader-worker workflow with persisted profiles", () => {
     const rootDir = await createRootDir();
 
     await expect(
-      runLeaderWorkerWorkflow({
+      runOrchestratorWorkerWorkflow({
         context: createContext(rootDir),
         goal: "Review this repository",
         workerId: "mock:unknown"
@@ -159,7 +159,7 @@ describe("leader-worker workflow with persisted profiles", () => {
     const rootDir = await createRootDir();
 
     await expect(
-      runLeaderWorkerWorkflow({
+      runOrchestratorWorkerWorkflow({
         context: createContext(rootDir),
         goal: "Review this repository",
         requireProfile: true
@@ -172,7 +172,7 @@ describe("leader-worker workflow with persisted profiles", () => {
     await writeRegistry(rootDir, [createRegistration()]);
 
     await expect(
-      runLeaderWorkerWorkflow({
+      runOrchestratorWorkerWorkflow({
         context: createContext(rootDir),
         goal: "Review this repository",
         workerId: "mock:registered-worker",
@@ -192,7 +192,7 @@ describe("leader-worker workflow with persisted profiles", () => {
       })
     ]);
 
-    const compatible = await runLeaderWorkerWorkflow({
+    const compatible = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository",
       workerId: "mock:registered-worker",
@@ -211,7 +211,7 @@ describe("leader-worker workflow with persisted profiles", () => {
       })
     ]);
 
-    const reinterviewed = await runLeaderWorkerWorkflow({
+    const reinterviewed = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository",
       workerId: "mock:registered-worker"
@@ -253,7 +253,7 @@ describe("leader-worker workflow with persisted profiles", () => {
       ]
     );
 
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository",
       requireProfile: true
@@ -284,7 +284,7 @@ describe("leader-worker workflow with persisted profiles", () => {
       ]
     );
 
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Generate implementation drafts",
       requireProfile: true
@@ -303,7 +303,7 @@ describe("leader-worker workflow with persisted profiles", () => {
     const rootDir = await createRootDir();
     await writeProfiles(rootDir, [createProfile()]);
     const planSpy = vi
-      .spyOn(LeaderAgent.prototype, "createPlan")
+      .spyOn(OrchestratorAgent.prototype, "createPlan")
       .mockResolvedValue({
         summary: "No worker tasks",
         steps: [],
@@ -313,7 +313,7 @@ describe("leader-worker workflow with persisted profiles", () => {
         validationStrategy: []
       });
 
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository",
       requireProfile: true
@@ -336,7 +336,7 @@ describe("leader-worker workflow with persisted profiles", () => {
     const rootDir = await createRootDir();
     await writeProfiles(rootDir, [createProfile()]);
     const planSpy = vi
-      .spyOn(LeaderAgent.prototype, "createPlan")
+      .spyOn(OrchestratorAgent.prototype, "createPlan")
       .mockResolvedValue({
         summary: "Use log analysis",
         steps: [],
@@ -354,7 +354,7 @@ describe("leader-worker workflow with persisted profiles", () => {
         validationStrategy: []
       });
 
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createContext(rootDir),
       goal: "Review this repository",
       requireProfile: true

@@ -29,7 +29,7 @@ import {
 } from "@agent-orchestrator/core";
 import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
 
-import { createInitialWorkflowState } from "../leader/leader-state.js";
+import { createInitialOrchestratorState } from "../orchestrator/orchestrator-state.js";
 
 interface InterviewTaskRuntimeDefinition {
   task: WorkerInterviewTask;
@@ -1387,7 +1387,7 @@ export const runWorkerInterviewWorkflow = async (
     .addEdge("run_suite", END)
     .compile();
 
-  const state = await app.invoke(createInitialWorkflowState(task));
+  const state = await app.invoke(createInitialOrchestratorState(task));
   const taskResults = state.toolResults.map(
     (result) => result.output as WorkerInterviewTaskResult
   );

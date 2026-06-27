@@ -23,7 +23,7 @@ export * from "./tools/ao-review-diff.tool.js";
 export * from "./tools/ao-review-files.tool.js";
 export * from "./tools/ao-review-repository.tool.js";
 export * from "./tools/ao-resume-task.tool.js";
-export * from "./tools/ao-run-leader-worker.tool.js";
+export * from "./tools/ao-run-host-worker.tool.js";
 export * from "./tools/ao-start-task.tool.js";
 export * from "./tools/ao-unregister-worker.tool.js";
 export * from "./tools/ao-validate-repository.tool.js";

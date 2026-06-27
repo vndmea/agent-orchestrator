@@ -9,7 +9,7 @@ import {
   runHostWorkerWorkflow,
   runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
-import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
+import { runOrchestratorWorkerWorkflow } from "./orchestrator-worker-workflow.js";
 import { runPlanningWorkflow } from "./planning-workflow.js";
 
 const createWorkspace = async (): Promise<string> => {
@@ -44,9 +44,9 @@ describe("planning workflow", () => {
   });
 });
 
-describe("leader-worker workflow", () => {
+describe("orchestrator-worker workflow", () => {
   it("transitions through planning, worker execution, and final review", async () => {
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runOrchestratorWorkerWorkflow({
       context: createExecutionContextFromEnv(undefined, {
         dryRun: true,
         allowWrite: false

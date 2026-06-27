@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const LeaderDecisionSchema = z.object({
+export const OrchestratorDecisionSchema = z.object({
   taskId: z.string().min(1),
   decision: z.enum(["approve", "revise", "reject", "human-review"]),
   reason: z.string().min(1),

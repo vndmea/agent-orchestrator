@@ -4,8 +4,8 @@ import {
   AoConfigSchema,
   AgentResultSchema,
   AgentTaskSchema,
-  LeaderDecisionSchema,
   ModelConfigSchema,
+  OrchestratorDecisionSchema,
   PatchApplyResultSchema,
   PatchInspectionSchema,
   PatchProposalSchema,
@@ -50,7 +50,7 @@ describe("core schemas", () => {
 
   it("rejects invalid leader decisions and model configs", () => {
     expect(() =>
-      LeaderDecisionSchema.parse({
+      OrchestratorDecisionSchema.parse({
         taskId: "task-1",
         decision: "maybe",
         reason: "invalid",

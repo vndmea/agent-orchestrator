@@ -9,8 +9,8 @@ import type {
 } from "@agent-orchestrator/core";
 import { resolveExecutionContext } from "@agent-orchestrator/core";
 
-import { LeaderAgent } from "../leader/leader-agent.js";
-import { createInitialWorkflowState } from "../leader/leader-state.js";
+import { OrchestratorAgent } from "../orchestrator/orchestrator-agent.js";
+import { createInitialOrchestratorState } from "../orchestrator/orchestrator-state.js";
 
 export interface PlanningWorkflowInput {
   context?: ExecutionContext;
@@ -42,7 +42,7 @@ export const runPlanningWorkflow = async (
   input: PlanningWorkflowInput
 ): Promise<PlanningWorkflowOutput> => {
   const context = input.context ?? await resolveExecutionContext();
-  const leader = new LeaderAgent(context);
+  const orchestrator = new OrchestratorAgent(context);
   const task: AgentTask = {
     id: randomUUID(),
     goal: input.goal,
@@ -60,19 +60,19 @@ export const runPlanningWorkflow = async (
       workflow: "planning-workflow"
     }
   };
-  const initialState = createInitialWorkflowState(task);
+  const initialState = createInitialOrchestratorState(task);
 
   const app = new StateGraph(PlanningState)
     .addNode("create_plan", async (state) => ({
       ...state,
-      plan: await leader.createPlan(state.task)
+      plan: await orchestrator.createPlan(state.task)
     }))
     .addEdge(START, "create_plan")
     .addEdge("create_plan", END)
     .compile();
 
   const result = await app.invoke(initialState);
-  const plan = result.plan ?? (await leader.createPlan(task));
+  const plan = result.plan ?? (await orchestrator.createPlan(task));
 
   return {
     plan,

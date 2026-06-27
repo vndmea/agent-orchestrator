@@ -5,7 +5,7 @@ import {
   createDefaultWorkerEvaluationSuite,
   runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
-import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
+import { runOrchestratorWorkerWorkflow } from "./orchestrator-worker-workflow.js";
 
 const createContext = () =>
   createExecutionContextFromEnv(undefined, {
@@ -71,7 +71,7 @@ describe("worker interview workflow", () => {
         }
       }
     });
-    const workflow = await runLeaderWorkerWorkflow({
+    const workflow = await runOrchestratorWorkerWorkflow({
       context: createContext(),
       goal: "Generate implementation drafts",
       workerCapabilityProfile: interview.profile
@@ -94,7 +94,7 @@ describe("worker interview workflow", () => {
         summarization: "bad"
       }
     });
-    const workflow = await runLeaderWorkerWorkflow({
+    const workflow = await runOrchestratorWorkerWorkflow({
       context: createContext(),
       goal: "Draft tests for workflow routing",
       workerCapabilityProfile: interview.profile
