@@ -29,12 +29,12 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
   {
     name: "ao_run_workflow",
     category: "workflow-building-blocks",
-    description: "Run one of the built-in orchestration workflows and return structured results."
+    description: "Run a low-level built-in workflow directly. Prefer host-facing task/session tools for normal use."
   },
   {
     name: "ao_run_leader_worker",
     category: "workflow-building-blocks",
-    description: "Run the leader-worker workflow with optional worker profile requirements."
+    description: "Run one explicit worker task under host control without starting an internal ao leader."
   },
   {
     name: "ao_propose_patch",
@@ -80,7 +80,7 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
     name: "ao_start_task",
     category: "high-level-task-entrypoints",
     recommended: true,
-    description: "Recommended high-level coding task entrypoint that starts a local task session, persists reviewable artifacts, and returns next recommended actions."
+    description: "Recommended host-facing coding entrypoint that keeps the host in control while ao manages context, validation, artifacts, and patch gates."
   },
   {
     name: "ao_resume_task",

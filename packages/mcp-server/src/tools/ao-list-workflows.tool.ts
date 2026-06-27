@@ -14,11 +14,11 @@ export const aoListWorkflowsTool: AoToolDefinition<
   execute: () => [
     {
       name: "planning-workflow",
-      description: "Create a task plan with worker assignments, risks, and validation strategy."
+      description: "Create a low-level task plan with worker assignments, risks, and validation strategy."
     },
     {
       name: "leader-worker-workflow",
-      description: "Coordinate leader planning, workers, tool validation, and final review."
+      description: "Internal standalone workflow that coordinates its own leader, workers, validation, and final review."
     },
     {
       name: "review-workflow",

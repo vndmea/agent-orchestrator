@@ -4,6 +4,12 @@ The MCP server is a first-class interface for `agent-orchestrator`.
 
 The MCP layer is intentionally thin. It delegates to the same workflow functions used by the CLI and keeps orchestration state in user-scoped AO workspace storage.
 
+In host-driven use, treat `ao` as the controlled execution/runtime layer, not as a second leader:
+
+- The host keeps user intent and final acceptance.
+- `ao` keeps worker execution, repository context, validation, artifacts, and patch gates explicit.
+- `ao_start_task` is the default control surface for coding flows.
+
 Use `ao_start_task` as the default high-level entrypoint for coding flows, and follow `nextRecommendedActions` instead of composing patch lifecycle steps by hand.
 
 ## Root Directory Resolution
@@ -56,9 +62,10 @@ By default, the MCP server stores AO-managed state under:
 
 ## Tool Categories
 
-- High-level orchestration: task sessions, leader-worker orchestration, plan, review, fix, patch proposal.
+- Host-facing execution: task sessions, review, fix, patch proposal, and explicit worker-task execution.
 - Patch lifecycle gates: inspect and apply remain explicit, separate safety steps.
 - Worker management: registry, profile, onboarding interview, and benchmark-driven capability qualification.
+- Low-level/internal workflows: planning and legacy standalone workflow runners.
 - Diagnostics and audit: doctor, audit event listing, model and workflow inspection.
 
 ## Exposed Tools
@@ -101,6 +108,12 @@ By default, the MCP server stores AO-managed state under:
 - New-user onboarding: start with `docs/minimal-success-path.md` and `ao setup`.
 - Command/operator detail: refer to `docs/cli.md`.
 - Workspace install and launch: refer to `docs/install.md`.
+
+For host-driven coding flows:
+
+1. Use `ao_start_task` when you want AO to manage repository context, validation, task artifacts, and patch lifecycle.
+2. Use `ao_run_leader_worker` only when the host wants one narrow worker task under explicit control.
+3. Treat `ao_run_workflow` and `leader-worker-workflow` as low-level/internal surfaces rather than the primary user-facing control path.
 
 For worker qualification over MCP, use:
 

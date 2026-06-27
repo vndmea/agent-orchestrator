@@ -2,14 +2,15 @@
 
 [English](https://github.com/vndmea/agent-orchestrator/blob/master/README.md) | 简体中文
 
-`agent-orchestrator` 是一个面向多模型工程工作流的 TypeScript 编排服务。它围绕 leader-worker 协作、确定性验证，以及通过 CLI 和 MCP server 提供的轻量交付接口来设计。
+`agent-orchestrator` 是一个面向多模型工程工作流的 TypeScript 编排运行时。它的核心职责是把 worker 调用、仓库上下文收敛、确定性验证、patch gate 和本地任务产物放进一个可控的执行层里。
 
 ## 这是什么
 
-- 一个使用 TypeScript / Node.js 构建的 monorepo，用于编排 leader 与 worker agent
+- 一个使用 TypeScript / Node.js 构建的 monorepo，用于编排 worker 执行、验证和任务产物
 - 一个可以被人类或其他 coding agent 通过 shell 命令调用的 CLI
 - 一个以结构化工具形式暴露编排能力的 MCP server
 - 一个默认以 dry-run 模式运行的安全工作流引擎
+- 一个把 repository reads、patch 生命周期、worker 资格和 audit 收口的本地执行层
 
 ## 这不是什么
 
@@ -17,6 +18,14 @@
 - 不是交互式 coding terminal 或 TUI
 - 不是完整的聊天界面
 - 不是 Web UI 产品
+
+## 宿主关系
+
+在 Codex 这类宿主驱动场景里，`ao` 不是第二个 leader，也不应该替代宿主做最终判断。
+
+- 宿主负责理解用户目标、决定是否接受结果。
+- `ao` 负责受控执行：worker 路由、repository context、确定性验证、artifact 持久化、patch gate。
+- 对宿主来说，`ao` 的推荐入口是 `ao_start_task` 和其他 host-managed tools，而不是再起一个内部 leader。
 
 ## 架构图
 
@@ -27,15 +36,13 @@ Human / Coding Agent / CI / MCP Client
            ao CLI / MCP
                 |
                 v
-         LangGraph Workflows
-                |
-      +---------+---------+
-      |                   |
-      v                   v
- Leader Agent      Deterministic Tools
+      Orchestration Runtime
+      |            |        \
+      v            v         v
+ Worker Routing  Deterministic Tools  AO Storage / Artifacts
       |
       v
- Worker Agents
+ Worker Models / Local Clients
 ```
 
 ## Monorepo 结构
@@ -195,12 +202,11 @@ ao worker register \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
-  --api-key-env-var LITELLM_API_KEY \
   --allow-write
 
 ao worker interview --worker litellm:qwen3-coder --save
 
-ao run leader-worker-workflow \
+ao task start \
   --goal "Review this repository" \
   --worker litellm:qwen3-coder \
   --require-profile
@@ -208,7 +214,7 @@ ao run leader-worker-workflow \
 ao audit list
 ```
 
-这条链路强调本地注册、能力画像持久化，以及可审计的显式分配。
+这条链路强调本地注册、能力画像持久化，以及可审计的显式分配，同时把整体任务控制权留在宿主手里。
 
 ## 仓库 review 流程
 
@@ -339,14 +345,14 @@ ao mcp list-tools
 3. `~/.ao/workspaces/<workspace-id>/config.json`
 4. 内置默认值
 
-`config.json` 只记录密钥环境变量名，例如 `apiKeyEnvVar`，不会保存实际 API key。
+`config.json` 不再记录密钥环境变量名。运行时密钥统一通过 `LEADER_MODEL_API_KEY`、`WORKER_MODEL_API_KEY` 这类固定变量提供。
 
 用户级 AO `config.json` 里的 repository context 配置也会作为 review、fix、patch 和 task workflow 的默认预算来源，包括 `maxFileBytes`、`maxTotalBytes` 和 `ignoredPaths`，除非某个命令显式覆盖。
 
 ## 内置工作流
 
 - `planning-workflow`：生成任务计划、worker 分配建议、风险列表和验证策略
-- `leader-worker-workflow`：协调 leader 规划、worker 执行、工具验证与最终审查
+- `leader-worker-workflow`：低层内部工作流，用于 standalone/测试式 leader-worker 编排
 - `review-workflow`：汇总 diff 影响、风险、缺失测试与后续项
 - `fix-error-workflow`：分析错误日志并给出以验证为导向的安全修复建议
 - `worker-interview-workflow`：在生产路由前评估 worker 模型，并生成能力画像
@@ -403,7 +409,7 @@ pnpm example:leader-worker-basic
 - validation 命令统一走安全命令路径，相关行为可通过 audit log 追踪。
 - `ao audit list` 可查看本地 workflow、文件与命令事件。
 - `ao cleanup runs` 和 `ao cleanup audit` 只删除本地 AO 产物，不会碰项目源代码。
-- Worker 输出在 leader review 完成前都不能视为最终结果。
+- 宿主驱动场景里，worker 输出在宿主接受前都不能视为最终结果。
 - Worker 在进入生产任务前应先通过 onboarding evaluation。
 - structured output 或可靠性不达标的 worker 会被限制或阻断。
 - 密钥应通过环境变量提供，且绝不能写入日志。

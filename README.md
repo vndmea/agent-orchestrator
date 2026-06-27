@@ -2,14 +2,15 @@
 
 English | [简体中文](https://github.com/vndmea/agent-orchestrator/blob/master/README.zh-CN.md)
 
-`agent-orchestrator` is a TypeScript orchestration server for multi-model engineering workflows. It is designed for leader-worker execution, deterministic validation, and thin delivery layers through a CLI and MCP server.
+`agent-orchestrator` is a TypeScript orchestration runtime for multi-model engineering workflows. It is designed to keep worker execution, repository context selection, deterministic validation, and local task artifacts under explicit control through a CLI and MCP server.
 
 ## What this is
 
-- A TypeScript/Node.js monorepo for orchestrating leader and worker agents
+- A TypeScript/Node.js monorepo for orchestrating worker execution, validation, and task artifacts
 - A CLI callable by humans or other coding agents through shell commands
 - An MCP server exposing orchestration capabilities as structured tools
 - A safe workflow engine that defaults to dry-run behavior
+- A local execution layer that keeps repository reads, patch lifecycle, and worker qualification auditable
 
 ## What this is not
 
@@ -17,6 +18,14 @@ English | [简体中文](https://github.com/vndmea/agent-orchestrator/blob/maste
 - Not an interactive coding terminal or TUI
 - Not a full chat interface
 - Not a web UI product
+
+## Host relationship
+
+In host-driven use cases such as Codex, `ao` is not intended to become a second user-facing leader.
+
+- The host agent stays responsible for user intent, final judgment, and acceptance.
+- `ao` provides the controlled runtime: worker routing, repository context packs, deterministic validation, artifact persistence, and patch gates.
+- The recommended host-facing path is `ao_start_task` and other host-managed tools.
 
 ## Architecture diagram
 
@@ -27,15 +36,13 @@ Human / Coding Agent / CI / MCP Client
            ao CLI / MCP
                 |
                 v
-         LangGraph Workflows
-                |
-      +---------+---------+
-      |                   |
-      v                   v
- Leader Agent      Deterministic Tools
+   Orchestration Runtime Layer
+      |            |         \
+      v            v          v
+ Worker Routing  Deterministic Tools  AO Storage / Artifacts
       |
       v
- Worker Agents
+ Worker Models / Local Clients
 ```
 
 ## Monorepo layout
@@ -203,7 +210,7 @@ ao worker register \
 
 ao worker interview --worker litellm:qwen3-coder --save
 
-ao run leader-worker-workflow \
+ao task start \
   --goal "Review this repository" \
   --worker litellm:qwen3-coder \
   --require-profile
@@ -211,7 +218,7 @@ ao run leader-worker-workflow \
 ao audit list
 ```
 
-This flow keeps worker selection local, auditable, and gated by a persisted capability profile.
+This flow keeps worker selection local, auditable, and gated by a persisted capability profile while leaving the host in control of the overall task.
 
 ## Repository review flow
 
@@ -344,14 +351,14 @@ Runtime configuration resolves in this order:
 3. `~/.ao/workspaces/<workspace-id>/config.json`
 4. built-in defaults
 
-`config.json` stores only env-var names for secrets such as `apiKeyEnvVar`. Actual API keys stay in the environment.
+`config.json` no longer stores secret env-var names. Provide runtime secrets through fixed variables such as `LEADER_MODEL_API_KEY` and `WORKER_MODEL_API_KEY`.
 
 Repository context settings in the user-scoped AO `config.json` also control default `maxFileBytes`, `maxTotalBytes`, and `ignoredPaths` for review, fix, patch, and task workflows unless a command overrides them explicitly.
 
 ## Workflows
 
 - `planning-workflow`: builds a plan, worker assignment proposal, risk list, and validation strategy
-- `leader-worker-workflow`: coordinates leader planning, worker execution, tool validation, and final review
+- `leader-worker-workflow`: legacy standalone workflow that coordinates internal leader planning, worker execution, tool validation, and final review
 - `review-workflow`: summarizes diff impact, risks, missing tests, and follow-up items
 - `fix-error-workflow`: analyzes error logs and proposes safe validation-oriented fix steps
 - `worker-interview-workflow`: evaluates a worker model before production routing and generates a capability profile
@@ -408,7 +415,8 @@ If you want different endpoints for leader and worker traffic, use the model-spe
 - Validation commands go through the safe command path and can be inspected through audit logs.
 - `ao audit list` exposes the local audit trail for workflow, file, and command events.
 - `ao cleanup runs` and `ao cleanup audit` only delete local AO artifacts and never touch project source files.
-- Worker outputs are not final until leader review completes.
+- In host-driven flows, worker outputs are not final until the host accepts them.
+- In legacy standalone leader-worker workflows, worker outputs are not final until internal leader review completes.
 - Workers must pass onboarding evaluation before they should receive production tasks.
 - Workers that fail structured output or reliability checks are limited or blocked.
 - Secrets are expected from environment variables and should never be logged.

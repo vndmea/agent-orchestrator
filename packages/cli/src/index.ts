@@ -36,7 +36,7 @@ export const buildCli = (io: CliIo = defaultIo): Command => {
 
   program
     .name("ao")
-    .description("Agent Orchestrator CLI for leader-worker engineering workflows.")
+    .description("Agent Orchestrator CLI for controlled worker execution, validation, and task artifacts.")
     .showHelpAfterError()
     .configureOutput({
       writeErr: io.error,

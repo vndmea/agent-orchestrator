@@ -31,7 +31,7 @@ export const aoRunWorkflowTool: AoToolDefinition<
   unknown
 > = {
   name: "ao_run_workflow",
-  description: "Run one of the built-in orchestration workflows and return structured results.",
+  description: "Run a low-level built-in workflow directly. Prefer ao_start_task or ao_run_leader_worker for host-facing use.",
   inputSchema,
   execute: async (args) => {
     switch (args.workflow) {

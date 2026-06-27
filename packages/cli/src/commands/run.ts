@@ -100,14 +100,14 @@ const workflowAliases: Record<string, string> = {
 export const registerRunCommand = (program: Command, io: CliIo): void => {
   program
     .command("run")
-    .description("Run a built-in workflow by name.")
-    .argument("<workflow>", "Workflow name")
-    .option("--goal <goal>", "Goal for planning or leader-worker workflows")
+    .description("Run a low-level built-in workflow by name.")
+    .argument("<workflow>", "Low-level workflow name")
+    .option("--goal <goal>", "Goal for planning or low-level leader-worker workflows")
     .option("--scope <scope>", "Optional repository or package scope")
     .option("--diff <diff>", "Diff text or revision range for review workflow")
     .option("--file <path...>", "Optional file list for review workflow")
     .option("--error-log <text>", "Error log text for fix-error workflow")
-    .option("--worker <workerId>", "Worker profile id for leader-worker workflows")
+    .option("--worker <workerId>", "Worker profile id for low-level leader-worker workflows")
     .option("--require-profile", "Fail if no usable worker profile is available", false)
     .option("--allow-write", "Allow writes for this invocation", false)
     .action(

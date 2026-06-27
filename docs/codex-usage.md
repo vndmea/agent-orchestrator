@@ -2,6 +2,8 @@
 
 Use `ao_start_task` as the default high-level coding task entrypoint for Codex and GPT clients.
 
+Codex stays in charge. `ao` should be treated as the controlled execution/runtime layer that narrows repository context, routes workers, records artifacts, and runs validation.
+
 Recommended call order:
 
 1. Call `ao_start_task` with `goal`, optional `scope`, and deterministic validation flags.
@@ -9,6 +11,12 @@ Recommended call order:
 3. Review `aoStorageDir/runs/<taskId>/report.md` or call `ao_get_task_report` before any patch apply attempt.
 4. Prefer `proposePatch=true` and `inspectPatch=true` first.
 5. Use patch apply only after manual review. Keep the first apply in dry-run mode unless a human explicitly wants writes.
+
+When to use `ao_run_leader_worker`:
+
+- Use it only when Codex wants one explicit worker task such as `review-lite` or `summarization`.
+- Treat it as a narrow worker invocation surface, not as a second planning or acceptance layer.
+- If the task needs multi-step orchestration or patch lifecycle management, go back to `ao_start_task`.
 
 When to require a profile:
 
