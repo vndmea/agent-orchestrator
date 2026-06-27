@@ -103,6 +103,41 @@ describe("review workflow", () => {
 
     expect(result.repositoryContext.gitDiff?.changedFiles).toContain("packages/core/src/index.ts");
   }, 15_000);
+
+  it("ignores non-path scope text when explicit files are provided", async () => {
+    const rootDir = await createWorkspace();
+    await writeFile(
+      join(rootDir, "package.json"),
+      JSON.stringify(
+        {
+          scripts: {
+            typecheck: "node -e \"process.exit(0)\""
+          }
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const result = await runReviewWorkflow({
+      context: createContext(rootDir),
+      files: ["packages/core/src/index.ts"],
+      scope: "please focus on id generation only",
+      validate: {
+        typecheck: true
+      }
+    });
+
+    expect(result.repositoryContext.scope).toBeUndefined();
+    expect(result.repositoryContext.warnings.join("\n")).toContain("Ignoring scope");
+    expect(result.validationReport.checks).toEqual([
+      expect.objectContaining({
+        name: "typecheck",
+        status: "dry-run"
+      })
+    ]);
+  });
 });
 
 describe("fix-error workflow", () => {

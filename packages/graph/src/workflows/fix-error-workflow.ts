@@ -106,11 +106,12 @@ export const runFixErrorWorkflow = async (
     scope: input.scope,
     errorLog
   });
+  const effectiveScope = repositoryContext.scope;
   const validationReport = await runRepositoryValidation(context, {
     typecheck: input.validate?.typecheck,
     lint: input.validate?.lint,
     test: input.validate?.test,
-    scope: input.scope
+    scope: effectiveScope
   });
   const sharedTaskInput = {
     errorLog,
@@ -122,7 +123,7 @@ export const runFixErrorWorkflow = async (
     goal: "Analyze the supplied error log and summarize the likely root cause using the scoped repository context.",
     repositoryContext,
     requireProfile: input.requireProfile,
-    scope: input.scope,
+    scope: effectiveScope,
     taskType: "log-analysis",
     additionalTaskInput: sharedTaskInput,
     workerId: input.workerId
@@ -132,7 +133,7 @@ export const runFixErrorWorkflow = async (
     goal: "Produce a safe candidate fix plan for the supplied error log using only the scoped repository context.",
     repositoryContext,
     requireProfile: input.requireProfile,
-    scope: input.scope,
+    scope: effectiveScope,
     taskType: "codegen",
     additionalTaskInput: sharedTaskInput,
     workerId: input.workerId
@@ -153,7 +154,7 @@ export const runFixErrorWorkflow = async (
           ? `Fix issues within ${input.scope}`
           : "Fix the supplied repository issue",
         repositoryContext,
-        scope: input.scope,
+        scope: effectiveScope,
         validationReport,
         workerId: input.workerId,
         requireProfile: input.requireProfile

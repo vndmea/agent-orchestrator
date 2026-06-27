@@ -55,6 +55,7 @@ export const runPatchProposalWorkflow = async (
       scope: input.scope,
       errorLog: input.errorLog
     });
+  const effectiveScope = repositoryContext.scope ?? input.scope;
   const warnings: string[] = [];
   const workerModelResolution = input.workerId
     ? await resolveWorkerModel({
@@ -84,7 +85,7 @@ export const runPatchProposalWorkflow = async (
   const fallbackProposal = buildFallbackPatchProposal(
     {
       goal: input.goal,
-      scope: input.scope
+      scope: effectiveScope
     },
     repositoryContext,
     workerId
@@ -100,7 +101,7 @@ export const runPatchProposalWorkflow = async (
       warnings.push(eligibility.reason);
       const inspection = PatchInspectionSchema.parse({
         ...(await inspectPatch(context, fallbackProposal, {
-          scope: input.scope
+          scope: effectiveScope
         })),
         ok: false,
         blockedReasons: [
@@ -130,14 +131,14 @@ export const runPatchProposalWorkflow = async (
     goal: input.goal ?? "Propose a safe patch.",
     repositoryContext,
     reviewResult: input.reviewResult,
-    scope: input.scope,
+    scope: effectiveScope,
     validationReport: input.validationReport,
     workerId,
     workerProfile
   });
   const proposal = generation.proposal;
   let inspection = await inspectPatch(context, proposal, {
-    scope: input.scope
+    scope: effectiveScope
   });
 
   if (!generation.structuredOutputOk) {
@@ -166,7 +167,7 @@ export const runPatchProposalWorkflow = async (
     errors: inspection.blockedReasons,
     metadata: {
       patchId: proposal.id,
-      scope: input.scope,
+      scope: effectiveScope,
       workerId
     }
   });

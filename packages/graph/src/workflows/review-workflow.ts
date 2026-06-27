@@ -130,11 +130,12 @@ export const runReviewWorkflow = async (
         gitDiff: diffSummary
       }
     : repositoryContextBase;
+  const effectiveScope = repositoryContext.scope;
   const validationReport = await runRepositoryValidation(context, {
     typecheck: input.validate?.typecheck,
     lint: input.validate?.lint,
     test: input.validate?.test,
-    scope: input.scope
+    scope: effectiveScope
   });
   const workerRun = await runHostWorkerWorkflow({
     context,
@@ -144,7 +145,7 @@ export const runReviewWorkflow = async (
     maxTotalBytes: input.maxTotalBytes,
     repositoryContext,
     requireProfile: input.requireProfile,
-    scope: input.scope,
+    scope: effectiveScope,
     taskType: "review-lite",
     additionalTaskInput: {
       diff: diffSummary?.diffText ?? input.diff,
