@@ -140,7 +140,10 @@ ao worker profile litellm:qwen3-coder
 
 - 指令遵循能力
 - 结构化 JSON 输出能力
+- 严格作用域约束能力
 - 摘要能力
+- 证据链式仓库 review 能力
+- 关键证据不足时的拒答能力
 - 代码理解能力
 - 简单 TypeScript 代码生成能力
 - 置信度校准能力

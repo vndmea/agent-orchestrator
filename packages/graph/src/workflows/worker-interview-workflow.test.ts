@@ -46,7 +46,9 @@ describe("worker interview workflow", () => {
     expect(result.profile.portrait?.repoGrounding).toBeGreaterThan(0.7);
     expect(result.profile.taskScores?.reviewLite).toBeGreaterThan(0.7);
     expect(result.profile.evidence?.repoGroundedCases).toContain("structured-output");
-    expect(result.taskResults).toHaveLength(7);
+    expect(result.profile.evidence?.repoGroundedCases).toContain("review-grounding");
+    expect(result.profile.evidence?.repoGroundedCases).toContain("evidence-sufficiency");
+    expect(result.taskResults).toHaveLength(9);
   });
 
   it("blocks workers that fail structured output handling", async () => {
@@ -79,6 +81,50 @@ describe("worker interview workflow", () => {
     expect(result.persistenceAdvice.reason).toContain("provider invocation failures");
     expect(result.profile.admission?.passed).toBe(false);
     expect(result.taskResults.some((task) => task.failureKind === "provider-invocation")).toBe(true);
+  });
+
+  it("blocks review-lite qualification when review grounding is generic", async () => {
+    const result = await runWorkerInterviewWorkflow({
+      context: createContext(),
+      simulatedResponses: {
+        "review-grounding": {
+          answer: "Review the files and inspect the implementation.",
+          findings: ["Possible issue.", "Needs more context."],
+          referencedFiles: ["packages/core/src/exportXml.ts", "packages/core/src/exportXml.ts"],
+          confidence: 0.91
+        }
+      }
+    });
+
+    expect(result.profile.supportedTaskTypes).not.toContain("review-lite");
+    expect(
+      result.taskResults.find((task) => task.type === "review-grounding")?.score
+    ).toBeLessThan(0.6);
+    expect(result.profile.admission?.blockingReasons.join("\n")).toMatch(
+      /review grounding|Repo grounding/u
+    );
+    expect(result.profile.evidence?.genericAnswerCases).toContain("review-grounding");
+  });
+
+  it("blocks summarization and review-lite when mandatory evidence is missing but the worker guesses", async () => {
+    const result = await runWorkerInterviewWorkflow({
+      context: createContext(),
+      simulatedResponses: {
+        "evidence-sufficiency": {
+          decision: "yes",
+          reason: "export looks fine so the fix is probably present",
+          missingFiles: [],
+          confidence: 0.94
+        }
+      }
+    });
+
+    expect(result.profile.supportedTaskTypes).not.toContain("summarization");
+    expect(result.profile.supportedTaskTypes).not.toContain("review-lite");
+    expect(result.profile.admission?.blockingReasons.join("\n")).toContain(
+      "Evidence sufficiency discipline is below the admission threshold."
+    );
+    expect(result.profile.evidence?.genericAnswerCases).toContain("evidence-sufficiency");
   });
 
   it("limits routing when code generation quality is too low", async () => {
@@ -149,6 +195,12 @@ describe("worker interview workflow", () => {
     expect(
       suite.tasks.find((task) => task.id === "summarization")?.prompt
     ).toContain("packages/runtime/src/readProfile.ts");
+    expect(
+      suite.tasks.find((task) => task.id === "review-grounding")?.prompt
+    ).toContain("packages/core/src/normalizeNode.ts");
+    expect(
+      suite.tasks.find((task) => task.id === "evidence-sufficiency")?.prompt
+    ).toContain("insufficient");
     expect(
       suite.tasks.find((task) => task.id === "code-understanding")?.prompt
     ).toContain("packages/math/src/sumValidated.ts");

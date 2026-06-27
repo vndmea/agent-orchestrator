@@ -143,7 +143,10 @@ The interview workflow evaluates:
 
 - instruction following
 - structured JSON output
+- strict scope discipline
 - summarization
+- evidence-linked repository review
+- refusal when mandatory evidence is missing
 - code understanding
 - simple TypeScript code generation
 - confidence calibration
