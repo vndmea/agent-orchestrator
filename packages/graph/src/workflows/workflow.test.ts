@@ -86,7 +86,42 @@ describe("host worker workflow", () => {
     );
     expect(result.qualityGate.missingRequestedFiles).toEqual([]);
     expect(result.qualityGate.genericFallbackDetected).toBe(false);
+    expect(result.qualityGate.workflowStatus).toBe("completed");
+    expect(result.qualityGate.answerStatus).toBe("complete");
     expect(result.finalResult.status).toBe("success");
+  });
+
+  it("fails fast when strict file mode cannot fit explicit files into the budget", async () => {
+    const rootDir = await createWorkspace();
+    await writeFile(
+      join(rootDir, "packages", "core", "src", "wide.ts"),
+      "export const wide = '".concat("x".repeat(200), "';\n"),
+      "utf8"
+    );
+
+    await expect(
+      runHostWorkerWorkflow({
+        context: createExecutionContextFromEnv(undefined, {
+          dryRun: true,
+          allowWrite: false,
+          rootDir
+        }),
+        goal: "Review explicit files only",
+        taskType: "review-lite",
+        files: [
+          "packages/core/src/generateId.ts",
+          "packages/core/src/wide.ts"
+        ],
+        maxFileBytes: 120,
+        maxTotalBytes: 140,
+        strictFiles: true
+      })
+    ).rejects.toMatchObject({
+      code: "REPOSITORY_CONTEXT_LIMIT_EXCEEDED",
+      details: {
+        strictFiles: true
+      }
+    });
   });
 });
 

@@ -26,6 +26,7 @@ export interface ReviewWorkflowInput {
   maxTotalBytes?: number;
   requireProfile?: boolean;
   scope?: string;
+  strictFiles?: boolean;
   validate?: {
     lint?: boolean;
     test?: boolean;
@@ -122,7 +123,8 @@ export const runReviewWorkflow = async (
     diffBase: diffSummary?.base,
     diffHead: diffSummary?.head,
     maxFileBytes: input.maxFileBytes,
-    maxTotalBytes: input.maxTotalBytes
+    maxTotalBytes: input.maxTotalBytes,
+    strictFiles: input.strictFiles
   });
   const repositoryContext = diffSummary
     ? {
@@ -146,6 +148,7 @@ export const runReviewWorkflow = async (
     repositoryContext,
     requireProfile: input.requireProfile,
     scope: effectiveScope,
+    strictFiles: input.strictFiles,
     taskType: "review-lite",
     additionalTaskInput: {
       diff: diffSummary?.diffText ?? input.diff,

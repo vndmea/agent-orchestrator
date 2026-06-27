@@ -401,6 +401,8 @@ describe("mcp tool registration", () => {
 
     expect(result.workerResult).not.toBeNull();
     expect(result.qualityGate.answered).toBe(true);
+    expect(result.qualityGate.workflowStatus).toBe("completed");
+    expect(result.qualityGate.answerStatus).toBe("complete");
     expect(result.finalResult.status).toBe("success");
   });
 
@@ -448,6 +450,8 @@ describe("mcp tool registration", () => {
       expect(repoReview.repositoryContext.scope).toBe("packages/core");
       expect(diffReview.repositoryContext.gitDiff).toBeDefined();
       expect(fileReview.repositoryContext.selectedFiles[0]?.path).toBe("packages/core/src/index.ts");
+      expect(fileReview.qualityGate.workflowStatus).toBe("completed");
+      expect(fileReview.qualityGate.answerStatus).toBe("complete");
       expect(validation.checks[0]?.status).toBe("dry-run");
       expect(fix.repositoryContext.scope).toBe("packages/core");
     });
@@ -475,6 +479,31 @@ describe("mcp tool registration", () => {
       );
     });
   }, 15_000);
+
+  it("fails fast for MCP file review when strict files exceed the budget", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      await writeFile(
+        join(rootDir, "packages", "core", "src", "wide.ts"),
+        "export const wide = '".concat("x".repeat(200), "';\n"),
+        "utf8"
+      );
+
+      await expect(
+        aoReviewFilesTool.execute({
+          files: [
+            "packages/core/src/index.ts",
+            "packages/core/src/wide.ts"
+          ],
+          maxFileBytes: 120,
+          maxTotalBytes: 140,
+          strictFiles: true
+        })
+      ).rejects.toMatchObject({
+        code: "REPOSITORY_CONTEXT_LIMIT_EXCEEDED"
+      });
+    });
+  });
 
   it("executes patch proposal, inspection, and apply tools", async () => {
     await withTempCwd(async (rootDir) => {

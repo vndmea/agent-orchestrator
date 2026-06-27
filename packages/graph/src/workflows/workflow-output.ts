@@ -110,7 +110,9 @@ export const formatReviewWorkflowOutput = (
     accepted: output.accepted,
     repository: {
       scope: output.repositoryContext.scope,
+      requestedFileCount: output.repositoryContext.requestedFiles.length,
       selectedFileCount: output.repositoryContext.selectedFiles.length,
+      strictFiles: output.repositoryContext.strictFiles,
       warningCount: output.repositoryContext.warnings.length,
       diffIncluded: Boolean(output.repositoryContext.gitDiff),
       truncatedFileCount: output.repositoryContext.selectedFiles.filter(
@@ -119,6 +121,8 @@ export const formatReviewWorkflowOutput = (
     },
     validation: summarizeValidationReport(output.validationReport, options?.maxBytes),
     workerReviewStatus: output.workerReviewResult?.status ?? "not-run",
+    workflowStatus: output.qualityGate.workflowStatus,
+    answerStatus: output.qualityGate.answerStatus,
     qualityGate: output.qualityGate
   };
 };

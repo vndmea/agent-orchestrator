@@ -21,6 +21,7 @@ const inputSchema = z.object({
   test: z.boolean().optional(),
   maxFileBytes: z.number().int().positive().optional(),
   maxTotalBytes: z.number().int().positive().optional(),
+  strictFiles: z.boolean().optional(),
   ...workflowOutputOptionShape
 });
 
@@ -41,6 +42,7 @@ export const aoReviewDiffTool: AoToolDefinition<
       scope: args.scope,
       maxFileBytes: args.maxFileBytes,
       maxTotalBytes: args.maxTotalBytes,
+      strictFiles: args.strictFiles,
       validate: {
         typecheck: args.typecheck,
         lint: args.lint,

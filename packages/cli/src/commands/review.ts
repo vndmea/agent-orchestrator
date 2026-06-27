@@ -73,6 +73,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
     .option("--scope <scope>", "Optional scope")
     .option("--max-file-bytes <bytes>", "Maximum bytes per selected file", Number)
     .option("--max-total-bytes <bytes>", "Maximum total bytes for repository context", Number)
+    .option("--strict-files", "Fail fast when requested files cannot be included within the context budget", false)
     .option("--typecheck", "Run typecheck", false)
     .option("--lint", "Run lint", false)
     .option("--test", "Run tests", false)
@@ -85,6 +86,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
       maxBytes?: number;
       maxFileBytes?: number;
       maxTotalBytes?: number;
+      strictFiles: boolean;
       scope?: string;
       summary: boolean;
       test: boolean;
@@ -95,6 +97,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
         context,
         maxFileBytes: options.maxFileBytes,
         maxTotalBytes: options.maxTotalBytes,
+        strictFiles: options.strictFiles,
         scope: options.scope,
         validate: {
           typecheck: options.typecheck,
@@ -123,6 +126,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
     .option("--scope <scope>", "Optional scope")
     .option("--max-file-bytes <bytes>", "Maximum bytes per selected file", Number)
     .option("--max-total-bytes <bytes>", "Maximum total bytes for repository context", Number)
+    .option("--strict-files", "Fail fast when requested files cannot be included within the context budget", false)
     .option("--typecheck", "Run typecheck", false)
     .option("--lint", "Run lint", false)
     .option("--test", "Run tests", false)
@@ -138,6 +142,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
         maxBytes?: number;
         maxFileBytes?: number;
         maxTotalBytes?: number;
+        strictFiles: boolean;
         scope?: string;
         summary: boolean;
         test: boolean;
@@ -151,6 +156,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
           diffHead: options.head,
           maxFileBytes: options.maxFileBytes,
           maxTotalBytes: options.maxTotalBytes,
+          strictFiles: options.strictFiles,
           scope: options.scope,
           validate: {
             typecheck: options.typecheck,
@@ -179,6 +185,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
     .option("--scope <scope>", "Optional scope")
     .option("--max-file-bytes <bytes>", "Maximum bytes per selected file", Number)
     .option("--max-total-bytes <bytes>", "Maximum total bytes for repository context", Number)
+    .option("--strict-files", "Fail fast when requested files cannot be included within the context budget", false)
     .option("--typecheck", "Run typecheck", false)
     .option("--lint", "Run lint", false)
     .option("--test", "Run tests", false)
@@ -193,6 +200,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
         maxBytes?: number;
         maxFileBytes?: number;
         maxTotalBytes?: number;
+        strictFiles: boolean;
         scope?: string;
         summary: boolean;
         test: boolean;
@@ -204,6 +212,7 @@ export const registerReviewCommand = (program: Command, io: CliIo): void => {
           files: options.file,
           maxFileBytes: options.maxFileBytes,
           maxTotalBytes: options.maxTotalBytes,
+          strictFiles: options.strictFiles,
           scope: options.scope,
           validate: {
             typecheck: options.typecheck,

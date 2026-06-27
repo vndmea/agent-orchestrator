@@ -11,6 +11,7 @@ const inputSchema = z.object({
   maxFileBytes: z.number().int().positive().optional(),
   maxTotalBytes: z.number().int().positive().optional(),
   scope: z.string().optional(),
+  strictFiles: z.boolean().optional(),
   taskType: z.enum([
     "summarization",
     "codegen",
@@ -41,6 +42,7 @@ export const aoRunHostWorkerTool: AoToolDefinition<
       maxTotalBytes: args.maxTotalBytes,
       requireProfile: args.requireProfile,
       scope: args.scope,
+      strictFiles: args.strictFiles,
       taskType: args.taskType,
       workerId: args.workerId
     });
@@ -59,6 +61,7 @@ export const aoRunHostWorkerTool: AoToolDefinition<
         maxTotalBytes: args.maxTotalBytes,
         requireProfile: args.requireProfile,
         scope: args.scope,
+        strictFiles: args.strictFiles,
         taskType: args.taskType,
         workerId: args.workerId
       }

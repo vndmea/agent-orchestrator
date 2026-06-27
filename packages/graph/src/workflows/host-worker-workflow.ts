@@ -37,19 +37,35 @@ export interface HostWorkerWorkflowInput {
   repositoryContext?: RepositoryContextPack;
   requireProfile?: boolean;
   scope?: string;
+  strictFiles?: boolean;
   taskType: Exclude<WorkerTaskType, "patch-generation">;
   workerCapabilityProfile?: WorkerCapabilityProfile | null;
   workerId?: string;
 }
 
+export type HostWorkerFailureStage =
+  | "worker-not-run"
+  | "missing-requested-files"
+  | "missing-file-citations"
+  | "template-fallback"
+  | "generic-fallback"
+  | "review-answer-missing"
+  | "review-findings-insufficient"
+  | "review-file-reference-missing"
+  | "worker-schema"
+  | "unknown";
+
 export interface HostWorkerWorkflowQualityGate {
   answered: boolean;
+  answerStatus: "complete" | "incomplete";
+  failureStages: HostWorkerFailureStage[];
   genericFallbackDetected: boolean;
   mentionedFiles: string[];
   missingRequestedFiles: string[];
   reasons: string[];
   structuredOutputOk: boolean;
   templateFallbackDetected: boolean;
+  workflowStatus: "completed" | "needs_review";
 }
 
 export interface HostWorkerWorkflowOutput {
@@ -144,31 +160,38 @@ const buildQualityGate = (
   const genericFallbackDetected =
     input.taskType === "review-lite" && detectGenericFallback(outputText);
   const reasons: string[] = [];
+  const failureStages = new Set<HostWorkerFailureStage>();
 
   if (!workerResult) {
     reasons.push("No worker result was produced.");
+    failureStages.add("worker-not-run");
   }
 
   if (!structuredOutputOk) {
     reasons.push("Worker did not return validated structured output.");
+    failureStages.add("worker-schema");
   }
 
   if (missingRequestedFiles.length > 0) {
     reasons.push(
       `Requested files were not all included in repository context: ${missingRequestedFiles.join(", ")}.`
     );
+    failureStages.add("missing-requested-files");
   }
 
   if (selectedPaths.length > 0 && mentionedFiles.length === 0) {
     reasons.push("Worker answer did not reference any selected repository file.");
+    failureStages.add("missing-file-citations");
   }
 
   if (templateFallbackDetected) {
     reasons.push("Worker answer matched a known template fallback pattern.");
+    failureStages.add("template-fallback");
   }
 
   if (genericFallbackDetected) {
     reasons.push("Worker answer fell back to generic wording instead of a concrete repository answer.");
+    failureStages.add("generic-fallback");
   }
 
   if (input.taskType === "review-lite") {
@@ -181,10 +204,12 @@ const buildQualityGate = (
 
     if (!answer) {
       reasons.push("Review worker did not provide a direct answer field.");
+      failureStages.add("review-answer-missing");
     }
 
     if (findings.length < 2) {
       reasons.push("Review worker did not provide enough concrete findings.");
+      failureStages.add("review-findings-insufficient");
     }
 
     if (
@@ -192,17 +217,27 @@ const buildQualityGate = (
       !referencedFiles.some((file) => selectedPaths.includes(file))
     ) {
       reasons.push("Review worker did not reference the selected files explicitly.");
+      failureStages.add("review-file-reference-missing");
     }
   }
 
+  if (failureStages.size === 0 && !structuredOutputOk) {
+    failureStages.add("unknown");
+  }
+
+  const answered = reasons.length === 0;
+
   return {
-    answered: reasons.length === 0,
+    answered,
+    answerStatus: answered ? "complete" : "incomplete",
+    failureStages: Array.from(failureStages),
     genericFallbackDetected,
     mentionedFiles,
     missingRequestedFiles,
     reasons,
     structuredOutputOk,
-    templateFallbackDetected
+    templateFallbackDetected,
+    workflowStatus: workerResult ? "completed" : "needs_review"
   };
 };
 
@@ -302,7 +337,8 @@ export const runHostWorkerWorkflow = async (
       scope: input.scope,
       files: input.files,
       maxFileBytes: input.maxFileBytes,
-      maxTotalBytes: input.maxTotalBytes
+      maxTotalBytes: input.maxTotalBytes,
+      strictFiles: input.strictFiles
     });
   const task = buildTask(input, repositoryContext);
 
@@ -373,7 +409,9 @@ export const runHostWorkerWorkflow = async (
       qualityGate,
       repositoryContext: {
         scope: repositoryContext.scope,
-        selectedFiles: repositoryContext.selectedFiles.map((file) => file.path)
+        requestedFiles: repositoryContext.requestedFiles,
+        selectedFiles: repositoryContext.selectedFiles.map((file) => file.path),
+        strictFiles: repositoryContext.strictFiles
       },
       worker: workerResult?.output ?? null
     },
