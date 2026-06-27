@@ -14,6 +14,8 @@ export type WorkerInterviewTaskType =
   | "structured-output"
   | "scope-discipline"
   | "summarization"
+  | "review-grounding"
+  | "evidence-sufficiency"
   | "code-understanding"
   | "codegen"
   | "confidence-calibration";

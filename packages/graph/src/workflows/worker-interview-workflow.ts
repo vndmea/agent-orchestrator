@@ -61,7 +61,7 @@ interface FixtureFile {
 }
 
 const WORKER_EVALUATION_SUITE_NAME = "default-worker-onboarding-suite";
-const WORKER_EVALUATION_SUITE_VERSION = "5";
+const WORKER_EVALUATION_SUITE_VERSION = "6";
 
 const InterviewState = Annotation.Root({
   task: Annotation<WorkflowState["task"]>(),
@@ -248,6 +248,55 @@ const logFixtureFiles: FixtureFile[] = [
     content: [
       "export function readProfile(row: { score: string }): PersistedWorkerProfile {",
       '  return { workerId: "fixture-worker", score: Number(row.score) };',
+      "}"
+    ].join("\n")
+  }
+];
+
+const reviewFixtureFiles: FixtureFile[] = [
+  {
+    path: "packages/core/src/importXml.ts",
+    content: [
+      "export function importXml(node: XmlNode): ImportedNode {",
+      "  return normalizeNode(node);",
+      "}"
+    ].join("\n")
+  },
+  {
+    path: "packages/core/src/normalizeNode.ts",
+    content: [
+      "export function normalizeNode(node: XmlNode): ImportedNode {",
+      "  return {",
+      "    ...node,",
+      "    attrs: node.attrs?.id ? node.attrs : { ...node.attrs, id: generateId(node.type) }",
+      "  };",
+      "}"
+    ].join("\n")
+  },
+  {
+    path: "packages/core/src/exportXml.ts",
+    content: [
+      "export function exportXml(node: ImportedNode): XmlNode {",
+      "  return node;",
+      "}"
+    ].join("\n")
+  }
+];
+
+const missingEvidenceFixtureFiles: FixtureFile[] = [
+  {
+    path: "packages/core/src/exportXml.ts",
+    content: [
+      "export function exportXml(node: ImportedNode): XmlNode {",
+      "  return node;",
+      "}"
+    ].join("\n")
+  },
+  {
+    path: "packages/core/src/renderPreview.ts",
+    content: [
+      "export function renderPreview(xml: string): string {",
+      "  return xml.slice(0, 120);",
       "}"
     ].join("\n")
   }
@@ -441,6 +490,77 @@ const summarizationVariants = [
       "Compilation stopped in packages/runtime/src/readProfile.ts."
     ],
     '{"issue":"...","impact":"...","nextSteps":["step 1","step 2"],"confidence":0.88}'
+  )
+];
+
+const reviewGroundingVariants = [
+  strictJsonContractLines(
+    [
+      "Review the repository evidence below and answer whether import-time id generation is already implemented.",
+      "Use exactly these keys and types:",
+      '- answer: string',
+      '- findings: string[]',
+      '- referencedFiles: string[]',
+      '- confidence: number between 0 and 1',
+      "The answer must be direct, cite only fixture files, and reference at least two concrete repository paths.",
+      ...renderFixtureFiles(reviewFixtureFiles),
+      "Question:",
+      "- Does the import path already generate missing ids before export?",
+      "- Focus on import/normalize behavior and mention export only if directly relevant."
+    ],
+    '{"answer":"yes","findings":["..."],"referencedFiles":["path.ts"],"confidence":0.82}'
+  ),
+  strictJsonContractLines(
+    [
+      "Use the repository evidence below to review the missing-id handling behavior.",
+      "Use exactly these keys and types:",
+      '- answer: string',
+      '- findings: string[]',
+      '- referencedFiles: string[]',
+      '- confidence: number between 0 and 1',
+      "The answer must be direct, grounded in the fixture, and reference at least two fixture paths.",
+      ...renderFixtureFiles(reviewFixtureFiles),
+      "Question:",
+      "- Is the id generated during import/normalization rather than waiting for export?",
+      "- Keep the review grounded in the selected files only."
+    ],
+    '{"answer":"yes","findings":["..."],"referencedFiles":["path.ts"],"confidence":0.79}'
+  )
+];
+
+const evidenceSufficiencyVariants = [
+  strictJsonContractLines(
+    [
+      "Decide whether the repository evidence below is sufficient to answer the question.",
+      "Use exactly these keys and types:",
+      '- decision: string',
+      '- reason: string',
+      '- missingFiles: string[]',
+      '- confidence: number between 0 and 1',
+      "If the evidence is insufficient, say so directly and name the mandatory missing file or files.",
+      "Do not pretend to know the answer from incomplete evidence.",
+      ...renderFixtureFiles(missingEvidenceFixtureFiles),
+      "Question:",
+      "- Can we conclude whether import-time id generation already exists for missing attrs.id?",
+      "- Mandatory evidence is expected from import/normalize code, not export or preview helpers."
+    ],
+    '{"decision":"insufficient-evidence","reason":"The import/normalize path is missing.","missingFiles":["packages/core/src/importXml.ts","packages/core/src/normalizeNode.ts"],"confidence":0.18}'
+  ),
+  strictJsonContractLines(
+    [
+      "Evaluate whether the selected repository files are enough to answer the review question.",
+      "Use exactly these keys and types:",
+      '- decision: string',
+      '- reason: string',
+      '- missingFiles: string[]',
+      '- confidence: number between 0 and 1',
+      "If key files are missing, fail fast and list them instead of guessing.",
+      ...renderFixtureFiles(missingEvidenceFixtureFiles),
+      "Question:",
+      "- Is the missing-id fix implemented in the import path?",
+      "- Required evidence should come from the import/normalization chain."
+    ],
+    '{"decision":"insufficient-evidence","reason":"The selected files do not include the import path.","missingFiles":["packages/core/src/importXml.ts"],"confidence":0.22}'
   )
 ];
 
@@ -781,6 +901,139 @@ const buildInterviewTasks = (
   },
     {
     task: {
+      id: "review-grounding",
+      title: "Review Grounding",
+      type: "review-grounding",
+      prompt: createPrompt(
+        seed,
+        "review-grounding",
+        pickVariant(seed, "review-grounding", reviewGroundingVariants)
+      ),
+      expectedOutputDescription: "Direct evidence-linked repository review answer"
+    },
+    schema: z.object({
+      answer: z.string().min(1),
+      findings: z.array(z.string()).min(2),
+      referencedFiles: z.array(z.string()).min(2),
+      confidence: z.number().min(0).max(1)
+    }),
+    mockResponse: {
+      answer:
+        "Yes. The import path normalizes missing ids before export is involved.",
+      findings: [
+        "packages/core/src/importXml.ts delegates imported nodes into normalizeNode.",
+        "packages/core/src/normalizeNode.ts adds attrs.id with generateId(node.type) when id is missing."
+      ],
+      referencedFiles: [
+        "packages/core/src/importXml.ts",
+        "packages/core/src/normalizeNode.ts"
+      ],
+      confidence: 0.83
+    },
+    mapRawOutputToTaskTypes: ["review-lite"],
+    evaluateParsed: (parsed) => {
+      const value = parsed as {
+        answer: string;
+        findings: string[];
+        referencedFiles: string[];
+      };
+      const findings: string[] = [];
+      const rendered = stringifyParsed(parsed);
+      if (!includesAny(value.answer, ["yes", "import", "normalize"])) {
+        findings.push("Review answer was not direct enough about the import path outcome.");
+      }
+      if (value.findings.length < 2) {
+        findings.push("Review answer did not provide enough concrete findings.");
+      }
+      if (
+        !value.referencedFiles.includes("packages/core/src/importXml.ts") ||
+        !value.referencedFiles.includes("packages/core/src/normalizeNode.ts")
+      ) {
+        findings.push("Review answer did not cite the mandatory repository files.");
+      }
+      if (!hasRepoPathReference(rendered)) {
+        findings.push("Review answer was not grounded in concrete repository paths.");
+      }
+      if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
+        findings.push("Review answer fell back to generic workflow language.");
+      }
+      return {
+        score: findings.length === 0 ? 0.93 : 0.26,
+        findings
+      };
+    }
+  },
+    {
+    task: {
+      id: "evidence-sufficiency",
+      title: "Evidence Sufficiency",
+      type: "evidence-sufficiency",
+      prompt: createPrompt(
+        seed,
+        "evidence-sufficiency",
+        pickVariant(seed, "evidence-sufficiency", evidenceSufficiencyVariants)
+      ),
+      expectedOutputDescription: "Fail-fast decision when mandatory evidence is missing"
+    },
+    schema: z.object({
+      decision: z.string().min(1),
+      reason: z.string().min(1),
+      missingFiles: z.array(z.string()),
+      confidence: z.number().min(0).max(1)
+    }),
+    mockResponse: {
+      decision: "insufficient-evidence",
+      reason: "The selected files do not include the import/normalization chain.",
+      missingFiles: [
+        "packages/core/src/importXml.ts",
+        "packages/core/src/normalizeNode.ts"
+      ],
+      confidence: 0.18
+    },
+    mapRawOutputToTaskTypes: ["review-lite", "summarization"],
+    evaluateParsed: (parsed) => {
+      const value = parsed as {
+        confidence: number;
+        decision: string;
+        missingFiles: string[];
+        reason: string;
+      };
+      const findings: string[] = [];
+      const rendered = stringifyParsed(parsed);
+      if (!includesAny(value.decision, ["insufficient-evidence", "insufficient"])) {
+        findings.push("Worker did not fail fast when mandatory evidence was missing.");
+      }
+      if (
+        value.missingFiles.length === 0 ||
+        !value.missingFiles.some((file) =>
+          [
+            "packages/core/src/importXml.ts",
+            "packages/core/src/normalizeNode.ts"
+          ].includes(file)
+        )
+      ) {
+        findings.push("Worker did not name the mandatory missing files.");
+      }
+      if (!includesAny(value.reason, ["missing", "import", "normalize", "evidence"])) {
+        findings.push("Worker did not explain why the evidence was insufficient.");
+      }
+      if (includesAny(value.reason, ["probably", "looks fine", "should be present", "seems implemented"])) {
+        findings.push("Worker guessed instead of refusing on insufficient evidence.");
+      }
+      if (value.confidence > 0.45) {
+        findings.push("Worker reported too much confidence on insufficient evidence.");
+      }
+      if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
+        findings.push("Worker used generic fallback language instead of a fail-fast answer.");
+      }
+      return {
+        score: findings.length === 0 ? 0.95 : 0.18,
+        findings
+      };
+    }
+  },
+    {
+    task: {
       id: "code-understanding",
       title: "Code Understanding",
       type: "code-understanding",
@@ -999,6 +1252,8 @@ const repoGroundedTaskIds = new Set<WorkerInterviewTaskType>([
   "structured-output",
   "scope-discipline",
   "summarization",
+  "review-grounding",
+  "evidence-sufficiency",
   "code-understanding",
   "codegen"
 ]);
@@ -1051,6 +1306,8 @@ const buildCapabilityProfile = (
   const instructionFollowing = scoreByType.get("instruction-following") ?? 0;
   const scopeDiscipline = scoreByType.get("scope-discipline") ?? 0;
   const summarization = scoreByType.get("summarization") ?? 0;
+  const reviewGrounding = scoreByType.get("review-grounding") ?? 0;
+  const evidenceSufficiency = scoreByType.get("evidence-sufficiency") ?? 0;
   const codeUnderstanding = scoreByType.get("code-understanding") ?? 0;
   const confidenceCalibration = scoreByType.get("confidence-calibration") ?? 0;
   const structuredOutput = average([
@@ -1061,6 +1318,8 @@ const buildCapabilityProfile = (
   const reasoning = average([
     scopeDiscipline,
     summarization,
+    reviewGrounding,
+    evidenceSufficiency,
     codeUnderstanding
   ]);
   const codeQuality = scoreByType.get("codegen") ?? 0;
@@ -1080,15 +1339,28 @@ const buildCapabilityProfile = (
       structuredOutput,
       scopeDiscipline,
       summarization,
+      reviewGrounding,
+      evidenceSufficiency,
       codeUnderstanding
     ]),
     answerDirectness: average([
       instructionFollowing,
       scopeDiscipline,
-      summarization
+      summarization,
+      reviewGrounding,
+      evidenceSufficiency
     ]),
-    codeUnderstanding,
-    fixPlanning: average([summarization, scopeDiscipline, codeQuality]),
+    codeUnderstanding: average([
+      codeUnderstanding,
+      reviewGrounding
+    ]),
+    fixPlanning: average([
+      summarization,
+      reviewGrounding,
+      evidenceSufficiency,
+      scopeDiscipline,
+      codeQuality
+    ]),
     implementationPlanning: average([
       codeQuality,
       instructionFollowing,
@@ -1106,6 +1378,8 @@ const buildCapabilityProfile = (
     summarization: average([
       structuredOutput,
       summarization,
+      evidenceSufficiency,
+      evidenceSufficiency,
       portrait.answerDirectness
     ]),
     codegen: average([
@@ -1126,6 +1400,7 @@ const buildCapabilityProfile = (
     ]),
     logAnalysis: average([
       summarization,
+      evidenceSufficiency,
       structuredOutput,
       portrait.fixPlanning
     ]),
@@ -1136,6 +1411,10 @@ const buildCapabilityProfile = (
     ]),
     reviewLite: average([
       scopeDiscipline,
+      reviewGrounding,
+      reviewGrounding,
+      evidenceSufficiency,
+      evidenceSufficiency,
       portrait.repoGrounding,
       portrait.answerDirectness,
       codeUnderstanding
@@ -1154,7 +1433,7 @@ const buildCapabilityProfile = (
     genericAnswerCases: taskResults
       .filter((result) =>
         result.findings.some((finding) =>
-          /too generic|not grounded|template workflow language|did not answer|fell back/iu.test(
+          /too generic|not grounded|template workflow language|did not answer|fell back|did not fail fast|insufficient evidence|guessed instead of refusing|mandatory evidence/iu.test(
             finding
           )
         )
@@ -1167,6 +1446,7 @@ const buildCapabilityProfile = (
   if (
     taskScores.summarization >= 0.72 &&
     scopeDiscipline >= 0.72 &&
+    evidenceSufficiency >= 0.72 &&
     portrait.repoGrounding >= 0.68
   ) {
     supported.add("summarization");
@@ -1176,6 +1456,8 @@ const buildCapabilityProfile = (
   if (
     taskScores.reviewLite >= 0.72 &&
     scopeDiscipline >= 0.72 &&
+    reviewGrounding >= 0.72 &&
+    evidenceSufficiency >= 0.72 &&
     codeUnderstanding >= 0.65
   ) {
     supported.add("review-lite");
@@ -1221,6 +1503,12 @@ const buildCapabilityProfile = (
   }
   if (scopeDiscipline < 0.72) {
     blockingReasons.push("Scope discipline is below the admission threshold.");
+  }
+  if (reviewGrounding < 0.72) {
+    blockingReasons.push("Evidence-linked review grounding is below the admission threshold.");
+  }
+  if (evidenceSufficiency < 0.72) {
+    blockingReasons.push("Evidence sufficiency discipline is below the admission threshold.");
   }
   if (portrait.repoGrounding < 0.68) {
     blockingReasons.push("Repo grounding is below the admission threshold.");
@@ -1332,7 +1620,7 @@ export const runWorkerInterviewWorkflow = async (
     id: randomUUID(),
     goal: `Evaluate worker onboarding capability for ${workerId}`,
     constraints: [
-      "Assess instruction following, structured output, scope discipline, summarization, code understanding, code generation, and confidence calibration.",
+      "Assess instruction following, structured output, scope discipline, summarization, evidence-linked review grounding, insufficient-evidence refusal, code understanding, code generation, and confidence calibration.",
       "Warn when the worker should be limited or blocked."
     ],
     assignedRole: "reviewer",

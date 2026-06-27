@@ -15,6 +15,8 @@ export const WorkerInterviewTaskTypeSchema = z.enum([
   "structured-output",
   "scope-discipline",
   "summarization",
+  "review-grounding",
+  "evidence-sufficiency",
   "code-understanding",
   "codegen",
   "confidence-calibration"
