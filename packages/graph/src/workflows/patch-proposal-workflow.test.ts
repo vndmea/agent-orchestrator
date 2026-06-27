@@ -59,10 +59,14 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
     status: "active",
     supportedTaskTypes: [
       "summarization",
+      "code-understanding",
       "log-analysis",
       "json-extraction",
       "review-lite",
+      "risk-analysis",
       "codegen",
+      "validation-fix",
+      "doc-generation",
       "patch-generation"
     ],
     unsupportedTaskTypes: [],
@@ -86,7 +90,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
     evaluatedAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
     suiteName: "default-worker-onboarding-suite",
-    suiteVersion: "5",
+    suiteVersion: "6",
     admission: {
       passed: true,
       blockingReasons: []
@@ -102,12 +106,16 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
     },
     taskScores: {
       summarization: 0.8,
+      codeUnderstanding: 0.79,
+      riskAnalysis: 0.8,
+      reviewLite: 0.8,
       codegen: 0.82,
       patchGeneration: 0.81,
       testGeneration: 0.82,
+      validationFix: 0.82,
       logAnalysis: 0.79,
       jsonExtraction: 0.78,
-      reviewLite: 0.8
+      docGeneration: 0.8
     },
     evidence: {
       failedCases: [],

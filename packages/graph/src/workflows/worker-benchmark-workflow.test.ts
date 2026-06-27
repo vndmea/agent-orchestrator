@@ -33,11 +33,15 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
     status: "active",
     supportedTaskTypes: [
       "summarization",
+      "code-understanding",
       "log-analysis",
       "json-extraction",
       "review-lite",
+      "risk-analysis",
       "codegen",
-      "test-generation"
+      "test-generation",
+      "validation-fix",
+      "doc-generation"
     ],
     unsupportedTaskTypes: ["patch-generation"],
     score: {
@@ -60,7 +64,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
     evaluatedAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
     suiteName: "default-worker-onboarding-suite",
-    suiteVersion: "2",
+    suiteVersion: "6",
     ...overrides
   });
 

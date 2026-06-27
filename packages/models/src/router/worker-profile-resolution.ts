@@ -31,7 +31,7 @@ export interface ResolveWorkerProfileResult {
 
 const knownStatuses = new Set<WorkerStatus>(["active", "limited", "blocked"]);
 const providerFailureWarningPattern = /provider invocation failed/iu;
-const supportedSuiteVersion = "5";
+const supportedSuiteVersion = "6";
 
 const buildFailure = (
   workerId: string,

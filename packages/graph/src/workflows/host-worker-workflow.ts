@@ -165,11 +165,13 @@ const createPlannedTask = (
   scope: repositoryContext.scope,
   riskLevel: input.taskType === "codegen" ? "medium" : "low",
   expectedArtifactType:
-    input.taskType === "codegen"
+    input.taskType === "codegen" || input.taskType === "validation-fix"
       ? "patch-plan"
       : input.taskType === "test-generation"
         ? "test-plan"
-        : input.taskType === "review-lite"
+        : input.taskType === "review-lite" ||
+            input.taskType === "risk-analysis" ||
+            input.taskType === "code-understanding"
           ? "review"
           : "summary"
 });
@@ -194,7 +196,10 @@ const buildTask = (
   ],
   expectedOutput: "Direct worker answer grounded in the selected repository files.",
   assignedRole: "worker",
-  priority: input.taskType === "codegen" ? "high" : "medium",
+  priority:
+    input.taskType === "codegen" || input.taskType === "validation-fix"
+      ? "high"
+      : "medium",
   metadata: {
     workflow: "host-worker-workflow"
   }
@@ -264,7 +269,11 @@ const buildQualityGate = (
         : "invalid";
   const templateFallbackDetected = detectTemplateFallback(outputText);
   const genericFallbackDetected =
-    input.taskType === "review-lite" && detectGenericFallback(outputText);
+    (
+      input.taskType === "review-lite" ||
+      input.taskType === "risk-analysis" ||
+      input.taskType === "code-understanding"
+    ) && detectGenericFallback(outputText);
   const coverageGapDetected =
     repositoryContext.coverageGapDetected === true || skippedFiles.length > 0;
   const reasons: string[] = [];
@@ -324,7 +333,14 @@ const buildQualityGate = (
     failureStages.add("generic-fallback");
   }
 
-  if (execution.state === "executed" && input.taskType === "review-lite") {
+  if (
+    execution.state === "executed" &&
+    (
+      input.taskType === "review-lite" ||
+      input.taskType === "risk-analysis" ||
+      input.taskType === "code-understanding"
+    )
+  ) {
     const answer =
       outputRecord && typeof outputRecord.answer === "string"
         ? outputRecord.answer
@@ -415,10 +431,14 @@ const resolveWorkerAgent = (
     case "summarization":
     case "log-analysis":
     case "json-extraction":
+    case "doc-generation":
       return new SummarizeWorker(context);
     case "review-lite":
+    case "risk-analysis":
+    case "code-understanding":
       return new ReviewWorker(context);
     case "codegen":
+    case "validation-fix":
       return new CodegenWorker(context);
     case "test-generation":
       return new TestWorker(context);

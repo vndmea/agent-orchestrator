@@ -118,8 +118,8 @@ describe("core schemas", () => {
         provider: "mock",
         model: "gpt-5.4-mini",
         status: "limited",
-        supportedTaskTypes: ["summarization", "json-extraction"],
-        unsupportedTaskTypes: ["codegen"],
+        supportedTaskTypes: ["summarization", "json-extraction", "doc-generation"],
+        unsupportedTaskTypes: ["codegen", "validation-fix"],
         score: {
           instructionFollowing: 0.9,
           structuredOutput: 0.8,
@@ -140,15 +140,47 @@ describe("core schemas", () => {
         evaluatedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
         suiteName: "default-worker-onboarding-suite",
-        suiteVersion: "1",
+        suiteVersion: "6",
         evaluationSummary: {
           suiteName: "coding-v1",
-          suiteVersion: "1",
+          suiteVersion: "6",
           sampleCount: 4,
           passedCount: 3,
           failedCount: 1,
           confidenceBand: "medium",
           knownFailureModes: ["validation-honesty: optimistic apply"]
+        },
+        admission: {
+          passed: true,
+          blockingReasons: []
+        },
+        portrait: {
+          scopeDiscipline: 0.82,
+          repoGrounding: 0.76,
+          answerDirectness: 0.78,
+          codeUnderstanding: 0.71,
+          fixPlanning: 0.69,
+          implementationPlanning: 0.45,
+          consistency: 0.74
+        },
+        taskScores: {
+          summarization: 0.77,
+          codeUnderstanding: 0.71,
+          riskAnalysis: 0.69,
+          reviewLite: 0.7,
+          codegen: 0.41,
+          patchGeneration: 0.38,
+          testGeneration: 0.43,
+          validationFix: 0.39,
+          logAnalysis: 0.75,
+          jsonExtraction: 0.78,
+          docGeneration: 0.76
+        },
+        evidence: {
+          failedCases: [],
+          repoGroundedCases: ["structured-output", "scope-discipline", "summarization"],
+          fallbackPatternCases: [],
+          genericAnswerCases: []
         }
       })
     ).not.toThrow();

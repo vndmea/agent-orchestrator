@@ -13,11 +13,15 @@ const createProfile = (
   status: "active",
   supportedTaskTypes: [
     "summarization",
+    "code-understanding",
     "log-analysis",
     "json-extraction",
     "review-lite",
+    "risk-analysis",
     "codegen",
-    "test-generation"
+    "test-generation",
+    "validation-fix",
+    "doc-generation"
   ],
   unsupportedTaskTypes: [],
   score: {
@@ -40,7 +44,7 @@ const createProfile = (
   evaluatedAt: new Date().toISOString(),
   expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
   suiteName: "default-worker-onboarding-suite",
-  suiteVersion: "5",
+  suiteVersion: "6",
   admission: {
     passed: true,
     blockingReasons: []
@@ -56,12 +60,16 @@ const createProfile = (
   },
   taskScores: {
     summarization: 0.79,
+    codeUnderstanding: 0.78,
+    riskAnalysis: 0.8,
+    reviewLite: 0.8,
     codegen: 0.82,
     patchGeneration: 0.8,
     testGeneration: 0.81,
+    validationFix: 0.81,
     logAnalysis: 0.78,
     jsonExtraction: 0.77,
-    reviewLite: 0.8
+    docGeneration: 0.79
   },
   evidence: {
     failedCases: [],
@@ -112,6 +120,45 @@ describe("assessWorkerTaskEligibility", () => {
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain("repository-grounded summarization discipline");
+  });
+
+  it("blocks code-understanding when code comprehension grounding is too weak", () => {
+    const result = assessWorkerTaskEligibility(
+      createProfile({
+        portrait: {
+          ...createProfile().portrait!,
+          codeUnderstanding: 0.64,
+          repoGrounding: 0.66
+        },
+        taskScores: {
+          ...createProfile().taskScores!,
+          codeUnderstanding: 0.69
+        }
+      }),
+      "code-understanding"
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain("code comprehension");
+  });
+
+  it("blocks validation-fix when implementation planning is below threshold", () => {
+    const result = assessWorkerTaskEligibility(
+      createProfile({
+        portrait: {
+          ...createProfile().portrait!,
+          implementationPlanning: 0.68
+        },
+        taskScores: {
+          ...createProfile().taskScores!,
+          validationFix: 0.7
+        }
+      }),
+      "validation-fix"
+    );
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain("validation-fix");
   });
 });
 

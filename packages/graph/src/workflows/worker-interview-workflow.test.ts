@@ -41,6 +41,10 @@ describe("worker interview workflow", () => {
 
     expect(result.status).toBe("active");
     expect(result.profile.supportedTaskTypes).toContain("codegen");
+    expect(result.profile.supportedTaskTypes).toContain("doc-generation");
+    expect(result.profile.supportedTaskTypes).toContain("risk-analysis");
+    expect(result.profile.supportedTaskTypes).toContain("code-understanding");
+    expect(result.profile.supportedTaskTypes).toContain("validation-fix");
     expect(result.profile.routingPolicy.allowCodegen).toBe(true);
     expect(result.profile.admission?.passed).toBe(true);
     expect(result.profile.portrait?.repoGrounding).toBeGreaterThan(0.7);
@@ -63,7 +67,7 @@ describe("worker interview workflow", () => {
     expect(result.profile.score.structuredOutput).toBeLessThan(0.45);
     expect(result.profile.admission?.passed).toBe(false);
     expect(result.profile.admission?.blockingReasons.join("\n")).toMatch(
-      /Structured output|Repo grounding|No worker task type/u
+      /Structured output|No worker task type/u
     );
     expect(result.warnings.join("\n")).toContain("structured-output");
   });
@@ -83,7 +87,7 @@ describe("worker interview workflow", () => {
     expect(result.taskResults.some((task) => task.failureKind === "provider-invocation")).toBe(true);
   });
 
-  it("blocks review-lite qualification when review grounding is generic", async () => {
+  it("marks review-heavy tasks unsupported without blocking the whole worker when review grounding is generic", async () => {
     const result = await runWorkerInterviewWorkflow({
       context: createContext(),
       simulatedResponses: {
@@ -97,16 +101,18 @@ describe("worker interview workflow", () => {
     });
 
     expect(result.profile.supportedTaskTypes).not.toContain("review-lite");
+    expect(result.profile.supportedTaskTypes).not.toContain("risk-analysis");
     expect(
       result.taskResults.find((task) => task.type === "review-grounding")?.score
     ).toBeLessThan(0.6);
-    expect(result.profile.admission?.blockingReasons.join("\n")).toMatch(
-      /review grounding|Repo grounding/u
-    );
+    expect(result.profile.admission?.passed).toBe(true);
+    expect(result.status).toBe("limited");
+    expect(result.profile.unsupportedTaskTypes).toContain("review-lite");
+    expect(result.profile.unsupportedTaskTypes).toContain("risk-analysis");
     expect(result.profile.evidence?.genericAnswerCases).toContain("review-grounding");
   });
 
-  it("blocks summarization and review-lite when mandatory evidence is missing but the worker guesses", async () => {
+  it("marks summarization and review tasks unsupported without blocking the whole worker when mandatory evidence is missing but the worker guesses", async () => {
     const result = await runWorkerInterviewWorkflow({
       context: createContext(),
       simulatedResponses: {
@@ -121,10 +127,30 @@ describe("worker interview workflow", () => {
 
     expect(result.profile.supportedTaskTypes).not.toContain("summarization");
     expect(result.profile.supportedTaskTypes).not.toContain("review-lite");
-    expect(result.profile.admission?.blockingReasons.join("\n")).toContain(
-      "Evidence sufficiency discipline is below the admission threshold."
-    );
+    expect(result.profile.supportedTaskTypes).not.toContain("risk-analysis");
+    expect(result.profile.admission?.passed).toBe(true);
+    expect(result.status).toBe("limited");
+    expect(result.profile.unsupportedTaskTypes).toContain("summarization");
+    expect(result.profile.unsupportedTaskTypes).toContain("doc-generation");
     expect(result.profile.evidence?.genericAnswerCases).toContain("evidence-sufficiency");
+  });
+
+  it("routes weak code understanding to limited with code-understanding unsupported", async () => {
+    const result = await runWorkerInterviewWorkflow({
+      context: createContext(),
+      simulatedResponses: {
+        "code-understanding": {
+          behavior: "Inspect the code for the implementation details.",
+          risk: "There may be a possible issue depending on context.",
+          confidence: 0.91
+        }
+      }
+    });
+
+    expect(result.profile.supportedTaskTypes).not.toContain("code-understanding");
+    expect(result.profile.admission?.passed).toBe(true);
+    expect(result.status).toBe("limited");
+    expect(result.profile.unsupportedTaskTypes).toContain("code-understanding");
   });
 
   it("limits routing when code generation quality is too low", async () => {

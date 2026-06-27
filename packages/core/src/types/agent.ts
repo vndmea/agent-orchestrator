@@ -3,12 +3,16 @@ import type { ZodType } from "zod";
 export type AgentRole = "worker" | "reviewer" | "tool";
 export type WorkerTaskType =
   | "summarization"
+  | "code-understanding"
+  | "review-lite"
+  | "risk-analysis"
   | "codegen"
   | "patch-generation"
   | "test-generation"
+  | "validation-fix"
   | "log-analysis"
   | "json-extraction"
-  | "review-lite";
+  | "doc-generation";
 export type WorkerInterviewTaskType =
   | "instruction-following"
   | "structured-output"
@@ -77,12 +81,16 @@ export interface WorkerCapabilityPortrait {
 
 export interface WorkerTaskScoreCard {
   summarization: number;
+  codeUnderstanding: number;
+  riskAnalysis: number;
+  reviewLite: number;
   codegen: number;
   patchGeneration: number;
   testGeneration: number;
+  validationFix: number;
   logAnalysis: number;
   jsonExtraction: number;
-  reviewLite: number;
+  docGeneration: number;
 }
 
 export interface WorkerInterviewEvidence {

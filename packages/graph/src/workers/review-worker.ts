@@ -24,7 +24,7 @@ const capability: WorkerCapability = {
   description: "Performs a low-cost review pass to highlight likely risks.",
   inputSchema,
   outputSchema,
-  supportedTaskTypes: ["review-lite"],
+  supportedTaskTypes: ["review-lite", "risk-analysis", "code-understanding"],
   preferredModel: "worker",
   costTier: "low"
 };

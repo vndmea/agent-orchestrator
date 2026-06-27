@@ -2,12 +2,16 @@ import { z } from "zod";
 
 export const WorkerTaskTypeSchema = z.enum([
   "summarization",
+  "code-understanding",
+  "review-lite",
+  "risk-analysis",
   "codegen",
   "patch-generation",
   "test-generation",
+  "validation-fix",
   "log-analysis",
   "json-extraction",
-  "review-lite"
+  "doc-generation"
 ]);
 
 export const WorkerInterviewTaskTypeSchema = z.enum([
@@ -56,12 +60,16 @@ export const WorkerCapabilityPortraitSchema = z.object({
 
 export const WorkerTaskScoreCardSchema = z.object({
   summarization: z.number().min(0).max(1),
+  codeUnderstanding: z.number().min(0).max(1),
+  riskAnalysis: z.number().min(0).max(1),
+  reviewLite: z.number().min(0).max(1),
   codegen: z.number().min(0).max(1),
   patchGeneration: z.number().min(0).max(1),
   testGeneration: z.number().min(0).max(1),
+  validationFix: z.number().min(0).max(1),
   logAnalysis: z.number().min(0).max(1),
   jsonExtraction: z.number().min(0).max(1),
-  reviewLite: z.number().min(0).max(1)
+  docGeneration: z.number().min(0).max(1)
 });
 
 export const WorkerInterviewEvidenceSchema = z.object({

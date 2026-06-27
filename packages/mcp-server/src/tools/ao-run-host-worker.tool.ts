@@ -15,11 +15,15 @@ const inputSchema = z.object({
   strictFiles: z.boolean().optional(),
   taskType: z.enum([
     "summarization",
+    "code-understanding",
+    "review-lite",
+    "risk-analysis",
     "codegen",
     "test-generation",
+    "validation-fix",
     "log-analysis",
     "json-extraction",
-    "review-lite"
+    "doc-generation"
   ]),
   workerId: z.string().optional(),
   requireProfile: z.boolean().optional()

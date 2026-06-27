@@ -1074,7 +1074,7 @@ const buildInterviewTasks = (
         "Non-number values are silently ignored, which can hide unexpected input problems.",
       confidence: 0.7
     },
-    mapRawOutputToTaskTypes: ["review-lite"],
+    mapRawOutputToTaskTypes: ["review-lite", "risk-analysis", "code-understanding"],
     evaluateParsed: (parsed) => {
       const value = parsed as { behavior: string; risk: string };
       const findings: string[] = [];
@@ -1127,7 +1127,7 @@ const buildInterviewTasks = (
       ].join("\n"),
       confidence: 0.68
     },
-    mapRawOutputToTaskTypes: ["codegen", "test-generation"],
+    mapRawOutputToTaskTypes: ["codegen", "validation-fix", "test-generation"],
     evaluateParsed: (parsed) => {
       const code = (parsed as { code: string }).code;
       const findings: string[] = [];
@@ -1400,6 +1400,29 @@ const buildCapabilityProfile = (
       evidenceSufficiency,
       portrait.answerDirectness
     ]),
+    codeUnderstanding: average([
+      codeUnderstanding,
+      portrait.codeUnderstanding,
+      portrait.repoGrounding
+    ]),
+    riskAnalysis: average([
+      scopeDiscipline,
+      reviewGrounding,
+      evidenceSufficiency,
+      codeUnderstanding,
+      portrait.repoGrounding,
+      portrait.answerDirectness
+    ]),
+    reviewLite: average([
+      scopeDiscipline,
+      reviewGrounding,
+      reviewGrounding,
+      evidenceSufficiency,
+      evidenceSufficiency,
+      portrait.repoGrounding,
+      portrait.answerDirectness,
+      codeUnderstanding
+    ]),
     codegen: average([
       codeQuality,
       portrait.implementationPlanning,
@@ -1416,6 +1439,12 @@ const buildCapabilityProfile = (
       portrait.repoGrounding,
       portrait.implementationPlanning
     ]),
+    validationFix: average([
+      codeQuality,
+      portrait.fixPlanning,
+      portrait.implementationPlanning,
+      instructionFollowing
+    ]),
     logAnalysis: average([
       summarization,
       evidenceSufficiency,
@@ -1427,15 +1456,11 @@ const buildCapabilityProfile = (
       portrait.repoGrounding,
       instructionFollowing
     ]),
-    reviewLite: average([
-      scopeDiscipline,
-      reviewGrounding,
-      reviewGrounding,
-      evidenceSufficiency,
-      evidenceSufficiency,
+    docGeneration: average([
+      summarization,
+      structuredOutput,
       portrait.repoGrounding,
-      portrait.answerDirectness,
-      codeUnderstanding
+      portrait.answerDirectness
     ])
   };
 
@@ -1470,15 +1495,21 @@ const buildCapabilityProfile = (
     supported.add("summarization");
     supported.add("log-analysis");
     supported.add("json-extraction");
+    supported.add("doc-generation");
   }
   if (
-    taskScores.reviewLite >= 0.72 &&
-    scopeDiscipline >= 0.72 &&
     reviewGrounding >= 0.72 &&
     evidenceSufficiency >= 0.72 &&
     codeUnderstanding >= 0.65
   ) {
     supported.add("review-lite");
+    supported.add("risk-analysis");
+  }
+  if (
+    taskScores.codeUnderstanding >= 0.72 &&
+    codeUnderstanding >= 0.68
+  ) {
+    supported.add("code-understanding");
   }
   if (
     taskScores.codegen >= 0.78 &&
@@ -1486,15 +1517,25 @@ const buildCapabilityProfile = (
     instructionFollowing >= 0.7
   ) {
     supported.add("codegen");
+    supported.add("validation-fix");
     supported.add("test-generation");
   }
 
+  const interviewQualifiedTaskTypes: WorkerTaskType[] = [
+    "summarization",
+    "code-understanding",
+    "review-lite",
+    "risk-analysis",
+    "codegen",
+    "test-generation",
+    "validation-fix",
+    "log-analysis",
+    "json-extraction",
+    "doc-generation"
+  ];
+
   const unsupportedTaskTypes = Array.from(
-    new Set(
-      runtimeTasks.flatMap((item) => item.mapRawOutputToTaskTypes).filter(
-        (taskType) => !supported.has(taskType)
-      )
-    )
+    interviewQualifiedTaskTypes.filter((taskType) => !supported.has(taskType))
   );
 
   const warnings = taskResults
@@ -1522,15 +1563,6 @@ const buildCapabilityProfile = (
   if (scopeDiscipline < 0.72) {
     blockingReasons.push("Scope discipline is below the admission threshold.");
   }
-  if (reviewGrounding < 0.72) {
-    blockingReasons.push("Evidence-linked review grounding is below the admission threshold.");
-  }
-  if (evidenceSufficiency < 0.72) {
-    blockingReasons.push("Evidence sufficiency discipline is below the admission threshold.");
-  }
-  if (portrait.repoGrounding < 0.68) {
-    blockingReasons.push("Repo grounding is below the admission threshold.");
-  }
   if (evidence.fallbackPatternCases.length > 0) {
     blockingReasons.push("Template workflow fallback was detected in interview output.");
   }
@@ -1548,6 +1580,8 @@ const buildCapabilityProfile = (
       ? "blocked"
       : taskScores.codegen < 0.78 ||
           taskScores.reviewLite < 0.76 ||
+          taskScores.riskAnalysis < 0.76 ||
+          taskScores.codeUnderstanding < 0.74 ||
           score.reliability < 0.78 ||
           evidence.genericAnswerCases.length > 0
         ? "limited"

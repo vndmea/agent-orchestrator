@@ -24,7 +24,12 @@ const capability: WorkerCapability = {
   description: "Summarizes goals and scoped context into a compact execution brief.",
   inputSchema,
   outputSchema,
-  supportedTaskTypes: ["summarization", "log-analysis", "json-extraction"],
+  supportedTaskTypes: [
+    "summarization",
+    "log-analysis",
+    "json-extraction",
+    "doc-generation"
+  ],
   preferredModel: "worker",
   costTier: "low"
 };

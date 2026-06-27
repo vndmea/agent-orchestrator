@@ -16,8 +16,8 @@ const createProfile = (overrides: Record<string, unknown> = {}) => ({
   provider: "mock",
   model: "worker-model",
   status: "active",
-  supportedTaskTypes: ["summarization"],
-  unsupportedTaskTypes: ["codegen"],
+  supportedTaskTypes: ["summarization", "doc-generation"],
+  unsupportedTaskTypes: ["codegen", "validation-fix"],
   score: {
     instructionFollowing: 0.9,
     structuredOutput: 0.9,
@@ -38,7 +38,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) => ({
   evaluatedAt: new Date().toISOString(),
   expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
   suiteName: "default-worker-onboarding-suite",
-  suiteVersion: "5",
+  suiteVersion: "6",
   admission: {
     passed: true,
     blockingReasons: []
@@ -54,12 +54,16 @@ const createProfile = (overrides: Record<string, unknown> = {}) => ({
   },
   taskScores: {
     summarization: 0.79,
+    codeUnderstanding: 0.76,
+    riskAnalysis: 0.74,
+    reviewLite: 0.78,
     codegen: 0.42,
     patchGeneration: 0.39,
     testGeneration: 0.44,
+    validationFix: 0.41,
     logAnalysis: 0.78,
     jsonExtraction: 0.77,
-    reviewLite: 0.78
+    docGeneration: 0.79
   },
   evidence: {
     failedCases: [],

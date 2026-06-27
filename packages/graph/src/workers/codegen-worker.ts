@@ -24,7 +24,7 @@ const capability: WorkerCapability = {
   description: "Produces candidate implementation notes or patch plans.",
   inputSchema,
   outputSchema,
-  supportedTaskTypes: ["codegen"],
+  supportedTaskTypes: ["codegen", "validation-fix"],
   preferredModel: "worker",
   costTier: "medium"
 };
