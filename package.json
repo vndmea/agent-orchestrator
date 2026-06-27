@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --exclude packages/cli/src/smoke-dist.test.ts",
     "smoke": "vitest run packages/cli/src/smoke.test.ts",
+    "smoke:pack": "pnpm --filter @agent-orchestrator/cli... build && vitest run packages/cli/src/smoke-pack.test.ts",
     "smoke:dist": "pnpm build && vitest run packages/cli/src/smoke-dist.test.ts",
     "test:watch": "vitest --exclude packages/cli/src/smoke-dist.test.ts",
     "lint": "eslint .",
