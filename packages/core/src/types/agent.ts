@@ -23,15 +23,15 @@ export type WorkerInterviewFailureKind =
   | "schema-validation";
 export type WorkerStatus = "active" | "limited" | "blocked";
 
-export type OrchestratorDecisionType =
+export type RuntimeDecisionType =
   | "approve"
   | "revise"
   | "reject"
   | "human-review";
 
-export interface OrchestratorDecision {
+export interface RuntimeDecision {
   taskId: string;
-  decision: OrchestratorDecisionType;
+  decision: RuntimeDecisionType;
   reason: string;
   nextActions: string[];
   requiresHumanReview: boolean;

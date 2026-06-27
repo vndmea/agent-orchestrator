@@ -5,7 +5,7 @@ import {
   AgentResultSchema,
   AgentTaskSchema,
   ModelConfigSchema,
-  OrchestratorDecisionSchema,
+  RuntimeDecisionSchema,
   PatchApplyResultSchema,
   PatchInspectionSchema,
   PatchProposalSchema,
@@ -50,7 +50,7 @@ describe("core schemas", () => {
 
   it("rejects invalid orchestration decisions and model configs", () => {
     expect(() =>
-      OrchestratorDecisionSchema.parse({
+      RuntimeDecisionSchema.parse({
         taskId: "task-1",
         decision: "maybe",
         reason: "invalid",
