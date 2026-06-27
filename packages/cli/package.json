@@ -24,6 +24,11 @@
     "prepack": "pnpm --dir ../.. --filter @mcp-code-worker/cli... build"
   },
   "dependencies": {
+    "@mcp-code-worker/core": "workspace:*",
+    "@mcp-code-worker/graph": "workspace:*",
+    "@mcp-code-worker/mcp-server": "workspace:*",
+    "@mcp-code-worker/models": "workspace:*",
+    "@mcp-code-worker/tools": "workspace:*",
     "@ai-sdk/openai": "^3.0.74",
     "@langchain/langgraph": "^1.4.5",
     "@modelcontextprotocol/sdk": "^1.29.0",

@@ -59,6 +59,21 @@ importers:
       '@langchain/langgraph':
         specifier: ^1.4.5
         version: 1.4.5(@langchain/core@1.2.1(@opentelemetry/api@1.9.1))(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
+      '@mcp-code-worker/core':
+        specifier: workspace:*
+        version: link:../core
+      '@mcp-code-worker/graph':
+        specifier: workspace:*
+        version: link:../graph
+      '@mcp-code-worker/mcp-server':
+        specifier: workspace:*
+        version: link:../mcp-server
+      '@mcp-code-worker/models':
+        specifier: workspace:*
+        version: link:../models
+      '@mcp-code-worker/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -80,15 +95,18 @@ importers:
 
   packages/graph:
     dependencies:
+      '@langchain/langgraph':
+        specifier: ^1.4.5
+        version: 1.4.5(@langchain/core@1.2.1(@opentelemetry/api@1.9.1))(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
       '@mcp-code-worker/core':
         specifier: workspace:*
         version: link:../core
       '@mcp-code-worker/models':
         specifier: workspace:*
         version: link:../models
-      '@langchain/langgraph':
-        specifier: ^1.4.5
-        version: 1.4.5(@langchain/core@1.2.1(@opentelemetry/api@1.9.1))(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
+      '@mcp-code-worker/tools':
+        specifier: workspace:*
+        version: link:../tools
       zod:
         specifier: ^4.1.12
         version: 4.4.3
@@ -116,12 +134,12 @@ importers:
 
   packages/models:
     dependencies:
-      '@mcp-code-worker/core':
-        specifier: workspace:*
-        version: link:../core
       '@ai-sdk/openai':
         specifier: ^3.0.74
         version: 3.0.74(zod@4.4.3)
+      '@mcp-code-worker/core':
+        specifier: workspace:*
+        version: link:../core
       ai:
         specifier: ^6.0.209
         version: 6.0.209(zod@4.4.3)

@@ -13,6 +13,7 @@
   "dependencies": {
     "@mcp-code-worker/core": "workspace:*",
     "@mcp-code-worker/models": "workspace:*",
+    "@mcp-code-worker/tools": "workspace:*",
     "@langchain/langgraph": "^1.4.5",
     "zod": "^4.1.12"
   }
