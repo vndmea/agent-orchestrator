@@ -110,8 +110,7 @@ export const createExecutionContextFromEnv = (
       model: env.WORKER_MODEL_NAME ?? "gpt-5.4-mini",
       baseURL: env.WORKER_MODEL_BASE_URL || undefined,
       apiKey: env.WORKER_MODEL_API_KEY || undefined,
-      temperature: 0.1,
-      maxTokens: 2000
+      temperature: 0.1
     },
     overrides.workerModel
   );

@@ -99,4 +99,27 @@ describe("AiSdkProvider", () => {
 
     expect(generateTextMock).toHaveBeenCalledTimes(1);
   });
+
+  it("does not pass maxOutputTokens when maxTokens is unset", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      text: "ok",
+      response: {
+        id: "plain"
+      },
+      usage: {
+        inputTokens: 5,
+        outputTokens: 1
+      }
+    });
+
+    const provider = new AiSdkProvider();
+    await provider.invoke(config, {
+      prompt: "Say ok"
+    });
+
+    expect(generateTextMock).toHaveBeenCalledTimes(1);
+    expect(generateTextMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      "maxOutputTokens"
+    );
+  });
 });

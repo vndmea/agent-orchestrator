@@ -44,7 +44,9 @@ export class LiteLlmProvider implements ModelProvider {
           system: request.systemPrompt,
           prompt: request.prompt,
           temperature: config.temperature,
-          maxOutputTokens: config.maxTokens,
+          ...(config.maxTokens !== undefined
+            ? { maxOutputTokens: config.maxTokens }
+            : {}),
           output: Output.object({
             schema: request.responseSchema
           })
@@ -72,7 +74,9 @@ export class LiteLlmProvider implements ModelProvider {
       system: request.systemPrompt,
       prompt: request.prompt,
       temperature: config.temperature,
-      maxOutputTokens: config.maxTokens
+      ...(config.maxTokens !== undefined
+        ? { maxOutputTokens: config.maxTokens }
+        : {})
     });
 
     return {
