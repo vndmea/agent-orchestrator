@@ -10,11 +10,15 @@
   },
   "scripts": {
     "build": "pnpm -r build",
+    "changeset": "changeset",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --exclude packages/cli/src/smoke-dist.test.ts",
     "smoke": "vitest run packages/cli/src/smoke.test.ts",
     "smoke:pack": "pnpm --filter @mcp-code-worker/cli... build && vitest run packages/cli/src/smoke-pack.test.ts",
     "smoke:dist": "pnpm build && vitest run packages/cli/src/smoke-dist.test.ts",
+    "release:check": "pnpm build && pnpm smoke:pack && pnpm smoke:dist",
+    "version:packages": "changeset version",
+    "release:npm": "pnpm release:check && pnpm --dir packages/cli run publish:npm",
     "test:watch": "vitest --exclude packages/cli/src/smoke-dist.test.ts",
     "lint": "eslint .",
     "format": "prettier --check .",
@@ -23,6 +27,7 @@
     "example:host-worker-basic": "pnpm --filter @mcp-code-worker/example-host-worker-basic dev"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^9.39.4",
     "@types/node": "^26.0.0",
     "eslint": "^9.39.4",
