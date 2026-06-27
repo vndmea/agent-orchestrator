@@ -12,6 +12,8 @@ In host-driven use, treat `ao` as the controlled execution/runtime layer, not as
 
 Use `ao_start_task` as the default high-level entrypoint for coding flows, and follow `nextRecommendedActions` instead of composing patch lifecycle steps by hand.
 
+When you need a narrower host-managed worker check, use `ao_run_host_worker` or `ao_review_files` with explicit files and `strictFiles=true`. Those paths now expose debug evidence such as requested files, selected files, worker metadata, and `worker-debug.json` artifacts.
+
 ## Root Directory Resolution
 
 By default, the MCP server resolves `rootDir` from the server process cwd. When an MCP client launches `ao` from a shared tools checkout instead of the active workspace, pass an explicit root:
@@ -110,7 +112,7 @@ By default, the MCP server stores AO-managed state under:
 For host-driven coding flows:
 
 1. Use `ao_start_task` when you want AO to manage repository context, validation, task artifacts, and patch lifecycle.
-2. Use `ao_run_host_worker` only when the host wants one narrow worker task under explicit control.
+2. Use `ao_run_host_worker` only when the host wants one narrow worker task under explicit control, and prefer explicit files plus `strictFiles=true` for hard-scope review tasks.
 3. Use `ao_list_workflows` only to inspect the remaining host-managed workflow surfaces; public tools no longer expose the old standalone leader workflow.
 
 For worker qualification over MCP, use:
@@ -130,6 +132,7 @@ Typical artifacts include:
 - `patch-proposal.json`
 - `patch-inspection.json`
 - `patch-apply-result.json`
+- `worker-debug.json` within worker result artifacts when a host-managed worker task runs
 
 Use `ao_read_task_artifact` for the minimum safe artifact-read path when a task response only returns refs.
 

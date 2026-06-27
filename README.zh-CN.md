@@ -26,6 +26,7 @@
 - 宿主负责理解用户目标、决定是否接受结果。
 - `ao` 负责受控执行：worker 路由、repository context、确定性验证、artifact 持久化、patch gate。
 - 对宿主来说，`ao` 的推荐入口是 `ao_start_task` 和其他 host-managed tools，而不是再起一个内部 leader。
+- 对于窄范围、repo-grounded 的检查，优先使用显式文件列表配合 strict file mode，这样 `ao` 会在证据不完整时直接失败，而不是悄悄放大范围或跳过关键文件。
 
 ## 架构图
 
@@ -107,7 +108,7 @@ pnpm exec ao mcp config
 ```bash
 ao review repo --scope packages/graph
 ao review diff --base main --head HEAD
-ao review files --file packages/graph/src/index.ts
+ao review files --file packages/graph/src/index.ts --strict-files
 ao validate --typecheck --lint --test
 ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
 ao task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
@@ -119,6 +120,8 @@ ao mcp config
 ao mcp serve
 ao mcp list-tools
 ```
+
+`ao review files --strict-files` 和 `ao_run_host_worker` 现在会暴露 host-managed worker 调试证据，包括 requested files、selected files、worker metadata，以及 structured output 失败细节。
 
 ## Worker 接入评估
 

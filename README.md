@@ -26,6 +26,7 @@ In host-driven use cases such as Codex, `ao` is not intended to become a second 
 - The host agent stays responsible for user intent, final judgment, and acceptance.
 - `ao` provides the controlled runtime: worker routing, repository context packs, deterministic validation, artifact persistence, and patch gates.
 - The recommended host-facing path is `ao_start_task` and other host-managed tools.
+- For narrow repo-grounded checks, prefer explicit file lists with strict file mode so AO fails fast instead of silently widening or skipping critical evidence.
 
 ## Architecture diagram
 
@@ -110,7 +111,7 @@ Legacy repository-local `.ao/` directories are unsupported and ignored by curren
 ```bash
 ao review repo --scope packages/graph
 ao review diff --base main --head HEAD
-ao review files --file packages/graph/src/index.ts
+ao review files --file packages/graph/src/index.ts --strict-files
 ao validate --typecheck --lint --test
 ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
 ao task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
@@ -122,6 +123,8 @@ ao mcp config
 ao mcp serve
 ao mcp list-tools
 ```
+
+`ao review files --strict-files` and `ao_run_host_worker` now expose debug evidence for host-managed worker runs, including requested files, selected files, worker metadata, and structured-output failure details.
 
 ## Worker onboarding
 

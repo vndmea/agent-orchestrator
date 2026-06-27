@@ -24,7 +24,7 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
   {
     name: "ao_run_host_worker",
     category: "workflow-building-blocks",
-    description: "Run one explicit worker task under host control without introducing a second leader surface."
+    description: "Run one explicit worker task under host control with debug evidence and without introducing a second leader surface."
   },
   {
     name: "ao_propose_patch",
@@ -175,7 +175,7 @@ const CATALOG_ORDER: McpToolCategory[] = [
 
 export const buildMcpToolCatalogView = (): McpToolCatalogView => ({
   summary:
-    "Start with the high-level task entrypoints unless you are debugging or managing ao internals.",
+    "Start with ao_start_task for host-managed coding flows; use lower-level tools only when you explicitly need narrower worker or artifact control.",
   recommendedEntrypoints: mcpToolCatalog.filter((tool) => tool.recommended),
   groups: CATALOG_ORDER.map((category) => ({
     category,
