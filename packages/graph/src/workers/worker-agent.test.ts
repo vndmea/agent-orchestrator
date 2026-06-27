@@ -17,9 +17,7 @@ import type {
 class SequenceProvider implements ModelProvider {
   public readonly name = "sequence";
 
-  public constructor(
-    private readonly responses: ModelInvocationResult[]
-  ) {}
+  public constructor(private readonly responses: ModelInvocationResult[]) {}
 
   public invoke(
     config: ModelConfig,
@@ -28,11 +26,13 @@ class SequenceProvider implements ModelProvider {
     void config;
     void request;
 
-    return Promise.resolve(this.responses.shift() ?? {
-      provider: "sequence",
-      model: "test-model",
-      text: "{}"
-    });
+    return Promise.resolve(
+      this.responses.shift() ?? {
+        provider: "sequence",
+        model: "test-model",
+        text: "{}"
+      }
+    );
   }
 }
 
@@ -40,9 +40,11 @@ const patchWorkerProvider = (
   worker: WorkerAgent,
   provider: ModelProvider
 ): void => {
-  const router = (worker as unknown as {
-    router: { providers: Map<string, ModelProvider> };
-  }).router;
+  const router = (
+    worker as unknown as {
+      router: { providers: Map<string, ModelProvider> };
+    }
+  ).router;
   router.providers.set("mock", provider);
 };
 
@@ -87,7 +89,9 @@ describe("WorkerAgent structured outputs", () => {
     });
     expect(result.metadata["prompt"]).toBeTypeOf("string");
     expect(result.metadata["rawText"]).toBeTypeOf("string");
-    expect(result.artifacts.some((artifact) => artifact.name === "worker-debug.json")).toBe(true);
+    expect(
+      result.artifacts.some((artifact) => artifact.name === "worker-debug.json")
+    ).toBe(true);
   });
 
   it("falls back and exposes structured invocation errors for invalid worker output", async () => {
@@ -127,9 +131,13 @@ describe("WorkerAgent structured outputs", () => {
         "Validate write and shell safety policies."
       ]
     });
-    expect(result.risks.some((risk) => risk.includes("schema validation failed"))).toBe(true);
+    expect(
+      result.risks.some((risk) => risk.includes("schema validation failed"))
+    ).toBe(true);
     expect(result.metadata["failureKind"]).toBe("schema-validation");
-    expect((result.metadata["structuredOutputErrors"] as string[]).length).toBeGreaterThan(0);
+    expect(
+      (result.metadata["structuredOutputErrors"] as string[]).length
+    ).toBeGreaterThan(0);
   });
 
   it("retries strict review outputs and succeeds after a repair attempt", async () => {
@@ -211,7 +219,18 @@ describe("WorkerAgent structured outputs", () => {
     expect(result.metadata["structuredOutputOk"]).toBe(true);
     expect(result.metadata["structuredOutputAttempts"]).toBe(2);
     expect(result.metadata["failureKind"]).toBeUndefined();
-    expect((result.metadata["structuredOutputErrors"] as string[])).toHaveLength(1);
+    expect(result.metadata["structuredOutputErrors"] as string[]).toHaveLength(
+      1
+    );
+    expect(result.metadata["prompt"]).toContain(
+      "Every finding must include at least one exact full path copied from Allowed referencedFiles."
+    );
+    expect(result.metadata["prompt"]).toContain(
+      "Do not use basename-only file references such as rawXml2.ts or schemaMinimum.ts."
+    );
+    expect(result.metadata["prompt"]).toContain(
+      "A finding without an exact full selected path will be marked incomplete."
+    );
     expect(result.output).toEqual({
       answer:
         "The fix looks partial until packages/core/src/generateId.ts is verified end to end.",

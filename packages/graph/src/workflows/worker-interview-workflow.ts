@@ -70,7 +70,8 @@ const InterviewState = Annotation.Root({
   toolResults: Annotation<WorkflowState["toolResults"]>(),
   review: Annotation<WorkflowState["review"]>(),
   finalResult: Annotation<WorkflowState["finalResult"]>(),
-  workerCapabilityProfile: Annotation<WorkflowState["workerCapabilityProfile"]>(),
+  workerCapabilityProfile:
+    Annotation<WorkflowState["workerCapabilityProfile"]>(),
   warnings: Annotation<WorkflowState["warnings"]>(),
   errors: Annotation<WorkflowState["errors"]>()
 });
@@ -99,7 +100,10 @@ const deriveSuiteSeed = (identity: WorkerInterviewSuiteIdentity): string => {
   return "default:worker-interview";
 };
 
-const createPromptId = (seed: string, taskType: WorkerInterviewTaskType): string =>
+const createPromptId = (
+  seed: string,
+  taskType: WorkerInterviewTaskType
+): string =>
   createHash("sha256")
     .update(`${WORKER_EVALUATION_SUITE_VERSION}:${seed}:${taskType}`)
     .digest("hex")
@@ -144,7 +148,9 @@ const normalizeText = (value: string): string => value.toLowerCase();
 
 const includesAny = (value: string, expected: string[]): boolean => {
   const normalizedValue = normalizeText(value);
-  return expected.some((entry) => normalizedValue.includes(normalizeText(entry)));
+  return expected.some((entry) =>
+    normalizedValue.includes(normalizeText(entry))
+  );
 };
 
 const stringifyParsed = (value: unknown): string =>
@@ -162,6 +168,22 @@ const detectGenericAnswer = (value: string): boolean =>
 
 const hasRepoPathReference = (value: string): boolean =>
   /packages\/[a-z0-9-]+\/src\/[A-Za-z0-9./-]+/iu.test(value);
+
+const hasConcreteRiskExample = (value: string): boolean => {
+  const normalizedValue = normalizeText(value);
+  const hasRiskSubject =
+    /ignore|non-number|unexpected input|nan|null|undefined|string|invalid/u.test(
+      normalizedValue
+    );
+  const hasTrigger = /input|value|\[|array|when|if|given|example|trigger/u.test(
+    normalizedValue
+  );
+  const hasOutcome =
+    /return|result|sum|0|silently|instead|ambiguous|incorrect|lost|hide/u.test(
+      normalizedValue
+    );
+  return hasRiskSubject && hasTrigger && hasOutcome;
+};
 
 const renderFixtureFiles = (files: FixtureFile[]): string[] => [
   "Repository files:",
@@ -192,7 +214,7 @@ const routingFixtureFiles: FixtureFile[] = [
     path: "packages/cli/src/index.ts",
     content: [
       "export function renderWorkerSummary(workerId: string): string {",
-      '  return `worker=${workerId}`;',
+      "  return `worker=${workerId}`;",
       "}"
     ].join("\n")
   }
@@ -349,10 +371,10 @@ const structuredOutputVariants = [
     [
       "Analyze the worker-routing regression using only the repository evidence below.",
       "Use exactly these keys and types:",
-      '- summary: string',
-      '- risks: string[]',
-      '- confidence: number between 0 and 1',
-      '- files: string[]',
+      "- summary: string",
+      "- risks: string[]",
+      "- confidence: number between 0 and 1",
+      "- files: string[]",
       "Return at least one risk and at least one file from the fixture.",
       ...renderFixtureFiles(routingFixtureFiles),
       "Incident summary:",
@@ -366,10 +388,10 @@ const structuredOutputVariants = [
     [
       "Review the release incident notes below using the repository fixture only.",
       "Use exactly these keys and types:",
-      '- summary: string',
-      '- risks: string[]',
-      '- confidence: number between 0 and 1',
-      '- files: string[]',
+      "- summary: string",
+      "- risks: string[]",
+      "- confidence: number between 0 and 1",
+      "- files: string[]",
       "Return at least one risk and at least one file from the fixture.",
       ...renderFixtureFiles(routingFixtureFiles),
       "Incident notes:",
@@ -383,10 +405,10 @@ const structuredOutputVariants = [
     [
       "Inspect the routing regression summary below using only the fixture files.",
       "Use exactly these keys and types:",
-      '- summary: string',
-      '- risks: string[]',
-      '- confidence: number between 0 and 1',
-      '- files: string[]',
+      "- summary: string",
+      "- risks: string[]",
+      "- confidence: number between 0 and 1",
+      "- files: string[]",
       "Return at least one risk and at least one file from the fixture.",
       ...renderFixtureFiles(routingFixtureFiles),
       "Regression summary:",
@@ -403,10 +425,10 @@ const scopeDisciplineVariants = [
     [
       "Review the repository task request below.",
       "Use exactly these keys and types:",
-      '- allowedFiles: string[]',
-      '- blockedFiles: string[]',
-      '- answer: string',
-      '- confidence: number between 0 and 1',
+      "- allowedFiles: string[]",
+      "- blockedFiles: string[]",
+      "- answer: string",
+      "- confidence: number between 0 and 1",
       "Do not invent files outside the request.",
       "The answer must mention at least one allowed file path.",
       ...renderFixtureFiles(scopeFixtureFiles),
@@ -422,10 +444,10 @@ const scopeDisciplineVariants = [
     [
       "Answer the scoped repository request below.",
       "Use exactly these keys and types:",
-      '- allowedFiles: string[]',
-      '- blockedFiles: string[]',
-      '- answer: string',
-      '- confidence: number between 0 and 1',
+      "- allowedFiles: string[]",
+      "- blockedFiles: string[]",
+      "- answer: string",
+      "- confidence: number between 0 and 1",
       "Do not widen the scope.",
       "The answer must cite an allowed file path verbatim.",
       ...renderFixtureFiles(scopeFixtureFiles),
@@ -444,10 +466,10 @@ const summarizationVariants = [
     [
       "Summarize the error log below as JSON using the repository fixture.",
       "Use exactly these keys and types:",
-      '- issue: string',
-      '- impact: string',
-      '- nextSteps: string[]',
-      '- confidence: number between 0 and 1',
+      "- issue: string",
+      "- impact: string",
+      "- nextSteps: string[]",
+      "- confidence: number between 0 and 1",
       "Return at least two nextSteps.",
       "Ground the summary in the repository fixture: at least one nextSteps item must name packages/runtime/src/readProfile.ts or packages/runtime/src/profileStore.ts verbatim.",
       "Do not use generic next steps without naming the concrete fixture file to inspect or change.",
@@ -463,10 +485,10 @@ const summarizationVariants = [
     [
       "Convert the failure log below into JSON using the repository fixture.",
       "Use exactly these keys and types:",
-      '- issue: string',
-      '- impact: string',
-      '- nextSteps: string[]',
-      '- confidence: number between 0 and 1',
+      "- issue: string",
+      "- impact: string",
+      "- nextSteps: string[]",
+      "- confidence: number between 0 and 1",
       "Return at least two nextSteps.",
       "Ground the summary in the repository fixture: at least one nextSteps item must name packages/runtime/src/readProfile.ts or packages/runtime/src/profileStore.ts verbatim.",
       "Do not use generic next steps without naming the concrete fixture file to inspect or change.",
@@ -482,10 +504,10 @@ const summarizationVariants = [
     [
       "Summarize the build failure below as JSON using the repository fixture.",
       "Use exactly these keys and types:",
-      '- issue: string',
-      '- impact: string',
-      '- nextSteps: string[]',
-      '- confidence: number between 0 and 1',
+      "- issue: string",
+      "- impact: string",
+      "- nextSteps: string[]",
+      "- confidence: number between 0 and 1",
       "Return at least two nextSteps.",
       "Ground the summary in the repository fixture: at least one nextSteps item must name packages/runtime/src/readProfile.ts or packages/runtime/src/profileStore.ts verbatim.",
       "Do not use generic next steps without naming the concrete fixture file to inspect or change.",
@@ -504,10 +526,10 @@ const reviewGroundingVariants = [
     [
       "Review the repository evidence below and answer whether import-time id generation is already implemented.",
       "Use exactly these keys and types:",
-      '- answer: string',
-      '- findings: string[]',
-      '- referencedFiles: string[]',
-      '- confidence: number between 0 and 1',
+      "- answer: string",
+      "- findings: string[]",
+      "- referencedFiles: string[]",
+      "- confidence: number between 0 and 1",
       "The answer must be direct, cite only fixture files, and reference at least two concrete repository paths.",
       ...renderFixtureFiles(reviewFixtureFiles),
       "Question:",
@@ -520,10 +542,10 @@ const reviewGroundingVariants = [
     [
       "Use the repository evidence below to review the missing-id handling behavior.",
       "Use exactly these keys and types:",
-      '- answer: string',
-      '- findings: string[]',
-      '- referencedFiles: string[]',
-      '- confidence: number between 0 and 1',
+      "- answer: string",
+      "- findings: string[]",
+      "- referencedFiles: string[]",
+      "- confidence: number between 0 and 1",
       "The answer must be direct, grounded in the fixture, and reference at least two fixture paths.",
       ...renderFixtureFiles(reviewFixtureFiles),
       "Question:",
@@ -539,10 +561,10 @@ const evidenceSufficiencyVariants = [
     [
       "Decide whether the repository evidence below is sufficient to answer the question.",
       "Use exactly these keys and types:",
-      '- decision: string',
-      '- reason: string',
-      '- missingFiles: string[]',
-      '- confidence: number between 0 and 1',
+      "- decision: string",
+      "- reason: string",
+      "- missingFiles: string[]",
+      "- confidence: number between 0 and 1",
       "If the evidence is insufficient, say so directly and name the mandatory missing file or files.",
       "Do not pretend to know the answer from incomplete evidence.",
       "Confidence means confidence in answering the original repository question reliably, not confidence that evidence is missing.",
@@ -559,10 +581,10 @@ const evidenceSufficiencyVariants = [
     [
       "Evaluate whether the selected repository files are enough to answer the review question.",
       "Use exactly these keys and types:",
-      '- decision: string',
-      '- reason: string',
-      '- missingFiles: string[]',
-      '- confidence: number between 0 and 1',
+      "- decision: string",
+      "- reason: string",
+      "- missingFiles: string[]",
+      "- confidence: number between 0 and 1",
       "If key files are missing, fail fast and list them instead of guessing.",
       "Confidence means confidence in answering the original repository question reliably, not confidence that evidence is missing.",
       "If required evidence is missing, confidence must stay low because the task answer remains uncertain.",
@@ -581,11 +603,14 @@ const codeUnderstandingVariants = [
     [
       "Given this TypeScript function, return only JSON.",
       "Use exactly these keys and types:",
-      '- behavior: string',
-      '- risk: string',
-      '- confidence: number between 0 and 1',
+      "- behavior: string",
+      "- risk: string",
+      "- confidence: number between 0 and 1",
       "Ground the answer in the fixture file by explicitly naming packages/math/src/sumValidated.ts in the behavior or risk field.",
       "Do not use vague risk labels such as low or none without naming a concrete limitation of the implementation.",
+      "The risk must name a concrete failure mode, the trigger input pattern, and the incorrect or ambiguous result.",
+      'Example concrete risk: packages/math/src/sumValidated.ts silently ignores ["5", NaN], so it can return 0 instead of reporting invalid input.',
+      'Generic phrases such as "may hide data issues" or "unexpected results" are insufficient unless paired with a concrete input/output example.',
       ...renderFixtureFiles(codeUnderstandingFixtureFiles),
       "Explain the behavior of packages/math/src/sumValidated.ts and name one concrete risk."
     ],
@@ -595,11 +620,14 @@ const codeUnderstandingVariants = [
     [
       "Review this TypeScript helper and return only JSON.",
       "Use exactly these keys and types:",
-      '- behavior: string',
-      '- risk: string',
-      '- confidence: number between 0 and 1',
+      "- behavior: string",
+      "- risk: string",
+      "- confidence: number between 0 and 1",
       "Ground the answer in the fixture file by explicitly naming packages/math/src/sumValidated.ts in the behavior or risk field.",
       "Do not use vague risk labels such as low or none without naming a concrete limitation of the implementation.",
+      "The risk must name a concrete failure mode, the trigger input pattern, and the incorrect or ambiguous result.",
+      'Example concrete risk: packages/math/src/sumValidated.ts silently ignores ["5", NaN], so it can return 0 instead of reporting invalid input.',
+      'Generic phrases such as "may hide data issues" or "unexpected results" are insufficient unless paired with a concrete input/output example.',
       ...renderFixtureFiles(codeUnderstandingFixtureFiles),
       "Focus on packages/math/src/sumValidated.ts.",
       "Describe what values are ignored and one limitation of that behavior."
@@ -610,11 +638,14 @@ const codeUnderstandingVariants = [
     [
       "Explain the TypeScript function below using only JSON.",
       "Use exactly these keys and types:",
-      '- behavior: string',
-      '- risk: string',
-      '- confidence: number between 0 and 1',
+      "- behavior: string",
+      "- risk: string",
+      "- confidence: number between 0 and 1",
       "Ground the answer in the fixture file by explicitly naming packages/math/src/sumValidated.ts in the behavior or risk field.",
       "Do not use vague risk labels such as low or none without naming a concrete limitation of the implementation.",
+      "The risk must name a concrete failure mode, the trigger input pattern, and the incorrect or ambiguous result.",
+      'Example concrete risk: packages/math/src/sumValidated.ts silently ignores ["5", NaN], so it can return 0 instead of reporting invalid input.',
+      'Generic phrases such as "may hide data issues" or "unexpected results" are insufficient unless paired with a concrete input/output example.',
       ...renderFixtureFiles(codeUnderstandingFixtureFiles),
       "Answer for packages/math/src/sumValidated.ts only."
     ],
@@ -626,13 +657,13 @@ const codegenVariants = [
   strictJsonContractLines(
     [
       "Use exactly these keys and types:",
-      '- code: string',
-      '- confidence: number between 0 and 1',
+      "- code: string",
+      "- confidence: number between 0 and 1",
       "The code value must be strict TypeScript.",
       ...renderFixtureFiles(codegenFixtureFiles),
       "Target file: packages/validation/src/validateScore.ts",
       "It must define:",
-      'export function validateScore(value: number): { ok: boolean; message?: string }',
+      "export function validateScore(value: number): { ok: boolean; message?: string }",
       "The function must reject non-finite and negative numbers."
     ],
     '{"code":"export function validateScore(...) { ... }","confidence":0.68}'
@@ -640,13 +671,13 @@ const codegenVariants = [
   strictJsonContractLines(
     [
       "Use exactly these keys and types:",
-      '- code: string',
-      '- confidence: number between 0 and 1',
+      "- code: string",
+      "- confidence: number between 0 and 1",
       "The code value must be strict TypeScript.",
       ...renderFixtureFiles(codegenFixtureFiles),
       "Target file: packages/validation/src/validateScore.ts",
       "Generate exactly this function signature:",
-      'export function validateScore(value: number): { ok: boolean; message?: string }',
+      "export function validateScore(value: number): { ok: boolean; message?: string }",
       "The implementation must reject non-finite values and values below zero."
     ],
     '{"code":"export function validateScore(...) { ... }","confidence":0.74}'
@@ -654,13 +685,13 @@ const codegenVariants = [
   strictJsonContractLines(
     [
       "Use exactly these keys and types:",
-      '- code: string',
-      '- confidence: number between 0 and 1',
+      "- code: string",
+      "- confidence: number between 0 and 1",
       "The code value must be strict TypeScript.",
       ...renderFixtureFiles(codegenFixtureFiles),
       "Target file: packages/validation/src/validateScore.ts",
       "Include this exact exported signature:",
-      'export function validateScore(value: number): { ok: boolean; message?: string }',
+      "export function validateScore(value: number): { ok: boolean; message?: string }",
       "Return ok=false for non-finite or negative input."
     ],
     '{"code":"export function validateScore(...) { ... }","confidence":0.61}'
@@ -672,9 +703,9 @@ const confidenceCalibrationVariants = [
     [
       "Answer the underspecified question below as JSON.",
       "Use exactly these keys and types:",
-      '- answer: string',
-      '- confidence: number between 0 and 1',
-      '- uncertaintyReason: string',
+      "- answer: string",
+      "- confidence: number between 0 and 1",
+      "- uncertaintyReason: string",
       "Keep confidence low when the prompt lacks evidence.",
       "Question: Which deployment change caused yesterday's production latency spike?"
     ],
@@ -684,9 +715,9 @@ const confidenceCalibrationVariants = [
     [
       "Return only JSON for the ambiguous question below.",
       "Use exactly these keys and types:",
-      '- answer: string',
-      '- confidence: number between 0 and 1',
-      '- uncertaintyReason: string',
+      "- answer: string",
+      "- confidence: number between 0 and 1",
+      "- uncertaintyReason: string",
       "Keep confidence low when the prompt lacks evidence.",
       "Question: Which engineer approved the risky routing patch last week?"
     ],
@@ -696,9 +727,9 @@ const confidenceCalibrationVariants = [
     [
       "Respond in JSON to the underdetermined question below.",
       "Use exactly these keys and types:",
-      '- answer: string',
-      '- confidence: number between 0 and 1',
-      '- uncertaintyReason: string',
+      "- answer: string",
+      "- confidence: number between 0 and 1",
+      "- uncertaintyReason: string",
       "Keep confidence low when the prompt lacks evidence.",
       "Question: Which worker model should handle tomorrow's production hotfix?"
     ],
@@ -713,485 +744,560 @@ const buildInterviewTasks = (
 
   return [
     {
-    task: {
-      id: "instruction-following",
-      title: "Instruction Following",
-      type: "instruction-following",
-      prompt: createPrompt(
-        seed,
-        "instruction-following",
-        pickVariant(seed, "instruction-following", instructionFollowingVariants)
-      ),
-      expectedOutputDescription: "Strict JSON-only output"
+      task: {
+        id: "instruction-following",
+        title: "Instruction Following",
+        type: "instruction-following",
+        prompt: createPrompt(
+          seed,
+          "instruction-following",
+          pickVariant(
+            seed,
+            "instruction-following",
+            instructionFollowingVariants
+          )
+        ),
+        expectedOutputDescription: "Strict JSON-only output"
+      },
+      schema: z.object({
+        mode: z.literal("json-only"),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        mode: "json-only",
+        confidence: 0.4
+      },
+      mapRawOutputToTaskTypes: [],
+      evaluateParsed: (parsed) => {
+        const value = parsed as { confidence: number; mode: string };
+        return {
+          score: value.mode === "json-only" ? 1 : 0.2,
+          findings:
+            value.mode === "json-only"
+              ? []
+              : ["Worker did not follow the exact output instruction."]
+        };
+      }
     },
-    schema: z.object({
-      mode: z.literal("json-only"),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      mode: "json-only",
-      confidence: 0.4
-    },
-    mapRawOutputToTaskTypes: [],
-    evaluateParsed: (parsed) => {
-      const value = parsed as { confidence: number; mode: string };
-      return {
-        score: value.mode === "json-only" ? 1 : 0.2,
-        findings:
-          value.mode === "json-only"
-            ? []
-            : ["Worker did not follow the exact output instruction."]
-      };
-    }
-  },
     {
-    task: {
-      id: "structured-output",
-      title: "Structured Output",
-      type: "structured-output",
-      prompt: createPrompt(
-        seed,
-        "structured-output",
-        pickVariant(seed, "structured-output", structuredOutputVariants)
-      ),
-      expectedOutputDescription: "Valid JSON matching the requested schema"
+      task: {
+        id: "structured-output",
+        title: "Structured Output",
+        type: "structured-output",
+        prompt: createPrompt(
+          seed,
+          "structured-output",
+          pickVariant(seed, "structured-output", structuredOutputVariants)
+        ),
+        expectedOutputDescription: "Valid JSON matching the requested schema"
+      },
+      schema: z.object({
+        summary: z.string().min(1),
+        risks: z.array(z.string()).min(1),
+        files: z.array(z.string()).min(1),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        summary:
+          "packages/runtime/src/profileCache.ts can reuse a stale profile and route the wrong worker.",
+        risks: ["A blocked worker may still be selected from cache reuse."],
+        files: ["packages/runtime/src/profileCache.ts"],
+        confidence: 0.66
+      },
+      mapRawOutputToTaskTypes: ["json-extraction"],
+      evaluateParsed: (parsed) => {
+        const value = parsed as {
+          files: string[];
+          risks: string[];
+          summary: string;
+        };
+        const findings: string[] = [];
+        const rendered = stringifyParsed(parsed);
+        if (
+          !value.files.some((file) =>
+            [
+              "packages/runtime/src/selectWorker.ts",
+              "packages/runtime/src/profileCache.ts",
+              "packages/cli/src/index.ts"
+            ].includes(file)
+          )
+        ) {
+          findings.push(
+            "Structured output did not preserve the cited repository files."
+          );
+        }
+        if (
+          !includesAny(value.summary, ["worker", "profile", "routing", "cache"])
+        ) {
+          findings.push("Structured output summary was too generic.");
+        }
+        if (value.risks.length === 0) {
+          findings.push("Structured output omitted concrete risks.");
+        }
+        if (detectTemplateLanguage(rendered)) {
+          findings.push(
+            "Structured output fell back to template workflow language."
+          );
+        }
+        return {
+          score: findings.length === 0 ? 0.92 : 0.38,
+          findings
+        };
+      }
     },
-    schema: z.object({
-      summary: z.string().min(1),
-      risks: z.array(z.string()).min(1),
-      files: z.array(z.string()).min(1),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      summary:
-        "packages/runtime/src/profileCache.ts can reuse a stale profile and route the wrong worker.",
-      risks: ["A blocked worker may still be selected from cache reuse."],
-      files: ["packages/runtime/src/profileCache.ts"],
-      confidence: 0.66
-    },
-    mapRawOutputToTaskTypes: ["json-extraction"],
-    evaluateParsed: (parsed) => {
-      const value = parsed as {
-        files: string[];
-        risks: string[];
-        summary: string;
-      };
-      const findings: string[] = [];
-      const rendered = stringifyParsed(parsed);
-      if (
-        !value.files.some((file) =>
-          [
-            "packages/runtime/src/selectWorker.ts",
-            "packages/runtime/src/profileCache.ts",
-            "packages/cli/src/index.ts"
-          ].includes(file)
-        )
-      ) {
-        findings.push("Structured output did not preserve the cited repository files.");
-      }
-      if (!includesAny(value.summary, ["worker", "profile", "routing", "cache"])) {
-        findings.push("Structured output summary was too generic.");
-      }
-      if (value.risks.length === 0) {
-        findings.push("Structured output omitted concrete risks.");
-      }
-      if (detectTemplateLanguage(rendered)) {
-        findings.push("Structured output fell back to template workflow language.");
-      }
-      return {
-        score: findings.length === 0 ? 0.92 : 0.38,
-        findings
-      };
-    }
-  },
     {
-    task: {
-      id: "scope-discipline",
-      title: "Scope Discipline",
-      type: "scope-discipline",
-      prompt: createPrompt(
-        seed,
-        "scope-discipline",
-        pickVariant(seed, "scope-discipline", scopeDisciplineVariants)
-      ),
-      expectedOutputDescription: "Repo-grounded answer that respects the provided scope"
+      task: {
+        id: "scope-discipline",
+        title: "Scope Discipline",
+        type: "scope-discipline",
+        prompt: createPrompt(
+          seed,
+          "scope-discipline",
+          pickVariant(seed, "scope-discipline", scopeDisciplineVariants)
+        ),
+        expectedOutputDescription:
+          "Repo-grounded answer that respects the provided scope"
+      },
+      schema: z.object({
+        allowedFiles: z.array(z.string()).min(1),
+        blockedFiles: z.array(z.string()).min(1),
+        answer: z.string().min(1),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        allowedFiles: ["packages/id/src/generateId.ts"],
+        blockedFiles: ["packages/cli/src/index.ts"],
+        answer:
+          "Inspect packages/id/src/generateId.ts first because it applies trim and prefix formatting directly.",
+        confidence: 0.82
+      },
+      mapRawOutputToTaskTypes: ["review-lite", "summarization"],
+      evaluateParsed: (parsed) => {
+        const value = parsed as {
+          allowedFiles: string[];
+          answer: string;
+          blockedFiles: string[];
+        };
+        const findings: string[] = [];
+        const rendered = stringifyParsed(parsed);
+        if (!value.blockedFiles.includes("packages/cli/src/index.ts")) {
+          findings.push("Worker did not block the out-of-scope file.");
+        }
+        if (!value.allowedFiles.includes("packages/id/src/generateId.ts")) {
+          findings.push("Worker missed the primary in-scope file.");
+        }
+        if (!includesAny(value.answer, ["packages/id/src/generateId.ts"])) {
+          findings.push(
+            "Worker answer was not grounded in an allowed repository file."
+          );
+        }
+        if (
+          detectTemplateLanguage(rendered) ||
+          detectGenericAnswer(value.answer)
+        ) {
+          findings.push(
+            "Worker answer fell back to generic workflow language."
+          );
+        }
+        return {
+          score: findings.length === 0 ? 0.94 : 0.28,
+          findings
+        };
+      }
     },
-    schema: z.object({
-      allowedFiles: z.array(z.string()).min(1),
-      blockedFiles: z.array(z.string()).min(1),
-      answer: z.string().min(1),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      allowedFiles: ["packages/id/src/generateId.ts"],
-      blockedFiles: ["packages/cli/src/index.ts"],
-      answer:
-        "Inspect packages/id/src/generateId.ts first because it applies trim and prefix formatting directly.",
-      confidence: 0.82
-    },
-    mapRawOutputToTaskTypes: ["review-lite", "summarization"],
-    evaluateParsed: (parsed) => {
-      const value = parsed as {
-        allowedFiles: string[];
-        answer: string;
-        blockedFiles: string[];
-      };
-      const findings: string[] = [];
-      const rendered = stringifyParsed(parsed);
-      if (!value.blockedFiles.includes("packages/cli/src/index.ts")) {
-        findings.push("Worker did not block the out-of-scope file.");
-      }
-      if (!value.allowedFiles.includes("packages/id/src/generateId.ts")) {
-        findings.push("Worker missed the primary in-scope file.");
-      }
-      if (!includesAny(value.answer, ["packages/id/src/generateId.ts"])) {
-        findings.push("Worker answer was not grounded in an allowed repository file.");
-      }
-      if (detectTemplateLanguage(rendered) || detectGenericAnswer(value.answer)) {
-        findings.push("Worker answer fell back to generic workflow language.");
-      }
-      return {
-        score: findings.length === 0 ? 0.94 : 0.28,
-        findings
-      };
-    }
-  },
     {
-    task: {
-      id: "summarization",
-      title: "Summarization",
-      type: "summarization",
-      prompt: createPrompt(
-        seed,
-        "summarization",
-        pickVariant(seed, "summarization", summarizationVariants)
-      ),
-      expectedOutputDescription: "Compact structured summary of a log"
-    },
-    schema: z.object({
-      issue: z.string().min(1),
-      impact: z.string().min(1),
-      nextSteps: z.array(z.string()).min(1),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      issue:
-        "packages/runtime/src/readProfile.ts still treats score as a string during profile parsing.",
-      impact: "Profile loading fails and runtime builds stop.",
-      nextSteps: [
-        "Update packages/runtime/src/readProfile.ts to normalize score as a number.",
-        "Verify PersistedWorkerProfile usage in packages/runtime/src/profileStore.ts."
-      ],
-      confidence: 0.72
-    },
-    mapRawOutputToTaskTypes: ["summarization", "log-analysis"],
-    evaluateParsed: (parsed) => {
-      const value = parsed as {
-        issue: string;
-        nextSteps: string[];
-      };
-      const findings: string[] = [];
-      const rendered = stringifyParsed(parsed);
-      if (value.nextSteps.length < 2) {
-        findings.push("Summarization did not provide enough next steps.");
+      task: {
+        id: "summarization",
+        title: "Summarization",
+        type: "summarization",
+        prompt: createPrompt(
+          seed,
+          "summarization",
+          pickVariant(seed, "summarization", summarizationVariants)
+        ),
+        expectedOutputDescription: "Compact structured summary of a log"
+      },
+      schema: z.object({
+        issue: z.string().min(1),
+        impact: z.string().min(1),
+        nextSteps: z.array(z.string()).min(1),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        issue:
+          "packages/runtime/src/readProfile.ts still treats score as a string during profile parsing.",
+        impact: "Profile loading fails and runtime builds stop.",
+        nextSteps: [
+          "Update packages/runtime/src/readProfile.ts to normalize score as a number.",
+          "Verify PersistedWorkerProfile usage in packages/runtime/src/profileStore.ts."
+        ],
+        confidence: 0.72
+      },
+      mapRawOutputToTaskTypes: ["summarization", "log-analysis"],
+      evaluateParsed: (parsed) => {
+        const value = parsed as {
+          issue: string;
+          nextSteps: string[];
+        };
+        const findings: string[] = [];
+        const rendered = stringifyParsed(parsed);
+        if (value.nextSteps.length < 2) {
+          findings.push("Summarization did not provide enough next steps.");
+        }
+        if (!includesAny(value.issue, ["score", "profile", "build", "type"])) {
+          findings.push("Summarization issue description was too generic.");
+        }
+        if (
+          !value.nextSteps.some((step) =>
+            includesAny(step, [
+              "packages/runtime/src/readProfile.ts",
+              "packages/runtime/src/profileStore.ts"
+            ])
+          )
+        ) {
+          findings.push(
+            "Summarization did not stay grounded in the cited repository files."
+          );
+        }
+        if (detectTemplateLanguage(rendered)) {
+          findings.push(
+            "Summarization fell back to template workflow language."
+          );
+        }
+        return {
+          score: findings.length === 0 ? 0.9 : 0.42,
+          findings
+        };
       }
-      if (!includesAny(value.issue, ["score", "profile", "build", "type"])) {
-        findings.push("Summarization issue description was too generic.");
+    },
+    {
+      task: {
+        id: "review-grounding",
+        title: "Review Grounding",
+        type: "review-grounding",
+        prompt: createPrompt(
+          seed,
+          "review-grounding",
+          pickVariant(seed, "review-grounding", reviewGroundingVariants)
+        ),
+        expectedOutputDescription:
+          "Direct evidence-linked repository review answer"
+      },
+      schema: z.object({
+        answer: z.string().min(1),
+        findings: z.array(z.string()).min(2),
+        referencedFiles: z.array(z.string()).min(2),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        answer:
+          "Yes. The import path normalizes missing ids before export is involved.",
+        findings: [
+          "packages/core/src/importXml.ts delegates imported nodes into normalizeNode.",
+          "packages/core/src/normalizeNode.ts adds attrs.id with generateId(node.type) when id is missing."
+        ],
+        referencedFiles: [
+          "packages/core/src/importXml.ts",
+          "packages/core/src/normalizeNode.ts"
+        ],
+        confidence: 0.83
+      },
+      mapRawOutputToTaskTypes: ["review-lite"],
+      evaluateParsed: (parsed) => {
+        const value = parsed as {
+          answer: string;
+          findings: string[];
+          referencedFiles: string[];
+        };
+        const findings: string[] = [];
+        const rendered = stringifyParsed(parsed);
+        if (!includesAny(value.answer, ["yes", "import", "normalize"])) {
+          findings.push(
+            "Review answer was not direct enough about the import path outcome."
+          );
+        }
+        if (value.findings.length < 2) {
+          findings.push(
+            "Review answer did not provide enough concrete findings."
+          );
+        }
+        if (
+          !value.referencedFiles.includes("packages/core/src/importXml.ts") ||
+          !value.referencedFiles.includes("packages/core/src/normalizeNode.ts")
+        ) {
+          findings.push(
+            "Review answer did not cite the mandatory repository files."
+          );
+        }
+        if (!hasRepoPathReference(rendered)) {
+          findings.push(
+            "Review answer was not grounded in concrete repository paths."
+          );
+        }
+        if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
+          findings.push(
+            "Review answer fell back to generic workflow language."
+          );
+        }
+        return {
+          score: findings.length === 0 ? 0.93 : 0.26,
+          findings
+        };
       }
-      if (
-        !value.nextSteps.some((step) =>
-          includesAny(step, [
-            "packages/runtime/src/readProfile.ts",
-            "packages/runtime/src/profileStore.ts"
+    },
+    {
+      task: {
+        id: "evidence-sufficiency",
+        title: "Evidence Sufficiency",
+        type: "evidence-sufficiency",
+        prompt: createPrompt(
+          seed,
+          "evidence-sufficiency",
+          pickVariant(seed, "evidence-sufficiency", evidenceSufficiencyVariants)
+        ),
+        expectedOutputDescription:
+          "Fail-fast decision when mandatory evidence is missing"
+      },
+      schema: z.object({
+        decision: z.string().min(1),
+        reason: z.string().min(1),
+        missingFiles: z.array(z.string()),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        decision: "insufficient-evidence",
+        reason:
+          "The selected files do not include the import/normalization chain.",
+        missingFiles: [
+          "packages/core/src/importXml.ts",
+          "packages/core/src/normalizeNode.ts"
+        ],
+        confidence: 0.18
+      },
+      mapRawOutputToTaskTypes: ["review-lite", "summarization"],
+      evaluateParsed: (parsed) => {
+        const value = parsed as {
+          confidence: number;
+          decision: string;
+          missingFiles: string[];
+          reason: string;
+        };
+        const findings: string[] = [];
+        const rendered = stringifyParsed(parsed);
+        if (
+          !includesAny(value.decision, [
+            "insufficient-evidence",
+            "insufficient"
           ])
-        )
-      ) {
-        findings.push("Summarization did not stay grounded in the cited repository files.");
+        ) {
+          findings.push(
+            "Worker did not fail fast when mandatory evidence was missing."
+          );
+        }
+        if (
+          value.missingFiles.length === 0 ||
+          !value.missingFiles.some((file) =>
+            [
+              "packages/core/src/importXml.ts",
+              "packages/core/src/normalizeNode.ts"
+            ].includes(file)
+          )
+        ) {
+          findings.push("Worker did not name the mandatory missing files.");
+        }
+        if (
+          !includesAny(value.reason, [
+            "missing",
+            "import",
+            "normalize",
+            "evidence"
+          ])
+        ) {
+          findings.push(
+            "Worker did not explain why the evidence was insufficient."
+          );
+        }
+        if (
+          includesAny(value.reason, [
+            "probably",
+            "looks fine",
+            "should be present",
+            "seems implemented"
+          ])
+        ) {
+          findings.push(
+            "Worker guessed instead of refusing on insufficient evidence."
+          );
+        }
+        if (value.confidence > 0.45) {
+          findings.push(
+            "Worker reported too much confidence on insufficient evidence."
+          );
+        }
+        if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
+          findings.push(
+            "Worker used generic fallback language instead of a fail-fast answer."
+          );
+        }
+        return {
+          score: findings.length === 0 ? 0.95 : 0.18,
+          findings
+        };
       }
-      if (detectTemplateLanguage(rendered)) {
-        findings.push("Summarization fell back to template workflow language.");
-      }
-      return {
-        score: findings.length === 0 ? 0.9 : 0.42,
-        findings
-      };
-    }
-  },
-    {
-    task: {
-      id: "review-grounding",
-      title: "Review Grounding",
-      type: "review-grounding",
-      prompt: createPrompt(
-        seed,
-        "review-grounding",
-        pickVariant(seed, "review-grounding", reviewGroundingVariants)
-      ),
-      expectedOutputDescription: "Direct evidence-linked repository review answer"
     },
-    schema: z.object({
-      answer: z.string().min(1),
-      findings: z.array(z.string()).min(2),
-      referencedFiles: z.array(z.string()).min(2),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      answer:
-        "Yes. The import path normalizes missing ids before export is involved.",
-      findings: [
-        "packages/core/src/importXml.ts delegates imported nodes into normalizeNode.",
-        "packages/core/src/normalizeNode.ts adds attrs.id with generateId(node.type) when id is missing."
+    {
+      task: {
+        id: "code-understanding",
+        title: "Code Understanding",
+        type: "code-understanding",
+        prompt: createPrompt(
+          seed,
+          "code-understanding",
+          pickVariant(seed, "code-understanding", codeUnderstandingVariants)
+        ),
+        expectedOutputDescription: "Structured code understanding notes"
+      },
+      schema: z.object({
+        behavior: z.string().min(1),
+        risk: z.string().min(1),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        behavior:
+          "packages/math/src/sumValidated.ts filters to finite numbers and returns their sum.",
+        risk: "Non-number values are silently ignored, which can hide unexpected input problems.",
+        confidence: 0.7
+      },
+      mapRawOutputToTaskTypes: [
+        "review-lite",
+        "risk-analysis",
+        "code-understanding"
       ],
-      referencedFiles: [
-        "packages/core/src/importXml.ts",
-        "packages/core/src/normalizeNode.ts"
-      ],
-      confidence: 0.83
+      evaluateParsed: (parsed) => {
+        const value = parsed as { behavior: string; risk: string };
+        const findings: string[] = [];
+        const rendered = stringifyParsed(parsed);
+        if (!includesAny(value.behavior, ["sum", "finite", "filter"])) {
+          findings.push(
+            "Code understanding missed the concrete behavior of the function."
+          );
+        }
+        if (!hasConcreteRiskExample(value.risk)) {
+          findings.push("Code understanding risk was too generic.");
+        }
+        if (!hasRepoPathReference(rendered)) {
+          findings.push(
+            "Code understanding answer was not grounded in the fixture file."
+          );
+        }
+        if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
+          findings.push(
+            "Code understanding answer fell back to generic workflow language."
+          );
+        }
+        return {
+          score: findings.length === 0 ? 0.88 : 0.44,
+          findings
+        };
+      }
     },
-    mapRawOutputToTaskTypes: ["review-lite"],
-    evaluateParsed: (parsed) => {
-      const value = parsed as {
-        answer: string;
-        findings: string[];
-        referencedFiles: string[];
-      };
-      const findings: string[] = [];
-      const rendered = stringifyParsed(parsed);
-      if (!includesAny(value.answer, ["yes", "import", "normalize"])) {
-        findings.push("Review answer was not direct enough about the import path outcome.");
-      }
-      if (value.findings.length < 2) {
-        findings.push("Review answer did not provide enough concrete findings.");
-      }
-      if (
-        !value.referencedFiles.includes("packages/core/src/importXml.ts") ||
-        !value.referencedFiles.includes("packages/core/src/normalizeNode.ts")
-      ) {
-        findings.push("Review answer did not cite the mandatory repository files.");
-      }
-      if (!hasRepoPathReference(rendered)) {
-        findings.push("Review answer was not grounded in concrete repository paths.");
-      }
-      if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
-        findings.push("Review answer fell back to generic workflow language.");
-      }
-      return {
-        score: findings.length === 0 ? 0.93 : 0.26,
-        findings
-      };
-    }
-  },
     {
-    task: {
-      id: "evidence-sufficiency",
-      title: "Evidence Sufficiency",
-      type: "evidence-sufficiency",
-      prompt: createPrompt(
-        seed,
-        "evidence-sufficiency",
-        pickVariant(seed, "evidence-sufficiency", evidenceSufficiencyVariants)
-      ),
-      expectedOutputDescription: "Fail-fast decision when mandatory evidence is missing"
-    },
-    schema: z.object({
-      decision: z.string().min(1),
-      reason: z.string().min(1),
-      missingFiles: z.array(z.string()),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      decision: "insufficient-evidence",
-      reason: "The selected files do not include the import/normalization chain.",
-      missingFiles: [
-        "packages/core/src/importXml.ts",
-        "packages/core/src/normalizeNode.ts"
-      ],
-      confidence: 0.18
-    },
-    mapRawOutputToTaskTypes: ["review-lite", "summarization"],
-    evaluateParsed: (parsed) => {
-      const value = parsed as {
-        confidence: number;
-        decision: string;
-        missingFiles: string[];
-        reason: string;
-      };
-      const findings: string[] = [];
-      const rendered = stringifyParsed(parsed);
-      if (!includesAny(value.decision, ["insufficient-evidence", "insufficient"])) {
-        findings.push("Worker did not fail fast when mandatory evidence was missing.");
-      }
-      if (
-        value.missingFiles.length === 0 ||
-        !value.missingFiles.some((file) =>
-          [
-            "packages/core/src/importXml.ts",
-            "packages/core/src/normalizeNode.ts"
-          ].includes(file)
-        )
-      ) {
-        findings.push("Worker did not name the mandatory missing files.");
-      }
-      if (!includesAny(value.reason, ["missing", "import", "normalize", "evidence"])) {
-        findings.push("Worker did not explain why the evidence was insufficient.");
-      }
-      if (includesAny(value.reason, ["probably", "looks fine", "should be present", "seems implemented"])) {
-        findings.push("Worker guessed instead of refusing on insufficient evidence.");
-      }
-      if (value.confidence > 0.45) {
-        findings.push("Worker reported too much confidence on insufficient evidence.");
-      }
-      if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
-        findings.push("Worker used generic fallback language instead of a fail-fast answer.");
-      }
-      return {
-        score: findings.length === 0 ? 0.95 : 0.18,
-        findings
-      };
-    }
-  },
-    {
-    task: {
-      id: "code-understanding",
-      title: "Code Understanding",
-      type: "code-understanding",
-      prompt: createPrompt(
-        seed,
-        "code-understanding",
-        pickVariant(seed, "code-understanding", codeUnderstandingVariants)
-      ),
-      expectedOutputDescription: "Structured code understanding notes"
-    },
-    schema: z.object({
-      behavior: z.string().min(1),
-      risk: z.string().min(1),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      behavior:
-        "packages/math/src/sumValidated.ts filters to finite numbers and returns their sum.",
-      risk:
-        "Non-number values are silently ignored, which can hide unexpected input problems.",
-      confidence: 0.7
-    },
-    mapRawOutputToTaskTypes: ["review-lite", "risk-analysis", "code-understanding"],
-    evaluateParsed: (parsed) => {
-      const value = parsed as { behavior: string; risk: string };
-      const findings: string[] = [];
-      const rendered = stringifyParsed(parsed);
-      if (!includesAny(value.behavior, ["sum", "finite", "filter"])) {
-        findings.push("Code understanding missed the concrete behavior of the function.");
-      }
-      if (!includesAny(value.risk, ["ignore", "non-number", "unexpected input"])) {
-        findings.push("Code understanding risk was too generic.");
-      }
-      if (!hasRepoPathReference(rendered)) {
-        findings.push("Code understanding answer was not grounded in the fixture file.");
-      }
-      if (detectTemplateLanguage(rendered) || detectGenericAnswer(rendered)) {
-        findings.push("Code understanding answer fell back to generic workflow language.");
-      }
-      return {
-        score: findings.length === 0 ? 0.88 : 0.44,
-        findings
-      };
-    }
-  },
-    {
-    task: {
-      id: "codegen",
-      title: "Simple Code Generation",
-      type: "codegen",
-      prompt: createPrompt(
-        seed,
-        "codegen",
-        pickVariant(seed, "codegen", codegenVariants)
-      ),
-      expectedOutputDescription: "Runnable strict TypeScript snippet"
-    },
-    schema: z.object({
-      code: z.string().min(1),
-      confidence: z.number().min(0).max(1)
-    }),
-    mockResponse: {
-      code: [
-        "export function validateScore(value: number): { ok: boolean; message?: string } {",
-        "  if (!Number.isFinite(value)) {",
-        "    return { ok: false, message: \"Value must be finite.\" };",
-        "  }",
-        "  if (value < 0) {",
-        "    return { ok: false, message: \"Value must not be negative.\" };",
-        "  }",
-        "  return { ok: true };",
-        "}"
-      ].join("\n"),
-      confidence: 0.68
-    },
-    mapRawOutputToTaskTypes: ["codegen", "validation-fix", "test-generation"],
-    evaluateParsed: (parsed) => {
-      const code = (parsed as { code: string }).code;
-      const findings: string[] = [];
+      task: {
+        id: "codegen",
+        title: "Simple Code Generation",
+        type: "codegen",
+        prompt: createPrompt(
+          seed,
+          "codegen",
+          pickVariant(seed, "codegen", codegenVariants)
+        ),
+        expectedOutputDescription: "Runnable strict TypeScript snippet"
+      },
+      schema: z.object({
+        code: z.string().min(1),
+        confidence: z.number().min(0).max(1)
+      }),
+      mockResponse: {
+        code: [
+          "export function validateScore(value: number): { ok: boolean; message?: string } {",
+          "  if (!Number.isFinite(value)) {",
+          '    return { ok: false, message: "Value must be finite." };',
+          "  }",
+          "  if (value < 0) {",
+          '    return { ok: false, message: "Value must not be negative." };',
+          "  }",
+          "  return { ok: true };",
+          "}"
+        ].join("\n"),
+        confidence: 0.68
+      },
+      mapRawOutputToTaskTypes: ["codegen", "validation-fix", "test-generation"],
+      evaluateParsed: (parsed) => {
+        const code = (parsed as { code: string }).code;
+        const findings: string[] = [];
 
-      if (code.includes("any")) {
-        findings.push("Generated code uses any.");
-      }
-      if (!code.includes("export function validateScore")) {
-        findings.push("Expected function name was not generated.");
-      }
-      if (!code.includes("Number.isFinite")) {
-        findings.push("Generated code did not reject non-finite input.");
-      }
-      if (!code.includes("value < 0")) {
-        findings.push("Generated code did not reject negative input.");
-      }
-      if (detectTemplateLanguage(code)) {
-        findings.push("Generated code fell back to template workflow language.");
-      }
+        if (code.includes("any")) {
+          findings.push("Generated code uses any.");
+        }
+        if (!code.includes("export function validateScore")) {
+          findings.push("Expected function name was not generated.");
+        }
+        if (!code.includes("Number.isFinite")) {
+          findings.push("Generated code did not reject non-finite input.");
+        }
+        if (!code.includes("value < 0")) {
+          findings.push("Generated code did not reject negative input.");
+        }
+        if (detectTemplateLanguage(code)) {
+          findings.push(
+            "Generated code fell back to template workflow language."
+          );
+        }
 
-      return {
-        score: findings.length === 0 ? 0.86 : 0.35,
-        findings
-      };
-    }
-  },
+        return {
+          score: findings.length === 0 ? 0.86 : 0.35,
+          findings
+        };
+      }
+    },
     {
-    task: {
-      id: "confidence-calibration",
-      title: "Confidence Calibration",
-      type: "confidence-calibration",
-      prompt: createPrompt(
-        seed,
-        "confidence-calibration",
-        pickVariant(
+      task: {
+        id: "confidence-calibration",
+        title: "Confidence Calibration",
+        type: "confidence-calibration",
+        prompt: createPrompt(
           seed,
           "confidence-calibration",
-          confidenceCalibrationVariants
-        )
-      ),
-      expectedOutputDescription: "Cautious confidence on ambiguous prompts"
-    },
-    schema: z.object({
-      answer: z.string().min(1),
-      confidence: z.number().min(0).max(1),
-      uncertaintyReason: z.string().min(1)
-    }),
-    mockResponse: {
-      answer: "I do not have enough evidence to answer reliably.",
-      confidence: 0.24,
-      uncertaintyReason: "The prompt does not include enough context."
-    },
-    mapRawOutputToTaskTypes: [],
-    evaluateParsed: (parsed) => {
-      const confidence = extractConfidence(parsed) ?? 1;
-      return {
-        score: confidence <= 0.45 ? 0.92 : 0.2,
-        findings:
-          confidence <= 0.45
-            ? []
-            : ["Worker reported high confidence on an ambiguous task."]
-      };
+          pickVariant(
+            seed,
+            "confidence-calibration",
+            confidenceCalibrationVariants
+          )
+        ),
+        expectedOutputDescription: "Cautious confidence on ambiguous prompts"
+      },
+      schema: z.object({
+        answer: z.string().min(1),
+        confidence: z.number().min(0).max(1),
+        uncertaintyReason: z.string().min(1)
+      }),
+      mockResponse: {
+        answer: "I do not have enough evidence to answer reliably.",
+        confidence: 0.24,
+        uncertaintyReason: "The prompt does not include enough context."
+      },
+      mapRawOutputToTaskTypes: [],
+      evaluateParsed: (parsed) => {
+        const confidence = extractConfidence(parsed) ?? 1;
+        return {
+          score: confidence <= 0.45 ? 0.92 : 0.2,
+          findings:
+            confidence <= 0.45
+              ? []
+              : ["Worker reported high confidence on an ambiguous task."]
+        };
+      }
     }
-  }
   ];
 };
 
@@ -1211,7 +1317,9 @@ const createTaskResult = async (
       type: runtimeTask.task.type,
       passed: false,
       score: 0,
-      findings: [`Attempt 1: provider invocation failed: ${mockResponse.message}`],
+      findings: [
+        `Attempt 1: provider invocation failed: ${mockResponse.message}`
+      ],
       rawOutput: null,
       failureKind: "provider-invocation"
     };
@@ -1232,9 +1340,10 @@ const createTaskResult = async (
       type: runtimeTask.task.type,
       passed: false,
       score: 0,
-      findings: invocation.errors.length > 0
-        ? invocation.errors
-        : ["Worker interview execution failed."],
+      findings:
+        invocation.errors.length > 0
+          ? invocation.errors
+          : ["Worker interview execution failed."],
       rawOutput: invocation.raw ?? invocation.rawText,
       failureKind: invocation.failureKind
     };
@@ -1319,7 +1428,9 @@ const buildCapabilityProfile = (
   taskResults: WorkerInterviewTaskResult[],
   runtimeTasks: InterviewTaskRuntimeDefinition[]
 ): WorkerCapabilityProfile => {
-  const scoreByType = new Map(taskResults.map((result) => [result.type, result.score]));
+  const scoreByType = new Map(
+    taskResults.map((result) => [result.type, result.score])
+  );
   const interviewDiagnostics = buildInterviewDiagnostics(taskResults);
   const instructionFollowing = scoreByType.get("instruction-following") ?? 0;
   const scopeDiscipline = scoreByType.get("scope-discipline") ?? 0;
@@ -1368,10 +1479,7 @@ const buildCapabilityProfile = (
       reviewGrounding,
       evidenceSufficiency
     ]),
-    codeUnderstanding: average([
-      codeUnderstanding,
-      reviewGrounding
-    ]),
+    codeUnderstanding: average([codeUnderstanding, reviewGrounding]),
     fixPlanning: average([
       summarization,
       reviewGrounding,
@@ -1465,13 +1573,17 @@ const buildCapabilityProfile = (
   };
 
   const evidence: WorkerInterviewEvidence = {
-    failedCases: taskResults.filter((result) => !result.passed).map((result) => result.taskId),
+    failedCases: taskResults
+      .filter((result) => !result.passed)
+      .map((result) => result.taskId),
     repoGroundedCases: runtimeTasks
       .map((runtimeTask) => runtimeTask.task)
       .filter((task) => repoGroundedTaskIds.has(task.type))
       .map((task) => task.id),
     fallbackPatternCases: taskResults
-      .filter((result) => detectTemplateLanguage(stringifyParsed(result.rawOutput)))
+      .filter((result) =>
+        detectTemplateLanguage(stringifyParsed(result.rawOutput))
+      )
       .map((result) => result.taskId),
     genericAnswerCases: taskResults
       .filter((result) =>
@@ -1505,10 +1617,7 @@ const buildCapabilityProfile = (
     supported.add("review-lite");
     supported.add("risk-analysis");
   }
-  if (
-    taskScores.codeUnderstanding >= 0.72 &&
-    codeUnderstanding >= 0.68
-  ) {
+  if (taskScores.codeUnderstanding >= 0.72 && codeUnderstanding >= 0.68) {
     supported.add("code-understanding");
   }
   if (
@@ -1540,7 +1649,9 @@ const buildCapabilityProfile = (
 
   const warnings = taskResults
     .filter((result) => !result.passed || result.findings.length > 0)
-    .flatMap((result) => result.findings.map((finding) => `${result.type}: ${finding}`));
+    .flatMap((result) =>
+      result.findings.map((finding) => `${result.type}: ${finding}`)
+    );
 
   if (interviewDiagnostics.outcome === "provider-error") {
     warnings.push(
@@ -1555,7 +1666,9 @@ const buildCapabilityProfile = (
     blockingReasons.push("Provider invocation failed during the interview.");
   }
   if (instructionFollowing < 0.7) {
-    blockingReasons.push("Instruction following is below the admission threshold.");
+    blockingReasons.push(
+      "Instruction following is below the admission threshold."
+    );
   }
   if (structuredOutput < 0.7) {
     blockingReasons.push("Structured output is below the admission threshold.");
@@ -1564,10 +1677,14 @@ const buildCapabilityProfile = (
     blockingReasons.push("Scope discipline is below the admission threshold.");
   }
   if (evidence.fallbackPatternCases.length > 0) {
-    blockingReasons.push("Template workflow fallback was detected in interview output.");
+    blockingReasons.push(
+      "Template workflow fallback was detected in interview output."
+    );
   }
   if (supported.size === 0) {
-    blockingReasons.push("No worker task type cleared the minimum support bar.");
+    blockingReasons.push(
+      "No worker task type cleared the minimum support bar."
+    );
   }
 
   const admission: WorkerAdmissionDecision = {
@@ -1575,17 +1692,16 @@ const buildCapabilityProfile = (
     blockingReasons
   };
 
-  const status =
-    !admission.passed
-      ? "blocked"
-      : taskScores.codegen < 0.78 ||
-          taskScores.reviewLite < 0.76 ||
-          taskScores.riskAnalysis < 0.76 ||
-          taskScores.codeUnderstanding < 0.74 ||
-          score.reliability < 0.78 ||
-          evidence.genericAnswerCases.length > 0
-        ? "limited"
-        : "active";
+  const status = !admission.passed
+    ? "blocked"
+    : taskScores.codegen < 0.78 ||
+        taskScores.reviewLite < 0.76 ||
+        taskScores.riskAnalysis < 0.76 ||
+        taskScores.codeUnderstanding < 0.74 ||
+        score.reliability < 0.78 ||
+        evidence.genericAnswerCases.length > 0
+      ? "limited"
+      : "active";
 
   const knownFailureModes = Array.from(
     new Set(taskResults.flatMap((result) => result.findings))
@@ -1613,9 +1729,10 @@ const buildCapabilityProfile = (
       requiresHostReview: status !== "active" || score.reliability < 0.85,
       allowCodegen: supported.has("codegen"),
       allowPatchGeneration:
-        supported.has("codegen") && codeQuality >= 0.82 && score.reliability >= 0.8,
-      allowDomainTasks:
-        status === "active" && score.domainKnowledge >= 0.75
+        supported.has("codegen") &&
+        codeQuality >= 0.82 &&
+        score.reliability >= 0.8,
+      allowDomainTasks: status === "active" && score.domainKnowledge >= 0.75
     },
     evaluatedAt: new Date().toISOString(),
     expiresAt: addDays(new Date().toISOString(), 30),
@@ -1660,7 +1777,7 @@ export const createDefaultWorkerEvaluationSuite = (
 export const runWorkerInterviewWorkflow = async (
   input: WorkerInterviewWorkflowInput = {}
 ): Promise<WorkerInterviewWorkflowOutput> => {
-  const context = input.context ?? await resolveExecutionContext();
+  const context = input.context ?? (await resolveExecutionContext());
   const modelConfig = input.modelConfig ?? context.workerModel;
   const workerId = input.workerId ?? ModelRouter.deriveWorkerId(modelConfig);
   const router = new ModelRouter(modelConfig);

@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import type { ExecutionContext, WorkerCapability } from "@agent-orchestrator/core";
+import type {
+  ExecutionContext,
+  WorkerCapability
+} from "@agent-orchestrator/core";
 
 import {
   buildRepositoryContextPromptLines,
@@ -13,11 +16,13 @@ const inputSchema = z.object({
   goal: z.string()
 });
 
-const outputSchema = z.object({
-  answer: z.string().min(1),
-  findings: z.array(z.string().min(1)),
-  referencedFiles: z.array(z.string().min(1))
-}).strict();
+const outputSchema = z
+  .object({
+    answer: z.string().min(1),
+    findings: z.array(z.string().min(1)),
+    referencedFiles: z.array(z.string().min(1))
+  })
+  .strict();
 
 const capability: WorkerCapability = {
   name: "review-worker",
@@ -36,8 +41,8 @@ export class ReviewWorker extends WorkerAgent {
 
   public async execute(input: WorkerExecutionInput) {
     const repositoryContext = getRepositoryContextFromTask(input.task);
-    const selectedPaths = repositoryContext?.selectedFiles
-      .map((file) => file.path) ?? [];
+    const selectedPaths =
+      repositoryContext?.selectedFiles.map((file) => file.path) ?? [];
     const citedPathsLine =
       selectedPaths.length > 0
         ? `Allowed referencedFiles values: ${selectedPaths.join(", ")}.`
@@ -66,7 +71,8 @@ export class ReviewWorker extends WorkerAgent {
           ? "repository-context must not expose unrestricted shell access through public interfaces."
           : `${selectedPaths[0]} must keep review output grounded in the selected repository paths.`
       ],
-      referencedFiles: selectedPaths.length > 0 ? selectedPaths : ["repository-context"]
+      referencedFiles:
+        selectedPaths.length > 0 ? selectedPaths : ["repository-context"]
     };
 
     return this.createResult({
@@ -81,7 +87,9 @@ export class ReviewWorker extends WorkerAgent {
         "The findings field must be a JSON array of strings.",
         "The referencedFiles field must be a JSON array of strings.",
         "Focus on implementation and workflow risks.",
-        "Every finding must mention at least one concrete selected repository file path.",
+        "Every finding must include at least one exact full path copied from Allowed referencedFiles.",
+        "Do not use basename-only file references such as rawXml2.ts or schemaMinimum.ts.",
+        "A finding without an exact full selected path will be marked incomplete.",
         "Reference concrete repository file paths from the provided context only.",
         citedPathsLine,
         `Goal: ${input.task.goal}`,

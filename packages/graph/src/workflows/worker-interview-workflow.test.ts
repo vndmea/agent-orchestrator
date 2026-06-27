@@ -49,9 +49,15 @@ describe("worker interview workflow", () => {
     expect(result.profile.admission?.passed).toBe(true);
     expect(result.profile.portrait?.repoGrounding).toBeGreaterThan(0.7);
     expect(result.profile.taskScores?.reviewLite).toBeGreaterThan(0.7);
-    expect(result.profile.evidence?.repoGroundedCases).toContain("structured-output");
-    expect(result.profile.evidence?.repoGroundedCases).toContain("review-grounding");
-    expect(result.profile.evidence?.repoGroundedCases).toContain("evidence-sufficiency");
+    expect(result.profile.evidence?.repoGroundedCases).toContain(
+      "structured-output"
+    );
+    expect(result.profile.evidence?.repoGroundedCases).toContain(
+      "review-grounding"
+    );
+    expect(result.profile.evidence?.repoGroundedCases).toContain(
+      "evidence-sufficiency"
+    );
     expect(result.taskResults).toHaveLength(9);
   });
 
@@ -82,9 +88,15 @@ describe("worker interview workflow", () => {
 
     expect(result.interviewDiagnostics.outcome).toBe("provider-error");
     expect(result.persistenceAdvice.canPersist).toBe(false);
-    expect(result.persistenceAdvice.reason).toContain("provider invocation failures");
+    expect(result.persistenceAdvice.reason).toContain(
+      "provider invocation failures"
+    );
     expect(result.profile.admission?.passed).toBe(false);
-    expect(result.taskResults.some((task) => task.failureKind === "provider-invocation")).toBe(true);
+    expect(
+      result.taskResults.some(
+        (task) => task.failureKind === "provider-invocation"
+      )
+    ).toBe(true);
   });
 
   it("marks review-heavy tasks unsupported without blocking the whole worker when review grounding is generic", async () => {
@@ -94,7 +106,10 @@ describe("worker interview workflow", () => {
         "review-grounding": {
           answer: "Review the files and inspect the implementation.",
           findings: ["Possible issue.", "Needs more context."],
-          referencedFiles: ["packages/core/src/exportXml.ts", "packages/core/src/exportXml.ts"],
+          referencedFiles: [
+            "packages/core/src/exportXml.ts",
+            "packages/core/src/exportXml.ts"
+          ],
           confidence: 0.91
         }
       }
@@ -109,7 +124,9 @@ describe("worker interview workflow", () => {
     expect(result.status).toBe("limited");
     expect(result.profile.unsupportedTaskTypes).toContain("review-lite");
     expect(result.profile.unsupportedTaskTypes).toContain("risk-analysis");
-    expect(result.profile.evidence?.genericAnswerCases).toContain("review-grounding");
+    expect(result.profile.evidence?.genericAnswerCases).toContain(
+      "review-grounding"
+    );
   });
 
   it("marks summarization and review tasks unsupported without blocking the whole worker when mandatory evidence is missing but the worker guesses", async () => {
@@ -132,7 +149,9 @@ describe("worker interview workflow", () => {
     expect(result.status).toBe("limited");
     expect(result.profile.unsupportedTaskTypes).toContain("summarization");
     expect(result.profile.unsupportedTaskTypes).toContain("doc-generation");
-    expect(result.profile.evidence?.genericAnswerCases).toContain("evidence-sufficiency");
+    expect(result.profile.evidence?.genericAnswerCases).toContain(
+      "evidence-sufficiency"
+    );
   });
 
   it("routes weak code understanding to limited with code-understanding unsupported", async () => {
@@ -147,10 +166,35 @@ describe("worker interview workflow", () => {
       }
     });
 
-    expect(result.profile.supportedTaskTypes).not.toContain("code-understanding");
+    expect(result.profile.supportedTaskTypes).not.toContain(
+      "code-understanding"
+    );
     expect(result.profile.admission?.passed).toBe(true);
     expect(result.status).toBe("limited");
     expect(result.profile.unsupportedTaskTypes).toContain("code-understanding");
+  });
+
+  it("accepts code understanding risk only when it gives a concrete input and result", async () => {
+    const result = await runWorkerInterviewWorkflow({
+      context: createContext(),
+      simulatedResponses: {
+        "code-understanding": {
+          behavior:
+            "packages/math/src/sumValidated.ts filters the input array to finite numbers and returns their sum.",
+          risk: 'packages/math/src/sumValidated.ts silently ignores ["5", NaN], so it can return 0 instead of reporting invalid input.',
+          confidence: 0.78
+        }
+      }
+    });
+
+    const task = result.taskResults.find(
+      (entry) => entry.type === "code-understanding"
+    );
+    expect(task?.score).toBeGreaterThan(0.8);
+    expect(task?.findings).not.toContain(
+      "Code understanding risk was too generic."
+    );
+    expect(result.profile.supportedTaskTypes).toContain("code-understanding");
   });
 
   it("limits routing when code generation quality is too low", async () => {
@@ -223,7 +267,9 @@ describe("worker interview workflow", () => {
     ).toContain("packages/runtime/src/readProfile.ts");
     expect(
       suite.tasks.find((task) => task.id === "summarization")?.prompt
-    ).toContain("at least one nextSteps item must name packages/runtime/src/readProfile.ts");
+    ).toContain(
+      "at least one nextSteps item must name packages/runtime/src/readProfile.ts"
+    );
     expect(
       suite.tasks.find((task) => task.id === "review-grounding")?.prompt
     ).toContain("packages/core/src/normalizeNode.ts");
@@ -232,7 +278,9 @@ describe("worker interview workflow", () => {
     ).toContain("insufficient");
     expect(
       suite.tasks.find((task) => task.id === "evidence-sufficiency")?.prompt
-    ).toContain("confidence in answering the original repository question reliably");
+    ).toContain(
+      "confidence in answering the original repository question reliably"
+    );
     expect(
       suite.tasks.find((task) => task.id === "code-understanding")?.prompt
     ).toContain("packages/math/src/sumValidated.ts");
@@ -240,8 +288,14 @@ describe("worker interview workflow", () => {
       suite.tasks.find((task) => task.id === "code-understanding")?.prompt
     ).toContain("explicitly naming packages/math/src/sumValidated.ts");
     expect(
-      suite.tasks.find((task) => task.id === "codegen")?.prompt
-    ).toContain("Target file: packages/validation/src/validateScore.ts");
+      suite.tasks.find((task) => task.id === "code-understanding")?.prompt
+    ).toContain("trigger input pattern");
+    expect(
+      suite.tasks.find((task) => task.id === "code-understanding")?.prompt
+    ).toContain('silently ignores ["5", NaN]');
+    expect(suite.tasks.find((task) => task.id === "codegen")?.prompt).toContain(
+      "Target file: packages/validation/src/validateScore.ts"
+    );
   });
 
   it("derives different prompt sets for different worker models", () => {
