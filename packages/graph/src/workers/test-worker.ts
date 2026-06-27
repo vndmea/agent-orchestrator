@@ -2,7 +2,12 @@ import { z } from "zod";
 
 import type { ExecutionContext, WorkerCapability } from "@agent-orchestrator/core";
 
-import { WorkerAgent, type WorkerExecutionInput } from "./worker-agent.js";
+import {
+  buildRepositoryContextPromptLines,
+  getRepositoryContextFromTask,
+  WorkerAgent,
+  type WorkerExecutionInput
+} from "./worker-agent.js";
 
 const inputSchema = z.object({
   goal: z.string()
@@ -28,8 +33,15 @@ export class TestWorker extends WorkerAgent {
   }
 
   public async execute(input: WorkerExecutionInput) {
+    const repositoryContext = getRepositoryContextFromTask(input.task);
+    const selectedPaths = repositoryContext?.selectedFiles
+      .slice(0, 2)
+      .map((file) => file.path) ?? [];
     const fallbackOutput = {
       suggestedTests: [
+        ...(selectedPaths.length > 0
+          ? [`Add focused coverage around ${selectedPaths.join(" and ")}.`]
+          : []),
         "Validate schema parsing for structured workflow outputs.",
         "Validate state transitions for planning and leader-worker workflows.",
         "Validate write and shell safety policies."
@@ -42,7 +54,9 @@ export class TestWorker extends WorkerAgent {
       prompt: [
         "Return JSON with key suggestedTests.",
         "Focus on deterministic validation ideas only.",
-        `Goal: ${input.task.goal}`
+        "Reference concrete repository file paths from the provided context.",
+        `Goal: ${input.task.goal}`,
+        ...buildRepositoryContextPromptLines(input.task)
       ].join("\n"),
       outputSchema,
       fallbackOutput,

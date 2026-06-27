@@ -2,7 +2,12 @@ import { z } from "zod";
 
 import type { ExecutionContext, WorkerCapability } from "@agent-orchestrator/core";
 
-import { WorkerAgent, type WorkerExecutionInput } from "./worker-agent.js";
+import {
+  buildRepositoryContextPromptLines,
+  getRepositoryContextFromTask,
+  WorkerAgent,
+  type WorkerExecutionInput
+} from "./worker-agent.js";
 
 const inputSchema = z.object({
   goal: z.string()
@@ -28,8 +33,15 @@ export class ReviewWorker extends WorkerAgent {
   }
 
   public async execute(input: WorkerExecutionInput) {
+    const repositoryContext = getRepositoryContextFromTask(input.task);
+    const selectedPaths = repositoryContext?.selectedFiles
+      .slice(0, 3)
+      .map((file) => file.path) ?? [];
     const fallbackOutput = {
       findings: [
+        ...(selectedPaths.length > 0
+          ? [`Review concrete risks in ${selectedPaths.join(", ")}.`]
+          : []),
         "Ensure dry-run behavior is preserved in CLI and MCP flows.",
         "Avoid exposing unrestricted shell access through public interfaces."
       ]
@@ -41,7 +53,9 @@ export class ReviewWorker extends WorkerAgent {
       prompt: [
         "Return JSON with key findings.",
         "Focus on implementation and workflow risks.",
-        `Goal: ${input.task.goal}`
+        "Reference concrete repository file paths from the provided context.",
+        `Goal: ${input.task.goal}`,
+        ...buildRepositoryContextPromptLines(input.task)
       ].join("\n"),
       outputSchema,
       fallbackOutput,

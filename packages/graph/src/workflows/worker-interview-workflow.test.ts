@@ -22,7 +22,7 @@ describe("worker interview workflow", () => {
     expect(result.status).toBe("active");
     expect(result.profile.supportedTaskTypes).toContain("codegen");
     expect(result.profile.routingPolicy.allowCodegen).toBe(true);
-    expect(result.taskResults).toHaveLength(6);
+    expect(result.taskResults).toHaveLength(7);
   });
 
   it("blocks workers that fail structured output handling", async () => {
@@ -103,6 +103,9 @@ describe("worker interview workflow", () => {
     expect(
       suite.tasks.find((task) => task.id === "structured-output")?.prompt
     ).toContain("Scenario ID:");
+    expect(
+      suite.tasks.find((task) => task.id === "scope-discipline")?.prompt
+    ).toContain("Allowed files:");
     expect(
       suite.tasks.find((task) => task.id === "summarization")?.prompt
     ).toMatch(/Error log:|Failure log:|Build output:/u);

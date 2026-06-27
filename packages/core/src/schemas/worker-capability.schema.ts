@@ -13,6 +13,7 @@ export const WorkerTaskTypeSchema = z.enum([
 export const WorkerInterviewTaskTypeSchema = z.enum([
   "instruction-following",
   "structured-output",
+  "scope-discipline",
   "summarization",
   "code-understanding",
   "codegen",

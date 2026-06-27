@@ -2,7 +2,12 @@ import { z } from "zod";
 
 import type { ExecutionContext, WorkerCapability } from "@agent-orchestrator/core";
 
-import { WorkerAgent, type WorkerExecutionInput } from "./worker-agent.js";
+import {
+  buildRepositoryContextPromptLines,
+  getRepositoryContextFromTask,
+  WorkerAgent,
+  type WorkerExecutionInput
+} from "./worker-agent.js";
 
 const inputSchema = z.object({
   goal: z.string(),
@@ -30,9 +35,19 @@ export class SummarizeWorker extends WorkerAgent {
   }
 
   public async execute(input: WorkerExecutionInput) {
+    const repositoryContext = getRepositoryContextFromTask(input.task);
+    const selectedPaths = repositoryContext?.selectedFiles
+      .slice(0, 3)
+      .map((file) => file.path) ?? [];
     const fallbackOutput = {
-      brief: `Summarized goal: ${input.task.goal}`,
+      brief:
+        selectedPaths.length > 0
+          ? `Summarized ${input.task.goal} using ${selectedPaths.join(", ")}.`
+          : `Summarized goal: ${input.task.goal}`,
       focusAreas: [
+        ...(selectedPaths.length > 0
+          ? [`Stay grounded in ${selectedPaths.join(", ")}.`]
+          : []),
         input.scope ? `Scope work to ${input.scope}` : "Scope not provided; keep changes minimal.",
         "Preserve package boundaries.",
         "Prefer deterministic validation."
@@ -44,8 +59,10 @@ export class SummarizeWorker extends WorkerAgent {
       task: input.task,
       prompt: [
         "Return JSON with keys brief and focusAreas.",
+        "Reference concrete repository file paths from the provided context.",
         `Goal: ${input.task.goal}`,
-        input.scope ? `Scope: ${input.scope}` : "Scope: not provided"
+        input.scope ? `Scope: ${input.scope}` : "Scope: not provided",
+        ...buildRepositoryContextPromptLines(input.task)
       ].join("\n"),
       outputSchema,
       fallbackOutput,

@@ -2,7 +2,12 @@ import { z } from "zod";
 
 import type { ExecutionContext, WorkerCapability } from "@agent-orchestrator/core";
 
-import { WorkerAgent, type WorkerExecutionInput } from "./worker-agent.js";
+import {
+  buildRepositoryContextPromptLines,
+  getRepositoryContextFromTask,
+  WorkerAgent,
+  type WorkerExecutionInput
+} from "./worker-agent.js";
 
 const inputSchema = z.object({
   goal: z.string(),
@@ -30,13 +35,23 @@ export class CodegenWorker extends WorkerAgent {
   }
 
   public async execute(input: WorkerExecutionInput) {
+    const repositoryContext = getRepositoryContextFromTask(input.task);
+    const selectedPaths = repositoryContext?.selectedFiles
+      .slice(0, 3)
+      .map((file) => file.path) ?? [];
     const fallbackOutput = {
       patchPlan: [
+        ...(selectedPaths.length > 0
+          ? [`Start from ${selectedPaths[0]}.`]
+          : []),
         "Add strict typed contracts before implementation.",
         "Keep writes gated behind policy checks.",
         "Return structured artifacts for review."
       ],
       notes: [
+        ...(selectedPaths.length > 0
+          ? [`Ground the plan in ${selectedPaths.join(", ")}.`]
+          : []),
         input.scope ? `Limit implementation to ${input.scope}.` : "No scope provided.",
         "Candidate patches still require leader review."
       ]
@@ -48,8 +63,10 @@ export class CodegenWorker extends WorkerAgent {
       prompt: [
         "Return JSON with keys patchPlan and notes.",
         "Patch plans must stay dry-run and must not apply changes.",
+        "Reference concrete repository file paths from the provided context.",
         `Goal: ${input.task.goal}`,
-        input.scope ? `Scope: ${input.scope}` : "Scope: not provided"
+        input.scope ? `Scope: ${input.scope}` : "Scope: not provided",
+        ...buildRepositoryContextPromptLines(input.task)
       ].join("\n"),
       outputSchema,
       fallbackOutput,

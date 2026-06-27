@@ -52,7 +52,7 @@ interface WorkerInterviewSuiteIdentity {
 }
 
 const WORKER_EVALUATION_SUITE_NAME = "default-worker-onboarding-suite";
-const WORKER_EVALUATION_SUITE_VERSION = "3";
+const WORKER_EVALUATION_SUITE_VERSION = "4";
 
 const InterviewState = Annotation.Root({
   task: Annotation<WorkflowState["task"]>(),
@@ -131,6 +131,13 @@ const strictJsonContractLines = (
   ...lines
 ];
 
+const normalizeText = (value: string): string => value.toLowerCase();
+
+const includesAny = (value: string, expected: string[]): boolean => {
+  const normalizedValue = normalizeText(value);
+  return expected.some((entry) => normalizedValue.includes(normalizeText(entry)));
+};
+
 const instructionFollowingVariants = [
   [
     'Return exactly JSON with {"mode":"json-only","confidence":0.4} and nothing else.',
@@ -197,6 +204,27 @@ const structuredOutputVariants = [
       "- Main risk: routing decisions may trust the wrong worker profile."
     ],
     '{"summary":"...","risks":["risk 1"],"confidence":0.81,"files":["path.ts"]}'
+  )
+];
+
+const scopeDisciplineVariants = [
+  strictJsonContractLines(
+    [
+      "Review the repository task request below.",
+      "Use exactly these keys and types:",
+      '- allowedFiles: string[]',
+      '- blockedFiles: string[]',
+      '- answer: string',
+      '- confidence: number between 0 and 1',
+      "Do not invent files outside the request.",
+      "The answer must mention at least one allowed file path.",
+      "Task request:",
+      "- Scope: packages/core",
+      "- Allowed files: packages/core/src/generateId.ts, packages/core/src/schemaMinimum.ts, packages/core/src/index.ts",
+      "- Out-of-scope file that must be blocked: packages/cli/src/index.ts",
+      "- Goal: explain which file should be inspected first for id-generation regressions."
+    ],
+    '{"allowedFiles":["packages/core/src/generateId.ts"],"blockedFiles":["packages/cli/src/index.ts"],"answer":"Inspect packages/core/src/generateId.ts first.","confidence":0.82}'
   )
 ];
 
@@ -438,18 +466,89 @@ const buildInterviewTasks = (
       confidence: z.number().min(0).max(1)
     }),
     mockResponse: {
-      summary: "Structured output is stable.",
+      summary: "Worker profile routing looks stable but still needs review.",
       risks: ["Low confidence still requires review."],
-      files: ["packages/graph/src/workflows/leader-worker-workflow.ts"],
+      files: ["packages/models/src/router/worker-profile-resolution.ts"],
       confidence: 0.66
     },
     mapRawOutputToTaskTypes: ["json-extraction"],
-    evaluateParsed: (parsed) => ({
-      score:
-        ((parsed as { risks: string[] }).risks.length > 0 ? 1 : 0.6) *
-        1,
-      findings: []
-    })
+    evaluateParsed: (parsed) => {
+      const value = parsed as {
+        files: string[];
+        risks: string[];
+        summary: string;
+      };
+      const findings: string[] = [];
+      if (
+        !value.files.some((file) =>
+          [
+            "packages/models/src/router/worker-profile-resolution.ts",
+            "packages/graph/src/workflows/leader-worker-workflow.ts",
+            "packages/models/src/router/model-router.ts",
+            "packages/cli/src/commands/worker.ts"
+          ].includes(file)
+        )
+      ) {
+        findings.push("Structured output did not preserve the cited repository files.");
+      }
+      if (!includesAny(value.summary, ["worker", "profile", "routing"])) {
+        findings.push("Structured output summary was too generic.");
+      }
+      if (value.risks.length === 0) {
+        findings.push("Structured output omitted concrete risks.");
+      }
+      return {
+        score: findings.length === 0 ? 0.92 : 0.38,
+        findings
+      };
+    }
+  },
+    {
+    task: {
+      id: "scope-discipline",
+      title: "Scope Discipline",
+      type: "scope-discipline",
+      prompt: createPrompt(
+        seed,
+        "scope-discipline",
+        pickVariant(seed, "scope-discipline", scopeDisciplineVariants)
+      ),
+      expectedOutputDescription: "Repo-grounded answer that respects the provided scope"
+    },
+    schema: z.object({
+      allowedFiles: z.array(z.string()).min(1),
+      blockedFiles: z.array(z.string()).min(1),
+      answer: z.string().min(1),
+      confidence: z.number().min(0).max(1)
+    }),
+    mockResponse: {
+      allowedFiles: ["packages/core/src/generateId.ts"],
+      blockedFiles: ["packages/cli/src/index.ts"],
+      answer: "Inspect packages/core/src/generateId.ts first because it is explicitly in scope for the id-generation regression.",
+      confidence: 0.82
+    },
+    mapRawOutputToTaskTypes: ["review-lite", "summarization"],
+    evaluateParsed: (parsed) => {
+      const value = parsed as {
+        allowedFiles: string[];
+        answer: string;
+        blockedFiles: string[];
+      };
+      const findings: string[] = [];
+      if (!value.blockedFiles.includes("packages/cli/src/index.ts")) {
+        findings.push("Worker did not block the out-of-scope file.");
+      }
+      if (!value.allowedFiles.includes("packages/core/src/generateId.ts")) {
+        findings.push("Worker missed the primary in-scope file.");
+      }
+      if (!includesAny(value.answer, ["packages/core/src/generateId.ts"])) {
+        findings.push("Worker answer was not grounded in an allowed repository file.");
+      }
+      return {
+        score: findings.length === 0 ? 0.94 : 0.28,
+        findings
+      };
+    }
   },
     {
     task: {
@@ -476,11 +575,23 @@ const buildInterviewTasks = (
       confidence: 0.72
     },
     mapRawOutputToTaskTypes: ["summarization", "log-analysis"],
-    evaluateParsed: (parsed) => ({
-      score:
-        (parsed as { nextSteps: string[] }).nextSteps.length >= 2 ? 0.9 : 0.6,
-      findings: []
-    })
+    evaluateParsed: (parsed) => {
+      const value = parsed as {
+        issue: string;
+        nextSteps: string[];
+      };
+      const findings: string[] = [];
+      if (value.nextSteps.length < 2) {
+        findings.push("Summarization did not provide enough next steps.");
+      }
+      if (!includesAny(value.issue, ["type", "profile", "build", "schema"])) {
+        findings.push("Summarization issue description was too generic.");
+      }
+      return {
+        score: findings.length === 0 ? 0.9 : 0.42,
+        findings
+      };
+    }
   },
     {
     task: {
@@ -668,7 +779,7 @@ const addDays = (isoDate: string, days: number): string => {
 
 const providerFailureRecoveryActions = [
   "Verify the worker base URL and model name.",
-  "Confirm the configured API key environment variable is populated.",
+  "Confirm WORKER_MODEL_API_KEY is populated in the current runtime.",
   "Run a direct provider health check before retrying the interview.",
   "Re-run `ao worker interview --save` after connectivity is stable."
 ];
@@ -719,11 +830,12 @@ const buildCapabilityProfile = (
   const scoreByType = new Map(taskResults.map((result) => [result.type, result.score]));
   const interviewDiagnostics = buildInterviewDiagnostics(taskResults);
   const structuredOutput = average([
-    scoreByType.get("instruction-following") ?? 0,
     scoreByType.get("structured-output") ?? 0,
-    scoreByType.get("structured-output") ?? 0
+    scoreByType.get("structured-output") ?? 0,
+    scoreByType.get("scope-discipline") ?? 0
   ]);
   const reasoning = average([
+    scoreByType.get("scope-discipline") ?? 0,
     scoreByType.get("summarization") ?? 0,
     scoreByType.get("code-understanding") ?? 0
   ]);
@@ -740,12 +852,20 @@ const buildCapabilityProfile = (
 
   const supported = new Set<WorkerTaskType>();
 
-  if (structuredOutput >= 0.7 && (scoreByType.get("summarization") ?? 0) >= 0.65) {
+  if (
+    structuredOutput >= 0.7 &&
+    (scoreByType.get("scope-discipline") ?? 0) >= 0.7 &&
+    (scoreByType.get("summarization") ?? 0) >= 0.65
+  ) {
     supported.add("summarization");
     supported.add("log-analysis");
     supported.add("json-extraction");
   }
-  if (structuredOutput >= 0.7 && (scoreByType.get("code-understanding") ?? 0) >= 0.65) {
+  if (
+    structuredOutput >= 0.7 &&
+    (scoreByType.get("scope-discipline") ?? 0) >= 0.7 &&
+    (scoreByType.get("code-understanding") ?? 0) >= 0.65
+  ) {
     supported.add("review-lite");
   }
   if (
@@ -842,7 +962,7 @@ export const runWorkerInterviewWorkflow = async (
     id: randomUUID(),
     goal: `Evaluate worker onboarding capability for ${workerId}`,
     constraints: [
-      "Assess instruction following, structured output, summarization, code understanding, code generation, and confidence calibration.",
+      "Assess instruction following, structured output, scope discipline, summarization, code understanding, code generation, and confidence calibration.",
       "Warn when the worker should be limited or blocked."
     ],
     assignedRole: "leader",

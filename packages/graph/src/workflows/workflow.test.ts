@@ -1,11 +1,32 @@
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
 import {
+  runHostWorkerWorkflow,
   runLeaderWorkerWorkflow,
   runPlanningWorkflow,
   runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
+
+const createWorkspace = async (): Promise<string> => {
+  const rootDir = await mkdtemp(join(tmpdir(), "ao-host-worker-"));
+  await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
+  await writeFile(
+    join(rootDir, "packages", "core", "src", "generateId.ts"),
+    "export const generateId = () => 'id';\n",
+    "utf8"
+  );
+  await writeFile(
+    join(rootDir, "packages", "core", "src", "schemaMinimum.ts"),
+    "export const schemaMinimum = 1;\n",
+    "utf8"
+  );
+  return rootDir;
+};
 
 describe("planning workflow", () => {
   it("produces a structured plan with risks and validation strategy", async () => {
@@ -38,6 +59,30 @@ describe("leader-worker workflow", () => {
     expect(result.state.workerCapabilityProfile?.status).toBe("active");
     expect(result.state.toolResults.length).toBeGreaterThan(0);
     expect(result.finalResult?.status).toBe("needs_review");
+  });
+});
+
+describe("host worker workflow", () => {
+  it("runs one explicit worker task without creating an internal plan", async () => {
+    const rootDir = await createWorkspace();
+    const result = await runHostWorkerWorkflow({
+      context: createExecutionContextFromEnv(undefined, {
+        dryRun: true,
+        allowWrite: false,
+        rootDir
+      }),
+      goal: "Review the selected files for id-generation regressions",
+      taskType: "review-lite",
+      files: [
+        "packages/core/src/generateId.ts",
+        "packages/core/src/schemaMinimum.ts"
+      ]
+    });
+
+    expect(result.workerResult).not.toBeNull();
+    expect(result.repositoryContext.selectedFiles).toHaveLength(2);
+    expect(result.qualityGate.missingRequestedFiles).toEqual([]);
+    expect(result.finalResult.status).toBe("success");
   });
 });
 

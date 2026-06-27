@@ -35,7 +35,7 @@ export const buildRepositoryContextPack = async (
   });
   const packageMetadata = await readPackageMetadata(
     options.rootDir,
-    options.scope
+    fileSelection.effectiveScope
   );
   const gitDiff = options.includeDiff
     ? await readGitDiff(context, {
@@ -47,7 +47,7 @@ export const buildRepositoryContextPack = async (
 
   return {
     rootDir: options.rootDir,
-    scope: options.scope,
+    scope: fileSelection.effectiveScope,
     files: fileSelection.files,
     selectedFiles: fileSelection.selectedFiles,
     selectionReasons: fileSelection.selectionReasons,

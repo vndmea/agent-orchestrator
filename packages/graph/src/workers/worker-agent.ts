@@ -3,6 +3,7 @@ import type {
   AgentTask,
   ExecutionContext,
   PlannedWorkerTask,
+  RepositoryContextPack,
   WorkerCapability,
   WorkerCapabilityProfile
 } from "@agent-orchestrator/core";
@@ -28,6 +29,53 @@ export interface WorkerResultOptions<T> {
   artifacts?: AgentResult["artifacts"];
   workerProfile?: WorkerCapabilityProfile | null;
 }
+
+interface TaskInputWithRepositoryContext {
+  repositoryContext?: RepositoryContextPack;
+}
+
+const asTaskInputWithRepositoryContext = (
+  value: unknown
+): TaskInputWithRepositoryContext =>
+  value && typeof value === "object"
+    ? (value as TaskInputWithRepositoryContext)
+    : {};
+
+const truncate = (value: string, maxLength: number): string =>
+  value.length <= maxLength ? value : `${value.slice(0, maxLength)}...`;
+
+export const getRepositoryContextFromTask = (
+  task: AgentTask
+): RepositoryContextPack | null =>
+  asTaskInputWithRepositoryContext(task.input).repositoryContext ?? null;
+
+export const buildRepositoryContextPromptLines = (
+  task: AgentTask
+): string[] => {
+  const repositoryContext = getRepositoryContextFromTask(task);
+
+  if (!repositoryContext) {
+    return ["Repository context: not provided."];
+  }
+
+  const selectedFiles = repositoryContext.selectedFiles.slice(0, 4);
+  const selectedPaths = selectedFiles.map((file) =>
+    `${file.path}${file.truncated ? " (truncated)" : ""}`
+  );
+  const snippets = selectedFiles.map((file) =>
+    [
+      `File: ${file.path}`,
+      truncate(file.content, 400)
+    ].join("\n")
+  );
+
+  return [
+    `Repository scope: ${repositoryContext.scope ?? "repository-wide"}`,
+    `Selected files: ${selectedPaths.join(", ") || "none"}`,
+    "Use only the selected files below and cite concrete paths in the answer.",
+    ...snippets
+  ];
+};
 
 export abstract class WorkerAgent {
   protected readonly router: ModelRouter;

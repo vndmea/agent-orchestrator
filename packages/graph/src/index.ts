@@ -8,6 +8,7 @@ export * from "./workers/summarize-worker.js";
 export * from "./workers/test-worker.js";
 export * from "./workers/worker-agent.js";
 export * from "./workflows/fix-error-workflow.js";
+export * from "./workflows/host-worker-workflow.js";
 export * from "./workflows/leader-worker-workflow.js";
 export * from "./workflows/planning-workflow.js";
 export * from "./workflows/patch-proposal-workflow.js";

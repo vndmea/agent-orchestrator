@@ -93,8 +93,10 @@ describe("repository context pack", () => {
 
     expect(result.selectedFiles[0]?.truncated).toBe(true);
     expect(result.selectedFiles[0]?.content.length).toBeLessThanOrEqual(20);
-    expect(result.selectedFiles).toHaveLength(1);
-    expect(result.warnings.some((warning) => warning.includes("maxTotalBytes"))).toBe(true);
+    expect(result.selectedFiles).toHaveLength(2);
+    expect(
+      result.warnings.some((warning) => warning.includes("explicitly requested"))
+    ).toBe(true);
   });
 
   it("rejects path traversal when selecting files", async () => {
@@ -122,6 +124,26 @@ describe("repository context pack", () => {
 
     expect(result.selectedFiles).toHaveLength(2);
     expect(result.selectedFiles.every((file) => file.path.startsWith("packages/pkg/"))).toBe(true);
+  });
+
+  it("ignores non-path scope strings when explicit files are provided", async () => {
+    const rootDir = await createRootDir();
+
+    await writeText(rootDir, "packages/pkg/src/index.ts", "export const value = 1;\n");
+
+    const result = await selectRepositoryFiles({
+      rootDir,
+      scope: "please only inspect this file and stay narrow",
+      files: ["packages/pkg/src/index.ts"]
+    });
+
+    expect(result.effectiveScope).toBeUndefined();
+    expect(result.selectedFiles.map((file) => file.path)).toEqual([
+      "packages/pkg/src/index.ts"
+    ]);
+    expect(
+      result.warnings.some((warning) => warning.includes("Ignoring scope"))
+    ).toBe(true);
   });
 
   it("blocks explicit files outside the provided scope with a stable error code", async () => {

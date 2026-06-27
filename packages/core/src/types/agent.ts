@@ -12,6 +12,7 @@ export type WorkerTaskType =
 export type WorkerInterviewTaskType =
   | "instruction-following"
   | "structured-output"
+  | "scope-discipline"
   | "summarization"
   | "code-understanding"
   | "codegen"

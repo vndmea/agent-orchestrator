@@ -55,6 +55,11 @@ export interface SelectRepositoryFilesOptions {
   scope?: string;
 }
 
+interface ResolvedRepositoryScope {
+  effectiveScope?: string;
+  warnings: string[];
+}
+
 const isSecretLikeFile = (path: string): boolean =>
   SECRET_FILE_PATTERNS.some((pattern) => pattern.test(basename(path).toLowerCase()));
 
@@ -176,6 +181,46 @@ const ensureInsideScope = (
   );
 };
 
+const resolveSelectionScope = async (
+  rootDir: string,
+  scope: string | undefined,
+  hasExplicitFiles: boolean
+): Promise<ResolvedRepositoryScope> => {
+  if (!scope) {
+    return {
+      warnings: []
+    };
+  }
+
+  const resolvedScope = resolveRepositoryScope(rootDir, scope);
+
+  if (!hasExplicitFiles) {
+    return {
+      effectiveScope: scope,
+      warnings: []
+    };
+  }
+
+  try {
+    await stat(resolvedScope);
+    return {
+      effectiveScope: scope,
+      warnings: []
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/ENOENT/u.test(message)) {
+      throw error;
+    }
+
+    return {
+      warnings: [
+        `Ignoring scope "${scope}" because it does not resolve to an existing repository path. Use files for explicit file review and scope only for repository paths.`
+      ]
+    };
+  }
+};
+
 export const readScopedRepositoryFile = async (
   rootDir: string,
   path: string,
@@ -215,19 +260,28 @@ export const selectRepositoryFiles = async ({
   maxFileBytes = 20_000,
   maxTotalBytes = 120_000
 }: SelectRepositoryFilesOptions): Promise<{
+  effectiveScope?: string;
   files: RepositoryFileSummary[];
   selectionReasons: SelectionReason[];
   selectedFiles: RepositoryFileContent[];
   warnings: string[];
 }> => {
-  const scopedRoot = resolveRepositoryScope(rootDir, scope);
-  const warnings: string[] = [];
+  const scopeResolution = await resolveSelectionScope(
+    rootDir,
+    scope,
+    (files?.length ?? 0) > 0
+  );
+  const effectiveScope = scopeResolution.effectiveScope;
+  const scopedRoot = resolveRepositoryScope(rootDir, effectiveScope);
+  const warnings: string[] = [...scopeResolution.warnings];
   const summaries: RepositoryFileSummary[] = [];
   const selectedFiles: RepositoryFileContent[] = [];
   let selectionReasons: SelectionReason[] = [];
 
   const selectedSet = new Set(
-    (files ?? []).map((file) => toRelativePath(rootDir, ensureInsideScope(rootDir, file, scope)))
+    (files ?? []).map((file) =>
+      toRelativePath(rootDir, ensureInsideScope(rootDir, file, effectiveScope))
+    )
   );
   const candidateFiles: RepositoryFileContent[] = [];
 
@@ -274,7 +328,7 @@ export const selectRepositoryFiles = async ({
   if (selectedSet.size > 0) {
     let totalBytes = 0;
     for (const path of selectedSet) {
-      const fullPath = ensureInsideScope(rootDir, path, scope);
+      const fullPath = ensureInsideScope(rootDir, path, effectiveScope);
       const fileStat = await stat(fullPath);
       summaries.push({
         path,
@@ -285,8 +339,9 @@ export const selectRepositoryFiles = async ({
       const nextBytes = totalBytes + Buffer.byteLength(fileContent.content, "utf8");
 
       if (nextBytes > maxTotalBytes) {
-        warnings.push(`Skipping ${path} because maxTotalBytes was reached.`);
-        continue;
+        warnings.push(
+          `Explicit file ${path} exceeded maxTotalBytes but was still included because it was explicitly requested.`
+        );
       }
 
       selectedFiles.push(fileContent);
@@ -301,7 +356,7 @@ export const selectRepositoryFiles = async ({
     await walk(scopedRoot);
     const ranked = rankRepositoryContextFiles({
       files: candidateFiles,
-      scope,
+      scope: effectiveScope,
       errorLog
     });
     let totalBytes = 0;
@@ -336,6 +391,7 @@ export const selectRepositoryFiles = async ({
   }
 
   return {
+    effectiveScope,
     files: summaries,
     selectionReasons,
     selectedFiles,

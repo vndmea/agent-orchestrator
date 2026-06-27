@@ -1,31 +1,47 @@
 import { z } from "zod";
 
 import { resolveExecutionContext, writeAuditEvent } from "@agent-orchestrator/core";
-import { runLeaderWorkerWorkflow } from "@agent-orchestrator/graph";
+import { runHostWorkerWorkflow } from "@agent-orchestrator/graph";
 
 import type { AoToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
+  files: z.array(z.string()).optional(),
   goal: z.string().min(1),
+  maxFileBytes: z.number().int().positive().optional(),
+  maxTotalBytes: z.number().int().positive().optional(),
   scope: z.string().optional(),
+  taskType: z.enum([
+    "summarization",
+    "codegen",
+    "test-generation",
+    "log-analysis",
+    "json-extraction",
+    "review-lite"
+  ]),
   workerId: z.string().optional(),
   requireProfile: z.boolean().optional()
 });
 
 export const aoRunLeaderWorkerTool: AoToolDefinition<
   typeof inputSchema.shape,
-  Awaited<ReturnType<typeof runLeaderWorkerWorkflow>>
+  Awaited<ReturnType<typeof runHostWorkerWorkflow>>
 > = {
   name: "ao_run_leader_worker",
-  description: "Run the leader-worker workflow with optional worker profile requirements.",
+  description:
+    "Run one explicit worker task under host control. This tool does not start an internal ao leader.",
   inputSchema,
   execute: async (args) => {
     const context = await resolveExecutionContext();
-    const result = await runLeaderWorkerWorkflow({
+    const result = await runHostWorkerWorkflow({
       context,
+      files: args.files,
       goal: args.goal,
+      maxFileBytes: args.maxFileBytes,
+      maxTotalBytes: args.maxTotalBytes,
       requireProfile: args.requireProfile,
       scope: args.scope,
+      taskType: args.taskType,
       workerId: args.workerId
     });
     await writeAuditEvent(context, {
@@ -34,12 +50,16 @@ export const aoRunLeaderWorkerTool: AoToolDefinition<
       mode: context.dryRun ? "dry-run" : "execute",
       tool: "ao_run_leader_worker",
       inputSummary: args.goal,
-      outputSummary: "Leader-worker MCP workflow completed.",
-      warnings: result.state.warnings,
-      errors: result.state.errors,
+      outputSummary: "Host-managed worker MCP workflow completed.",
+      warnings: result.warnings,
+      errors: result.errors,
       metadata: {
+        files: args.files,
+        maxFileBytes: args.maxFileBytes,
+        maxTotalBytes: args.maxTotalBytes,
         requireProfile: args.requireProfile,
         scope: args.scope,
+        taskType: args.taskType,
         workerId: args.workerId
       }
     });

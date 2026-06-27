@@ -355,7 +355,6 @@ describe("mcp tool registration", () => {
       const registered = await aoRegisterWorkerTool.execute({
         provider: "mock",
         model: "registered-worker",
-        apiKeyEnvVar: "AO_TEST_WORKER_KEY",
         tags: ["coding"],
         allowWrite: true
       });
@@ -366,7 +365,6 @@ describe("mcp tool registration", () => {
 
       expect(registered.mode).toBe("execute");
       expect(registrations).toHaveLength(1);
-      expect(registration?.apiKeyEnvVar).toBe("AO_TEST_WORKER_KEY");
       expect(JSON.stringify(registration)).not.toContain("secret");
 
       const removed = await aoUnregisterWorkerTool.execute({
@@ -397,11 +395,13 @@ describe("mcp tool registration", () => {
 
   it("executes the dedicated leader-worker MCP tool", async () => {
     const result = await aoRunLeaderWorkerTool.execute({
-      goal: "Review this repository"
+      goal: "Review this repository",
+      taskType: "review-lite"
     });
 
-    expect(result.state.plan).not.toBeNull();
-    expect(result.finalResult?.status).toBe("needs_review");
+    expect(result.workerResult).not.toBeNull();
+    expect(result.qualityGate.answered).toBe(true);
+    expect(result.finalResult.status).toBe("success");
   });
 
   it("executes doctor and returns a structured report", async () => {

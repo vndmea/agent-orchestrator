@@ -43,7 +43,8 @@ describe("mcp audit side effects", () => {
   it("writes an audit event for ao_run_leader_worker", async () => {
     await withWritableAuditEnv(async () => {
       await aoRunLeaderWorkerTool.execute({
-        goal: "Review the repository for workflow regressions"
+        goal: "Review the repository for workflow regressions",
+        taskType: "review-lite"
       });
       const events = await aoListAuditEventsTool.execute({ limit: 20 });
 
