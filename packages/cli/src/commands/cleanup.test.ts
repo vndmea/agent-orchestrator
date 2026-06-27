@@ -4,9 +4,9 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 import {
-  getAoWorkspaceAuditDir,
-  getAoWorkspaceRunsDir
-} from "@agent-orchestrator/core";
+  getCwWorkspaceAuditDir,
+  getCwWorkspaceRunsDir
+} from "@mcp-code-worker/core";
 
 import { resolveCleanupTargetPath } from "./cleanup.js";
 
@@ -15,13 +15,13 @@ const createWorkspace = async (): Promise<{
   rootDir: string;
   runsDir: string;
 }> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-cleanup-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-cleanup-"));
   const env = {
     ...process.env,
-    AO_HOME_DIR: join(rootDir, "ao-home")
+    CW_HOME_DIR: join(rootDir, "cw-home")
   };
-  const runsDir = getAoWorkspaceRunsDir(rootDir, env);
-  const auditDir = getAoWorkspaceAuditDir(rootDir, env);
+  const runsDir = getCwWorkspaceRunsDir(rootDir, env);
+  const auditDir = getCwWorkspaceAuditDir(rootDir, env);
   await mkdir(runsDir, { recursive: true });
   await mkdir(auditDir, { recursive: true });
   return {
@@ -43,14 +43,14 @@ describe("cleanup path safety", () => {
     expect(result.warning).toBeUndefined();
   });
 
-  it("rejects protected .ao files", async () => {
+  it("rejects protected .cw files", async () => {
     const { rootDir } = await createWorkspace();
-    const protectedDir = join(rootDir, "ao-home", "protected");
+    const protectedDir = join(rootDir, "cw-home", "protected");
     const targetPath = join(protectedDir, "config.json");
     await mkdir(protectedDir, { recursive: true });
     await writeFile(targetPath, "{}", "utf8");
 
-    const result = await resolveCleanupTargetPath(join(rootDir, "ao-home"), targetPath);
+    const result = await resolveCleanupTargetPath(join(rootDir, "cw-home"), targetPath);
 
     expect(result.deletePath).toBeUndefined();
     expect(result.warning).toContain("protected");

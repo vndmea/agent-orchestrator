@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatFixErrorWorkflowOutput,
   runFixErrorWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
@@ -23,11 +23,11 @@ const inputSchema = z.object({
   ...workflowOutputOptionShape
 });
 
-export const aoFixErrorTool: AoToolDefinition<
+export const cwFixErrorTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<typeof formatFixErrorWorkflowOutput>
 > = {
-  name: "ao_fix_error",
+  name: "cw_fix_error",
   description: "Analyze an error log, propose a safe fix plan, and return validation guidance.",
   inputSchema,
   execute: async (args) => {

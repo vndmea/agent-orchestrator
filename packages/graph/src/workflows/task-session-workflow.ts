@@ -22,13 +22,13 @@ import {
   type WorkspaceBindingSummary,
   updateTaskSession,
   writeTaskArtifact
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   ModelRouter,
   resolveWorkerModel,
   resolveWorkerProfile
-} from "@agent-orchestrator/models";
-import { applyPatchProposal } from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/models";
+import { applyPatchProposal } from "@mcp-code-worker/tools";
 
 import {
   runFixErrorWorkflow,
@@ -491,8 +491,8 @@ const buildNextRecommendedActions = (input: {
     ? {
         action: "view_report",
         reason: "Read the persisted task report before taking the next step.",
-        command: `ao task report ${input.session.taskId}`,
-        toolName: "ao_get_task_report",
+        command: `cw task report ${input.session.taskId}`,
+        toolName: "cw_get_task_report",
         toolArgs: {
           taskId: input.session.taskId
         }
@@ -507,7 +507,7 @@ const buildNextRecommendedActions = (input: {
         {
           action: "persist_session" as const,
           reason:
-            "Rerun this task with `--allow-write-session` if you want resumable sessions and readable artifacts in user-scoped ao storage."
+            "Rerun this task with `--allow-write-session` if you want resumable sessions and readable artifacts in user-scoped cw storage."
         }
       ]
     : [];
@@ -547,8 +547,8 @@ const buildNextRecommendedActions = (input: {
           reason:
             "The stored patch passed earlier gates but still requires explicit confirmation before writes are allowed.",
           command:
-            `ao task resume ${input.session.taskId} --from-step patch-applied --apply-patch --allow-write --confirm-apply`,
-          toolName: "ao_resume_task",
+            `cw task resume ${input.session.taskId} --from-step patch-applied --apply-patch --allow-write --confirm-apply`,
+          toolName: "cw_resume_task",
           toolArgs: {
             taskId: input.session.taskId,
             fromStep: "patch-applied",
@@ -587,8 +587,8 @@ const buildNextRecommendedActions = (input: {
         reason:
           "Dry-run the stored patch proposal first so deterministic checks can fail safely without repository writes.",
         command:
-          `ao task resume ${input.session.taskId} --from-step patch-applied --apply-patch`,
-        toolName: "ao_resume_task",
+          `cw task resume ${input.session.taskId} --from-step patch-applied --apply-patch`,
+        toolName: "cw_resume_task",
         toolArgs: {
           taskId: input.session.taskId,
           fromStep: "patch-applied",
@@ -600,8 +600,8 @@ const buildNextRecommendedActions = (input: {
         reason:
           "Only after manual review, rerun with explicit write gates to apply the stored patch proposal.",
         command:
-          `ao task resume ${input.session.taskId} --from-step patch-applied --apply-patch --allow-write --confirm-apply`,
-        toolName: "ao_resume_task",
+          `cw task resume ${input.session.taskId} --from-step patch-applied --apply-patch --allow-write --confirm-apply`,
+        toolName: "cw_resume_task",
         toolArgs: {
           taskId: input.session.taskId,
           fromStep: "patch-applied",
@@ -622,8 +622,8 @@ const buildNextRecommendedActions = (input: {
         reason:
           "If the report looks good, continue into patch proposal and inspection from the stored session.",
         command:
-          `ao task resume ${input.session.taskId} --propose-patch --inspect-patch`,
-        toolName: "ao_resume_task",
+          `cw task resume ${input.session.taskId} --propose-patch --inspect-patch`,
+        toolName: "cw_resume_task",
         toolArgs: {
           taskId: input.session.taskId,
           proposePatch: true,
@@ -688,13 +688,13 @@ const loadArtifact = async <T>(
   rootDir: string,
   taskId: string,
   artifactName: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<T | undefined> => {
   const artifact = await readTaskArtifact<T>(
     rootDir,
     taskId,
     artifactName,
-    aoStorageDir
+    cwStorageDir
   );
   return artifact.exists ? (artifact.value as T) : undefined;
 };
@@ -1014,7 +1014,7 @@ const executePatchApplyStep = async (input: {
 const hydrateWorkflowOutput = async (
   rootDir: string,
   session: TaskSession,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<{
   fixResult?: FixErrorWorkflowOutput;
   repositoryContext?: RepositoryContextPack;
@@ -1029,49 +1029,49 @@ const hydrateWorkflowOutput = async (
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.repositoryContext,
-    aoStorageDir
+    cwStorageDir
   );
   const reviewResult = await loadArtifact<ReviewWorkflowOutput>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.reviewResult,
-    aoStorageDir
+    cwStorageDir
   );
   const validationReport = await loadArtifact<ValidationReport>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.validationReport,
-    aoStorageDir
+    cwStorageDir
   );
   const fixResult = await loadArtifact<FixErrorWorkflowOutput>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.fixResult,
-    aoStorageDir
+    cwStorageDir
   );
   const patchProposal = await loadArtifact<PatchProposal>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.patchProposal,
-    aoStorageDir
+    cwStorageDir
   );
   const patchInspection = await loadArtifact<PatchInspection>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.patchInspection,
-    aoStorageDir
+    cwStorageDir
   );
   const patchApplyResult = await loadArtifact<PatchApplyResult>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.patchApplyResult,
-    aoStorageDir
+    cwStorageDir
   );
   const reportArtifact = await readTaskArtifact<string>(
     rootDir,
     session.taskId,
     ARTIFACT_NAMES.report,
-    aoStorageDir
+    cwStorageDir
   );
 
   return {
@@ -1329,7 +1329,7 @@ export const runTaskSessionWorkflow = async (
     sessionWriteMode: sessionCreate.mode,
     transientNotice: persistence.sessionPersisted
       ? undefined
-      : "Temporary result only. Rerun with --allow-write-session to resume later or read artifacts from user-scoped ao storage.",
+      : "Temporary result only. Rerun with --allow-write-session to resume later or read artifacts from user-scoped cw storage.",
     workerId: resolved.workerId,
     workspaceBinding,
     reviewResult,
@@ -1352,7 +1352,7 @@ export const resumeTaskSessionWorkflow = async (
   const session = await readTaskSession(
     baseContext.rootDir,
     input.taskId,
-    baseContext.aoStorageDir
+    baseContext.cwStorageDir
   );
 
   if (!session) {
@@ -1375,43 +1375,43 @@ export const resumeTaskSessionWorkflow = async (
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.repositoryContext,
-    resolved.context.aoStorageDir
+    resolved.context.cwStorageDir
   );
   let reviewResult = await loadArtifact<ReviewWorkflowOutput>(
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.reviewResult,
-    resolved.context.aoStorageDir
+    resolved.context.cwStorageDir
   );
   let validationReport = await loadArtifact<ValidationReport>(
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.validationReport,
-    resolved.context.aoStorageDir
+    resolved.context.cwStorageDir
   );
   let fixResult = await loadArtifact<FixErrorWorkflowOutput>(
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.fixResult,
-    resolved.context.aoStorageDir
+    resolved.context.cwStorageDir
   );
   let patchProposal = await loadArtifact<PatchProposal>(
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.patchProposal,
-    resolved.context.aoStorageDir
+    resolved.context.cwStorageDir
   );
   let patchInspection = await loadArtifact<PatchInspection>(
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.patchInspection,
-    resolved.context.aoStorageDir
+    resolved.context.cwStorageDir
   );
   let patchApplyResult = await loadArtifact<PatchApplyResult>(
     resolved.context.rootDir,
     session.taskId,
     ARTIFACT_NAMES.patchApplyResult,
-    resolved.context.aoStorageDir
+    resolved.context.cwStorageDir
   );
 
   if (shouldRunStep(session, "reviewed", fromStep)) {
@@ -1624,14 +1624,14 @@ export const resumeTaskSessionWorkflow = async (
     sessionPath: getTaskSessionPath(
       resolved.context.rootDir,
       session.taskId,
-      resolved.context.aoStorageDir
+      resolved.context.cwStorageDir
     ),
     repositoryWriteMode,
     rootDir: resolved.context.rootDir,
     sessionWriteMode,
     transientNotice: persistence.sessionPersisted
       ? undefined
-      : "Temporary result only. Rerun with --allow-write-session to resume later or read artifacts from user-scoped ao storage.",
+      : "Temporary result only. Rerun with --allow-write-session to resume later or read artifacts from user-scoped cw storage.",
     workerId: resolved.workerId,
     workspaceBinding,
     reviewResult,
@@ -1648,9 +1648,9 @@ export const resumeTaskSessionWorkflow = async (
 export const getTaskSessionStatus = async (
   rootDir: string,
   taskId: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<TaskSession> => {
-  const session = await readTaskSession(rootDir, taskId, aoStorageDir);
+  const session = await readTaskSession(rootDir, taskId, cwStorageDir);
 
   if (!session) {
     throw new AgentError("TASK_SESSION_NOT_FOUND", `Task session ${taskId} was not found.`, {
@@ -1664,10 +1664,10 @@ export const getTaskSessionStatus = async (
 export const getTaskSessionReport = async (
   rootDir: string,
   taskId: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<{ report: string; session: TaskSession }> => {
-  const session = await getTaskSessionStatus(rootDir, taskId, aoStorageDir);
-  const hydrated = await hydrateWorkflowOutput(rootDir, session, aoStorageDir);
+  const session = await getTaskSessionStatus(rootDir, taskId, cwStorageDir);
+  const hydrated = await hydrateWorkflowOutput(rootDir, session, cwStorageDir);
   const report =
     hydrated.report ??
     buildSessionReport({
@@ -1696,5 +1696,5 @@ export const getTaskSessionReport = async (
 export const listStoredTaskSessions = async (
   rootDir: string,
   limit = 50,
-  aoStorageDir?: string
-): Promise<TaskSession[]> => listTaskSessions(rootDir, limit, aoStorageDir);
+  cwStorageDir?: string
+): Promise<TaskSession[]> => listTaskSessions(rootDir, limit, cwStorageDir);

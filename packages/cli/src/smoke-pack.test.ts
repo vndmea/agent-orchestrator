@@ -9,8 +9,8 @@ import { afterEach, describe, expect, it } from "vitest";
 const execFile = promisify(execFileCallback);
 const repoRoot = process.cwd();
 const cliPackageDir = join(repoRoot, "packages", "cli");
-const installedAoPath = (prefixDir: string): string =>
-  join(prefixDir, "node_modules", ".bin", process.platform === "win32" ? "ao.cmd" : "ao");
+const installedCwPath = (prefixDir: string): string =>
+  join(prefixDir, "node_modules", ".bin", process.platform === "win32" ? "cw.cmd" : "cw");
 
 const tempPaths: string[] = [];
 
@@ -45,7 +45,7 @@ const parsePackEntries = (stdout: string): Array<{ filename: string }> => {
     throw new Error(`Unable to parse npm pack output: ${normalized}`);
   }
 
-  return JSON.parse(match[1]) as Array<{ filename: string }>;
+  return JSON.parse(match[1] ?? "[]") as Array<{ filename: string }>;
 };
 
 const runCommand = async (
@@ -69,9 +69,9 @@ describe("cli packed tarball smoke", () => {
     );
   });
 
-  it("installs from npm pack output and runs the ao bin shim", async () => {
-    const installPrefix = await trackTempDir("ao-pack-prefix-");
-    const workspaceRoot = await trackTempDir("ao-pack-workspace-");
+  it("installs from npm pack output and runs the cw bin shim", async () => {
+    const installPrefix = await trackTempDir("cw-pack-prefix-");
+    const workspaceRoot = await trackTempDir("cw-pack-workspace-");
 
     const pack = await runCommand("npm", ["pack", "--json"], cliPackageDir);
     const packEntries = parsePackEntries(pack.stdout);
@@ -89,16 +89,16 @@ describe("cli packed tarball smoke", () => {
         repoRoot
       );
 
-      const aoPath = installedAoPath(installPrefix);
+      const cwPath = installedCwPath(installPrefix);
 
-      const help = await runCommand(aoPath, ["--help"], workspaceRoot);
-      expect(help.stdout).toContain("Agent Orchestrator CLI");
+      const help = await runCommand(cwPath, ["--help"], workspaceRoot);
+      expect(help.stdout).toContain("MCP Code Worker CLI");
 
-      const doctor = await runCommand(aoPath, ["doctor"], workspaceRoot);
+      const doctor = await runCommand(cwPath, ["doctor"], workspaceRoot);
       expect(JSON.parse(doctor.stdout) as { checks: unknown[] }).toHaveProperty("checks");
 
-      const tools = await runCommand(aoPath, ["mcp", "list-tools"], workspaceRoot);
-      expect(listToolNames(tools.stdout)).toContain("ao_start_task");
+      const tools = await runCommand(cwPath, ["mcp", "list-tools"], workspaceRoot);
+      expect(listToolNames(tools.stdout)).toContain("cw_start_task");
     } finally {
       await rm(tarballPath, { force: true });
     }

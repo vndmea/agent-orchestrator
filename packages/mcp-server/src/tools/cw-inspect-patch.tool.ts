@@ -1,20 +1,20 @@
 import { z } from "zod";
 
-import { PatchProposalSchema, resolveExecutionContext } from "@agent-orchestrator/core";
-import { inspectPatch } from "@agent-orchestrator/tools";
+import { PatchProposalSchema, resolveExecutionContext } from "@mcp-code-worker/core";
+import { inspectPatch } from "@mcp-code-worker/tools";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   patchProposal: z.unknown(),
   scope: z.string().optional()
 });
 
-export const aoInspectPatchTool: AoToolDefinition<
+export const cwInspectPatchTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof inspectPatch>>
 > = {
-  name: "ao_inspect_patch",
+  name: "cw_inspect_patch",
   description: "Inspect a structured patch proposal for safety and applicability.",
   inputSchema,
   execute: async (args) => {

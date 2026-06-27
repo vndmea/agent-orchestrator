@@ -1,28 +1,28 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   ModelRouter,
   getWorkerProfile
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   workerId: z.string().optional()
 });
 
-export const aoGetWorkerProfileTool: AoToolDefinition<
+export const cwGetWorkerProfileTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof getWorkerProfile>>
 > = {
-  name: "ao_get_worker_profile",
+  name: "cw_get_worker_profile",
   description: "Get a single worker capability profile by id.",
   inputSchema,
   execute: async (args) => {
     const context = await resolveExecutionContext();
     const workerId =
       args.workerId ?? ModelRouter.deriveWorkerId(context.workerModel);
-    return getWorkerProfile(context.rootDir, workerId, context.aoStorageDir);
+    return getWorkerProfile(context.rootDir, workerId, context.cwStorageDir);
   }
 };

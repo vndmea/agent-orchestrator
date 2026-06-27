@@ -9,6 +9,6 @@ if (!globalThis.crypto) {
   });
 }
 
-if (!process.env.AO_HOME_DIR) {
-  process.env.AO_HOME_DIR = join(tmpdir(), `ao-vitest-home-${process.pid}`);
+if (!process.env.CW_HOME_DIR) {
+  process.env.CW_HOME_DIR = join(tmpdir(), `cw-vitest-home-${process.pid}`);
 }

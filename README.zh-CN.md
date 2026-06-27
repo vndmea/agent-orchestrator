@@ -1,8 +1,8 @@
-# agent-orchestrator
+# mcp-code-worker
 
-[English](https://github.com/vndmea/agent-orchestrator/blob/master/README.md) | 简体中文
+[English](https://github.com/vndmea/mcp-code-worker/blob/master/README.md) | 简体中文
 
-`agent-orchestrator` 是一个面向多模型工程工作流的 TypeScript 编排运行时。它的核心职责是把 worker 调用、仓库上下文收敛、确定性验证、patch gate 和本地任务产物放进一个可控的执行层里。
+`mcp-code-worker` 是一个面向多模型工程工作流的 TypeScript 编排运行时。它的核心职责是把 worker 调用、仓库上下文收敛、确定性验证、patch gate 和本地任务产物放进一个可控的执行层里。
 
 ## 这是什么
 
@@ -21,12 +21,12 @@
 
 ## 宿主关系
 
-在 Codex 这类宿主驱动场景里，`ao` 只是受控执行层，不替代宿主做最终判断。
+在 Codex 这类宿主驱动场景里，`cw` 只是受控执行层，不替代宿主做最终判断。
 
 - 宿主负责理解用户目标、决定是否接受结果。
-- `ao` 负责受控执行：worker 路由、repository context、确定性验证、artifact 持久化、patch gate。
-- 对宿主来说，`ao` 的推荐入口是 `ao_start_task` 和其他 host-managed tools。
-- 对于窄范围、repo-grounded 的检查，优先使用显式文件列表配合 strict file mode，这样 `ao` 会在证据不完整时直接失败，而不是悄悄放大范围或跳过关键文件。
+- `cw` 负责受控执行：worker 路由、repository context、确定性验证、artifact 持久化、patch gate。
+- 对宿主来说，`cw` 的推荐入口是 `cw_start_task` 和其他 host-managed tools。
+- 对于窄范围、repo-grounded 的检查，优先使用显式文件列表配合 strict file mode，这样 `cw` 会在证据不完整时直接失败，而不是悄悄放大范围或跳过关键文件。
 
 ## 架构图
 
@@ -34,7 +34,7 @@
 Human / Coding Agent / CI / MCP Client
                 |
                 v
-           ao CLI / MCP
+           cw CLI / MCP
                 |
                 v
       Orchestration Runtime
@@ -75,9 +75,9 @@ docs/
 ```bash
 pnpm install
 pnpm build
-pnpm exec ao doctor
-pnpm exec ao setup --allow-write
-pnpm exec ao doctor
+pnpm exec cw doctor
+pnpm exec cw setup --allow-write
+pnpm exec cw doctor
 pnpm typecheck
 pnpm test
 ```
@@ -85,17 +85,17 @@ pnpm test
 ## 首次使用
 
 ```bash
-pnpm exec ao setup --allow-write
-pnpm exec ao doctor
-pnpm exec ao mcp config
+pnpm exec cw setup --allow-write
+pnpm exec cw doctor
+pnpm exec cw mcp config
 ```
 
-当前 internal-trial 安装路径下，除非特别说明，下面所有 `ao ...` 示例都等价于在仓库根目录执行 `pnpm exec ao ...`。
+当前 internal-trial 安装路径下，除非特别说明，下面所有 `cw ...` 示例都等价于在仓库根目录执行 `pnpm exec cw ...`。
 当前官方内部交付形态见 `docs/distribution.md`。
 
-当前版本不会读取仓库内旧 `.ao/` 目录；旧路径不受支持，也不会被兼容处理。
+当前版本不会读取仓库内旧 `.cw/` 目录；旧路径不受支持，也不会被兼容处理。
 
-`ao setup` 默认会在 `~/.ao/workspaces/<workspace-id>/` 下创建用户级 AO 工作区存储：
+`cw setup` 默认会在 `~/.cw/workspaces/<workspace-id>/` 下创建用户级 AO 工作区存储：
 
 - `config.json`
 - `workers.json`
@@ -106,22 +106,22 @@ pnpm exec ao mcp config
 ## CLI 用法
 
 ```bash
-ao review repo --scope packages/graph
-ao review diff --base main --head HEAD
-ao review files --file packages/graph/src/index.ts --strict-files
-ao validate --typecheck --lint --test
-ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
-ao task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
-ao task report <taskId>
-ao cleanup runs
-ao cleanup audit
-ao models list
-ao mcp config
-ao mcp serve
-ao mcp list-tools
+cw review repo --scope packages/graph
+cw review diff --base main --head HEAD
+cw review files --file packages/graph/src/index.ts --strict-files
+cw validate --typecheck --lint --test
+cw fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
+cw task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
+cw task report <taskId>
+cw cleanup runs
+cw cleanup audit
+cw models list
+cw mcp config
+cw mcp serve
+cw mcp list-tools
 ```
 
-`ao review files --strict-files` 和 `ao_run_host_worker` 现在会暴露 host-managed worker 调试证据，包括 requested files、selected files、worker metadata，以及 structured output 失败细节。
+`cw review files --strict-files` 和 `cw_run_host_worker` 现在会暴露 host-managed worker 调试证据，包括 requested files、selected files、worker metadata，以及 structured output 失败细节。
 
 ## Worker 接入评估
 
@@ -130,10 +130,10 @@ ao mcp list-tools
 在分配真实任务前，先执行接入评估：
 
 ```bash
-ao worker interview --provider litellm --model qwen3-coder
-ao worker interview --provider litellm --model qwen3-coder --save
-ao worker list
-ao worker profile litellm:qwen3-coder
+cw worker interview --provider litellm --model qwen3-coder
+cw worker interview --provider litellm --model qwen3-coder --save
+cw worker list
+cw worker profile litellm:qwen3-coder
 ```
 
 这套 interview 会评估：
@@ -179,20 +179,20 @@ Recommended action:
 如果你希望把这次评估结果保存下来，可以使用 `--save`：
 
 ```bash
-ao worker interview --provider litellm --model qwen3-coder --save
+cw worker interview --provider litellm --model qwen3-coder --save
 ```
 
 保存后的 profile 会写到：
 
 ```text
-~/.ao/workspaces/<workspace-id>/worker-profiles.json
+~/.cw/workspaces/<workspace-id>/worker-profiles.json
 ```
 
 你可以通过下面的命令查看这些已保存的 profile：
 
 ```bash
-ao worker list
-ao worker profile litellm:qwen3-coder
+cw worker list
+cw worker profile litellm:qwen3-coder
 ```
 
 当前行为仍然偏保守：如果 workflow 启动时没有显式传入 profile object，系统可以重新执行 interview，而不是盲目信任旧的能力记录。
@@ -202,20 +202,20 @@ ao worker profile litellm:qwen3-coder
 先注册可复用 worker，再做 interview，并在真正执行时显式引用它：
 
 ```bash
-ao worker register \
+cw worker register \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
-ao worker interview --worker litellm:qwen3-coder --save
+cw worker interview --worker litellm:qwen3-coder --save
 
-ao task start \
+cw task start \
   --goal "Review this repository" \
   --worker litellm:qwen3-coder \
   --require-profile
 
-ao audit list
+cw audit list
 ```
 
 这条链路强调本地注册、能力画像持久化，以及可审计的显式分配，同时把整体任务控制权留在宿主手里。
@@ -225,11 +225,11 @@ ao audit list
 日常工程检查建议直接使用专用命令：
 
 ```bash
-ao review repo --scope packages/graph
-ao review diff --base main --head HEAD
-ao review files --file packages/graph/src/index.ts
-ao validate --typecheck --lint --test
-ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/core
+cw review repo --scope packages/graph
+cw review diff --base main --head HEAD
+cw review files --file packages/graph/src/index.ts
+cw validate --typecheck --lint --test
+cw fix error --error-log-file ./tmp/tsc-error.log --scope packages/core
 ```
 
 这些命令会构建 repository context pack、安全读取 scope 内文件，并把确定性验证结果并入 review 输出。
@@ -239,17 +239,17 @@ ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/core
 patch 相关动作被明确拆成 proposal、inspection 和 gated apply 三步：
 
 ```bash
-ao fix error --error-log-file ./tmp/tsc.log --scope packages/core
+cw fix error --error-log-file ./tmp/tsc.log --scope packages/core
 
-ao patch propose \
+cw patch propose \
   --goal "Fix failing typecheck" \
   --scope packages/core
 
-ao patch inspect ./tmp/candidate.patch
+cw patch inspect ./tmp/candidate.patch
 
-ao patch apply ./tmp/candidate.patch --dry-run
+cw patch apply ./tmp/candidate.patch --dry-run
 
-ao patch apply ./tmp/candidate.patch \
+cw patch apply ./tmp/candidate.patch \
   --allow-write \
   --confirm-apply \
   --typecheck \
@@ -267,10 +267,10 @@ ao patch apply ./tmp/candidate.patch \
 
 ## Task session 流程
 
-task session 默认会把本地可审查产物和可恢复状态写入 `~/.ao/workspaces/<workspace-id>/runs`：
+task session 默认会把本地可审查产物和可恢复状态写入 `~/.cw/workspaces/<workspace-id>/runs`：
 
 ```bash
-ao task start \
+cw task start \
   --goal "Fix failing typecheck in packages/core" \
   --scope packages/core \
   --worker litellm:qwen3-coder \
@@ -280,15 +280,15 @@ ao task start \
   --propose-patch \
   --allow-write-session
 
-ao task status <taskId>
-ao task resume <taskId>
-ao task report <taskId>
+cw task status <taskId>
+cw task resume <taskId>
+cw task report <taskId>
 ```
 
 即使在 task resume 里，patch apply 仍然需要显式 gate：
 
 ```bash
-ao task resume <taskId> \
+cw task resume <taskId> \
   --apply-patch \
   --allow-write \
   --confirm-apply
@@ -301,24 +301,24 @@ ao task resume <taskId> \
 启动 stdio server：
 
 ```bash
-ao mcp serve
+cw mcp serve
 ```
 
 打印通用的本地 MCP server 配置片段：
 
 ```bash
-ao mcp config
+cw mcp config
 ```
 
 列出当前暴露的工具名：
 
 ```bash
-ao mcp list-tools
+cw mcp list-tools
 ```
 
 ## 环境变量
 
-参见 [.env.example](https://github.com/vndmea/agent-orchestrator/blob/master/.env.example)。
+参见 [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.example)。
 
 - `WORKER_MODEL_PROVIDER`
 - `WORKER_MODEL_NAME`
@@ -328,12 +328,12 @@ ao mcp list-tools
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
-- `AO_ROOT_DIR`
-- `AO_HOME_DIR`
-- `AO_WORKER_CLIENT_COMMAND`
-- `AO_DRY_RUN`
-- `AO_ALLOW_WRITE`
-- `AO_ALLOWED_COMMANDS`
+- `CW_ROOT_DIR`
+- `CW_HOME_DIR`
+- `CW_WORKER_CLIENT_COMMAND`
+- `CW_DRY_RUN`
+- `CW_ALLOW_WRITE`
+- `CW_ALLOWED_COMMANDS`
 
 ## 配置优先级
 
@@ -341,7 +341,7 @@ ao mcp list-tools
 
 1. CLI flags
 2. 环境变量
-3. `~/.ao/workspaces/<workspace-id>/config.json`
+3. `~/.cw/workspaces/<workspace-id>/config.json`
 4. 内置默认值
 
 `config.json` 不再记录密钥环境变量名。运行时密钥统一通过 `WORKER_MODEL_API_KEY` 这类固定变量提供。
@@ -398,14 +398,14 @@ ao mcp list-tools
 - 文件写入需要显式的策略授权。
 - Shell 执行通过 allowlist 控制。
 - `git diff` 这类只读 git 检查命令即使在 dry-run 下也允许执行，因此 review workflow 不需要开启写权限。
-- `ao setup`、`ao cleanup`、worker registry 写入和 task session 持久化都只作用于 AO 本地存储。
+- `cw setup`、`cw cleanup`、worker registry 写入和 task session 持久化都只作用于 AO 本地存储。
 - 仓库读取必须留在 repo root 内，并会阻止 `.env`、私钥等 secret-like 文件进入上下文。
 - 专用 review / fix 流程只返回结构化 JSON，不会自动应用 patch。
 - patch proposal / inspection / apply 被显式拆开，保证写入动作始终可审查。
 - 如果结构化 patch 生成失败，fallback proposal 会被标记为不可应用的 `[PLACEHOLDER]` 产物。
 - validation 命令统一走安全命令路径，相关行为可通过 audit log 追踪。
-- `ao audit list` 可查看本地 workflow、文件与命令事件。
-- `ao cleanup runs` 和 `ao cleanup audit` 只删除本地 AO 产物，不会碰项目源代码。
+- `cw audit list` 可查看本地 workflow、文件与命令事件。
+- `cw cleanup runs` 和 `cw cleanup audit` 只删除本地 AO 产物，不会碰项目源代码。
 - 宿主驱动场景里，worker 输出在宿主接受前都不能视为最终结果。
 - Worker 在进入生产任务前应先通过 onboarding evaluation。
 - structured output 或可靠性不达标的 worker 会被限制或阻断。

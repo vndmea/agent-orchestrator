@@ -1,10 +1,10 @@
 import type { Command } from "commander";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatFixErrorWorkflowOutput,
   runFixErrorWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 import type { CliIo } from "../index.js";
 import {

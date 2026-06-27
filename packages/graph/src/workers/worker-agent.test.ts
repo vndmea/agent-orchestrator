@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import type { ModelConfig } from "@agent-orchestrator/core";
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
+import { createExecutionContextFromEnv } from "@mcp-code-worker/core";
 import {
   ReviewWorker,
   SummarizeWorker,
   TestWorker,
   type WorkerAgent
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 import type {
   ModelInvocationRequest,
   ModelInvocationResult,
   ModelProvider
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
 class SequenceProvider implements ModelProvider {
   public readonly name = "sequence";

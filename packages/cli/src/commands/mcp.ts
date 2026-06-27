@@ -2,8 +2,8 @@ import type { Command } from "commander";
 
 import {
   buildMcpToolCatalogView,
-  serveAoMcpServer
-} from "@agent-orchestrator/mcp-server";
+  serveCwMcpServer
+} from "@mcp-code-worker/mcp-server";
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
@@ -54,10 +54,10 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
     )
     .action(async (options: { root?: string }) => {
       if (options.root) {
-        process.env.AO_ROOT_DIR = options.root;
+        process.env.CW_ROOT_DIR = options.root;
       }
 
-      await serveAoMcpServer({
+      await serveCwMcpServer({
         rootDir: options.root
       });
     });
@@ -88,7 +88,7 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
     .option("--args <args...>", "Arguments passed to the command")
     .option(
       "--env <assignment>",
-      "Add an environment variable assignment such as AO_HOME_DIR=C:\\\\Users\\\\me\\\\.ao",
+      "Add an environment variable assignment such as CW_HOME_DIR=C:\\\\Users\\\\me\\\\.cw",
       collect,
       []
     )
@@ -98,7 +98,7 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
     )
     .option(
       "--worker-client-command <command>",
-      "Set AO_WORKER_CLIENT_COMMAND in the generated snippet when you need a non-default compatible CLI."
+      "Set CW_WORKER_CLIENT_COMMAND in the generated snippet when you need a non-default compatible CLI."
     )
     .action((options: {
       args?: string[];
@@ -115,14 +115,14 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
       }
 
       if (options.workerClientCommand) {
-        env.AO_WORKER_CLIENT_COMMAND = options.workerClientCommand;
+        env.CW_WORKER_CLIENT_COMMAND = options.workerClientCommand;
       }
 
       io.write(
         JSON.stringify(
           {
             mcpServers: {
-              "agent-orchestrator": {
+              "mcp-code-worker": {
                 command: options.command,
                 args,
                 ...(Object.keys(env).length > 0 ? { env } : {})

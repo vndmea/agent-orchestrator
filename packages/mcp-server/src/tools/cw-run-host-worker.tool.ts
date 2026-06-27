@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { resolveExecutionContext, writeAuditEvent } from "@agent-orchestrator/core";
-import { runHostWorkerWorkflow } from "@agent-orchestrator/graph";
+import { resolveExecutionContext, writeAuditEvent } from "@mcp-code-worker/core";
+import { runHostWorkerWorkflow } from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   files: z.array(z.string()).optional(),
@@ -27,11 +27,11 @@ const inputSchema = z.object({
   requireProfile: z.boolean().optional()
 });
 
-export const aoRunHostWorkerTool: AoToolDefinition<
+export const cwRunHostWorkerTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof runHostWorkerWorkflow>>
 > = {
-  name: "ao_run_host_worker",
+  name: "cw_run_host_worker",
   description:
     "Run one explicit worker task under host control without introducing another decision-making surface.",
   inputSchema,
@@ -52,7 +52,7 @@ export const aoRunHostWorkerTool: AoToolDefinition<
       actor: "mcp",
       action: "tool-call",
       mode: context.dryRun ? "dry-run" : "execute",
-      tool: "ao_run_host_worker",
+      tool: "cw_run_host_worker",
       inputSummary: args.goal,
       outputSummary: "Host-managed worker MCP workflow completed.",
       warnings: result.warnings,

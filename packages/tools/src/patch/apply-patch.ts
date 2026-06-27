@@ -8,7 +8,7 @@ import {
   type ValidationReport,
   PatchApplyResultSchema,
   writeAuditEvent
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { inspectPatch } from "./patch-inspector.js";
 import { hasBlockingDirtyWorktree, readDirtyWorktree } from "../repository/git-status.js";

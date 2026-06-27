@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
-import { ModelRouter } from "@agent-orchestrator/models";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
+import { ModelRouter } from "@mcp-code-worker/models";
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";

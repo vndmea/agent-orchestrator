@@ -5,24 +5,24 @@ import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  getAoConfigPath,
-  loadAoConfig,
+  getCwConfigPath,
+  loadCwConfig,
   resolveExecutionContext
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 const createWorkspace = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-config-"));
+  mkdtemp(join(tmpdir(), "cw-config-"));
 
 const writeConfig = async (rootDir: string, value: unknown): Promise<void> => {
-  const configPath = getAoConfigPath(rootDir);
+  const configPath = getCwConfigPath(rootDir);
   await mkdir(dirname(configPath), { recursive: true });
   await writeFile(configPath, JSON.stringify(value, null, 2), "utf8");
 };
 
-describe("ao config", () => {
+describe("cw config", () => {
   it("loads defaults when config is missing", async () => {
     const rootDir = await createWorkspace();
-    const result = await loadAoConfig(rootDir);
+    const result = await loadCwConfig(rootDir);
 
     expect(result.exists).toBe(false);
     expect(result.config.version).toBe(1);
@@ -44,7 +44,7 @@ describe("ao config", () => {
       }
     });
 
-    const result = await loadAoConfig(rootDir);
+    const result = await loadCwConfig(rootDir);
     const context = await resolveExecutionContext({
       rootDir,
       env: {
@@ -72,7 +72,7 @@ describe("ao config", () => {
       }
     });
 
-    const result = await loadAoConfig(rootDir);
+    const result = await loadCwConfig(rootDir);
 
     expect(result.exists).toBe(true);
     expect(result.error).toContain("baseURL");
@@ -99,7 +99,7 @@ describe("ao config", () => {
       env: {
         WORKER_MODEL_PROVIDER: "env-provider",
         WORKER_MODEL_NAME: "env-worker",
-        AO_DRY_RUN: "true"
+        CW_DRY_RUN: "true"
       },
       cliOverrides: {
         allowWrite: true,
@@ -117,26 +117,26 @@ describe("ao config", () => {
     expect(context.allowedCommands).toEqual(["git"]);
   });
 
-  it("uses AO_ROOT_DIR when rootDir is not passed explicitly", async () => {
+  it("uses CW_ROOT_DIR when rootDir is not passed explicitly", async () => {
     const rootDir = await createWorkspace();
 
     const context = await resolveExecutionContext({
       env: {
-        AO_ROOT_DIR: rootDir
+        CW_ROOT_DIR: rootDir
       }
     });
 
     expect(context.rootDir).toBe(rootDir);
   });
 
-  it("prefers explicit rootDir over AO_ROOT_DIR", async () => {
+  it("prefers explicit rootDir over CW_ROOT_DIR", async () => {
     const rootDir = await createWorkspace();
     const envRootDir = await createWorkspace();
 
     const context = await resolveExecutionContext({
       rootDir,
       env: {
-        AO_ROOT_DIR: envRootDir
+        CW_ROOT_DIR: envRootDir
       }
     });
 

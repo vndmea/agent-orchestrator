@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { relative, resolve } from "node:path";
 
-import type { WorkflowOutputOptions } from "@agent-orchestrator/graph";
+import type { WorkflowOutputOptions } from "@mcp-code-worker/graph";
 
 import type { CliIo } from "./index.js";
 

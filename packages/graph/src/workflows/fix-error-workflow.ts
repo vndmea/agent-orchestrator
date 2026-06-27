@@ -2,13 +2,13 @@ import type {
   ExecutionContext,
   RepositoryContextPack,
   ValidationReport
-} from "@agent-orchestrator/core";
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   buildRepositoryContextPack,
   readRepositoryFile,
   runRepositoryValidation
-} from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/tools";
 
 import type { HostWorkerWorkflowOutput } from "./host-worker-workflow.js";
 import { runHostWorkerWorkflow } from "./host-worker-workflow.js";

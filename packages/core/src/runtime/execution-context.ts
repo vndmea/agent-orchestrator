@@ -1,12 +1,12 @@
 import { isAbsolute, resolve } from "node:path";
 
-import { getAoWorkspaceDir } from "../storage/ao-paths.js";
+import { getCwWorkspaceDir } from "../storage/cw-paths.js";
 import type { ModelConfig } from "../types/workflow.js";
 import { SafetyPolicy } from "../policies/safety-policy.js";
 import { WritePolicy } from "../policies/write-policy.js";
 
 export interface ExecutionContext {
-  aoStorageDir: string;
+  cwStorageDir: string;
   rootDir: string;
   dryRun: boolean;
   allowWrite: boolean;
@@ -83,15 +83,15 @@ export const createExecutionContextFromEnv = (
   overrides: ExecutionContextOverrides = {}
 ): ExecutionContext => {
   const rootDir = normalizeRootDir(
-    overrides.rootDir ?? env.AO_ROOT_DIR ?? process.cwd()
+    overrides.rootDir ?? env.CW_ROOT_DIR ?? process.cwd()
   );
-  const aoStorageDir = getAoWorkspaceDir(rootDir, env);
-  const dryRun = overrides.dryRun ?? parseBoolean(env.AO_DRY_RUN, true);
+  const cwStorageDir = getCwWorkspaceDir(rootDir, env);
+  const dryRun = overrides.dryRun ?? parseBoolean(env.CW_DRY_RUN, true);
   const allowWrite =
-    overrides.allowWrite ?? parseBoolean(env.AO_ALLOW_WRITE, false);
+    overrides.allowWrite ?? parseBoolean(env.CW_ALLOW_WRITE, false);
   const allowedCommands =
     overrides.allowedCommands ??
-    parseList(env.AO_ALLOWED_COMMANDS, ["git", "node", "pnpm"]);
+    parseList(env.CW_ALLOWED_COMMANDS, ["git", "node", "pnpm"]);
   const contextBudget = {
     ...DEFAULT_CONTEXT_BUDGET,
     ...overrides.contextBudget,
@@ -116,21 +116,21 @@ export const createExecutionContextFromEnv = (
     dryRun
   });
   const writePolicy = new WritePolicy({
-    additionalRootDirs: [aoStorageDir],
+    additionalRootDirs: [cwStorageDir],
     allowWrite,
     dryRun,
     rootDir
   });
 
   return {
-    aoStorageDir,
+    cwStorageDir,
     rootDir,
     dryRun,
     allowWrite,
     allowedCommands,
     contextBudget,
     workerModel,
-    serverName: overrides.serverName ?? env.MCP_SERVER_NAME ?? "agent-orchestrator",
+    serverName: overrides.serverName ?? env.MCP_SERVER_NAME ?? "mcp-code-worker",
     serverVersion: overrides.serverVersion ?? env.MCP_SERVER_VERSION ?? "0.1.0",
     logLevel: overrides.logLevel ?? env.LOG_LEVEL ?? "info",
     safetyPolicy,

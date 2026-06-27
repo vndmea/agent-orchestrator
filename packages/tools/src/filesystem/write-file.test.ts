@@ -4,12 +4,12 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createExecutionContextFromEnv, listAuditEvents } from "@agent-orchestrator/core";
+import { createExecutionContextFromEnv, listAuditEvents } from "@mcp-code-worker/core";
 
 import { writeRepositoryFile } from "./write-file.js";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-write-file-"));
+  mkdtemp(join(tmpdir(), "cw-write-file-"));
 
 describe("writeRepositoryFile", () => {
   it("blocks unsafe paths", async () => {

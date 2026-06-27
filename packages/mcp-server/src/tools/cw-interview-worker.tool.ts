@@ -1,14 +1,14 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
-import { runWorkerInterviewWorkflow } from "@agent-orchestrator/graph";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
+import { runWorkerInterviewWorkflow } from "@mcp-code-worker/graph";
 import {
   getWorkerRegistration,
   resolveWorkerModel,
   saveWorkerProfile
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   workerId: z.string().optional(),
@@ -40,7 +40,7 @@ const executeWorkerInterview = async (
     ? await getWorkerRegistration(
         context.rootDir,
         args.workerId,
-        context.aoStorageDir
+        context.cwStorageDir
       )
     : null;
   const resolved = registeredWorker
@@ -81,24 +81,24 @@ const executeWorkerInterview = async (
   };
 };
 
-export const aoRunWorkerInterviewTool: AoToolDefinition<
+export const cwRunWorkerInterviewTool: CwToolDefinition<
   typeof inputSchema.shape,
   WorkerInterviewToolResult
 > = {
-  name: "ao_run_worker_interview",
+  name: "cw_run_worker_interview",
   description:
     "Run a fresh worker interview, generate a capability profile, and optionally persist it.",
   inputSchema,
   execute: executeWorkerInterview
 };
 
-export const aoInterviewWorkerTool: AoToolDefinition<
+export const cwInterviewWorkerTool: CwToolDefinition<
   typeof inputSchema.shape,
   WorkerInterviewToolResult
 > = {
-  name: "ao_interview_worker",
+  name: "cw_interview_worker",
   description:
-    "Alias for ao_run_worker_interview. Evaluate a worker model, generate a capability profile, and optionally persist it.",
+    "Alias for cw_run_worker_interview. Evaluate a worker model, generate a capability profile, and optionally persist it.",
   inputSchema,
   execute: executeWorkerInterview
 };

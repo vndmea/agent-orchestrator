@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 
 const { chatMock, createOpenAIMock, generateTextMock } = vi.hoisted(() => ({
   chatMock: vi.fn((model: string) => ({ model })),
@@ -25,7 +25,7 @@ vi.mock("ai", () => ({
   generateText: generateTextMock
 }));
 
-import { LiteLlmProvider } from "@agent-orchestrator/models";
+import { LiteLlmProvider } from "@mcp-code-worker/models";
 
 const config: ModelConfig = {
   provider: "litellm",

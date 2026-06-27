@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { buildCli } from "@agent-orchestrator/cli";
+import { buildCli } from "@mcp-code-worker/cli";
 
 const createIo = () => {
   const output: string[] = [];
@@ -28,7 +28,7 @@ const withTempCwd = async (
   callback: (rootDir: string) => Promise<void>
 ): Promise<void> => {
   const originalCwd = process.cwd();
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-smoke-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-smoke-"));
 
   try {
     process.chdir(rootDir);
@@ -58,26 +58,26 @@ describe("cli smoke", () => {
       const cli = buildCli(io);
 
       output.push(cli.helpInformation());
-      expect(output[0]).toContain("Agent Orchestrator CLI");
+      expect(output[0]).toContain("MCP Code Worker CLI");
 
-      await cli.parseAsync(["node", "ao", "doctor"]);
+      await cli.parseAsync(["node", "cw", "doctor"]);
       expect(parseLastJson<{ checks: unknown[] }>(output).checks.length).toBeGreaterThan(0);
 
-      await cli.parseAsync(["node", "ao", "models", "list"]);
+      await cli.parseAsync(["node", "cw", "models", "list"]);
       expect(parseLastJson<Array<{ role: string }>>(output)).toEqual([
         expect.objectContaining({ role: "worker" })
       ]);
 
-      await cli.parseAsync(["node", "ao", "mcp", "list-tools"]);
-      expect(listToolNames(output)).toContain("ao_start_task");
+      await cli.parseAsync(["node", "cw", "mcp", "list-tools"]);
+      expect(listToolNames(output)).toContain("cw_start_task");
 
-      await cli.parseAsync(["node", "ao", "mcp", "config"]);
-      expect(parseLastJson<{ mcpServers: Record<string, unknown> }>(output).mcpServers["agent-orchestrator"]).toBeTruthy();
+      await cli.parseAsync(["node", "cw", "mcp", "config"]);
+      expect(parseLastJson<{ mcpServers: Record<string, unknown> }>(output).mcpServers["mcp-code-worker"]).toBeTruthy();
 
-      await cli.parseAsync(["node", "ao", "audit", "list"]);
+      await cli.parseAsync(["node", "cw", "audit", "list"]);
       expect(Array.isArray(parseLastJson<unknown[]>(output))).toBe(true);
 
-      await cli.parseAsync(["node", "ao", "worker", "registry", "list"]);
+      await cli.parseAsync(["node", "cw", "worker", "registry", "list"]);
       expect(Array.isArray(parseLastJson<unknown[]>(output))).toBe(true);
     });
   });

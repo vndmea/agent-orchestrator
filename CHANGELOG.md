@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `agent-orchestrator` should be documented in this file.
+All notable changes to `mcp-code-worker` should be documented in this file.
 
 The current internal trial line follows semantic-style version labels even while the repository remains private.
 
@@ -9,13 +9,13 @@ The current internal trial line follows semantic-style version labels even while
 ### Added
 
 - Trial runbook for internal onboarding, worker evaluation, and task session execution.
-- Example AO config under `docs/examples/ao-config.example.json`.
+- Example AO config under `docs/examples/cw-config.example.json`.
 - Installation guide for the current workspace-based internal-trial path.
 - Permission model document covering dry-run, session writes, repository writes, patch apply gates, and local audit artifacts.
 - Expanded MCP and CLI documentation aligned with current command and tool names.
 - Interview diagnostics that distinguish provider invocation failures from completed worker evaluations.
 - Summary-first MCP/CLI output shaping and a minimal task artifact reader for persisted task artifacts.
-- User-scoped AO storage path helpers under `packages/core/src/storage/ao-paths.ts`.
+- User-scoped CW storage path helpers under `packages/core/src/storage/ao-paths.ts`.
 
 ### Changed
 
@@ -23,11 +23,11 @@ The current internal trial line follows semantic-style version labels even while
 - `patch propose` now supports the same summary/full output controls as other high-level CLI and MCP workflow entrypoints.
 - `worker interview --save` now skips persistence when provider access fails and returns re-interview guidance instead of saving a misleading blocked profile.
 - Validation reports now include compact diagnostic summaries so MCP and CLI clients can stay within tighter context budgets.
-- AO local state now persists under `~/.ao/workspaces/<workspace-id>/` by default instead of repository-local `.ao/`.
-- Legacy repository-local `.ao/` storage is no longer supported or read by current builds.
-- `AO_HOME_DIR` now overrides the user-scoped storage root and `AO_ROOT_DIR` now overrides workspace binding for CLI and MCP launches.
-- `ao setup` is now the primary onboarding path for creating config, worker registry/profile stores, runs, and audit directories.
-- MCP workspace-root guidance now documents `--root` and `AO_ROOT_DIR` for workspace-scoped launches.
+- AO local state now persists under `~/.cw/workspaces/<workspace-id>/` by default instead of repository-local `.cw/`.
+- Legacy repository-local `.cw/` storage is no longer supported or read by current builds.
+- `CW_HOME_DIR` now overrides the user-scoped storage root and `CW_ROOT_DIR` now overrides workspace binding for CLI and MCP launches.
+- `cw setup` is now the primary onboarding path for creating config, worker registry/profile stores, runs, and audit directories.
+- MCP workspace-root guidance now documents `--root` and `CW_ROOT_DIR` for workspace-scoped launches.
 
 ### Rollback Guidance
 

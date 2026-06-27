@@ -5,19 +5,19 @@ import type { Command } from "commander";
 
 import {
   AgentError,
-  AoConfigSchema,
-  getAoConfigPath,
-  getAoWorkspaceAuditDirFromStorageDir,
-  getAoWorkspaceRunsDirFromStorageDir,
-  loadAoConfig,
+  CwConfigSchema,
+  getCwConfigPath,
+  getCwWorkspaceAuditDirFromStorageDir,
+  getCwWorkspaceRunsDirFromStorageDir,
+  loadCwConfig,
   resolveExecutionContext,
   runDoctor,
   writeAuditEvent,
-  type AoConfig,
+  type CwConfig,
   type ExecutionContext,
   type ModelConfig
-} from "@agent-orchestrator/core";
-import { runWorkerInterviewWorkflow } from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/core";
+import { runWorkerInterviewWorkflow } from "@mcp-code-worker/graph";
 import {
   createWorkerProfileDoctorChecks,
   deriveWorkerRegistrationId,
@@ -27,7 +27,7 @@ import {
   readWorkerRegistry,
   saveWorkerProfile,
   saveWorkerRegistration
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
 import type { CliIo } from "../index.js";
 import { formatDisplayPath, writeOutput } from "../output.js";
@@ -99,7 +99,7 @@ const relativePath = (rootDir: string, path: string): string =>
   formatDisplayPath(rootDir, path);
 
 const mergeModelConfig = (
-  existing: AoConfig["workerModel"],
+  existing: CwConfig["workerModel"],
   updates: {
     baseURL?: string;
     model?: string;
@@ -124,10 +124,10 @@ const mergeModelConfig = (
 };
 
 const buildDesiredConfig = (
-  existing: AoConfig,
+  existing: CwConfig,
   options: SetupOptions
-): AoConfig =>
-  AoConfigSchema.parse({
+): CwConfig =>
+  CwConfigSchema.parse({
     ...existing,
     version: 1,
     workerModel: mergeModelConfig(existing.workerModel, {
@@ -255,7 +255,7 @@ const ensureDirectory = async (
 
 const resolveSetupWorkerModel = (
   context: ExecutionContext,
-  desiredConfig: AoConfig
+  desiredConfig: CwConfig
 ): ModelConfig => ({
   ...context.workerModel,
   ...(desiredConfig.workerModel ?? {})
@@ -295,7 +295,7 @@ const formatSetupResult = (result: SetupResult): string[] => {
   const needsInputSteps = result.steps.filter((step) => step.status === "needs-input");
 
   const lines: string[] = [
-    `ao setup: ${result.status}`,
+    `cw setup: ${result.status}`,
     result.summary,
     `workspace: ${result.rootDir}`,
     `mode: ${result.mode}`,
@@ -336,18 +336,18 @@ const formatSetupResult = (result: SetupResult): string[] => {
 export const registerSetupCommand = (program: Command, io: CliIo): void => {
   program
     .command("setup")
-    .description("Guide and optionally apply the user-scoped setup steps needed before ao task workflows feel reliable.")
+    .description("Guide and optionally apply the user-scoped setup steps needed before cw task workflows feel reliable.")
     .option("--worker-provider <provider>", "Worker provider")
     .option("--worker-model <model>", "Worker model")
     .option("--worker-base-url <url>", "Worker base URL")
     .option("--worker-id <workerId>", "Explicit worker id used for register/interview")
-    .option("--register-worker", "Register the configured worker in the ao workspace registry", false)
+    .option("--register-worker", "Register the configured worker in the cw workspace registry", false)
     .option("--interview-worker", "Run worker onboarding interview and persist the profile when allowed", false)
     .option("--typecheck-script <name>", "Add or replace the typecheck script mapping", collect, [])
     .option("--lint-script <name>", "Add or replace the lint script mapping", collect, [])
     .option("--test-script <name>", "Add or replace the test script mapping", collect, [])
     .option("--disable-validation-auto-discover", "Turn off validation script auto-discovery", false)
-    .option("--allow-write", "Persist ao workspace setup changes", false)
+    .option("--allow-write", "Persist cw workspace setup changes", false)
     .action(async (options: SetupOptions) => {
       const context = await resolveExecutionContext({
         cliOverrides: {
@@ -356,30 +356,30 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
         }
       });
       const steps: SetupStepResult[] = [];
-      const configResult = await loadAoConfig(context.rootDir);
+      const configResult = await loadCwConfig(context.rootDir);
       const desiredConfig = buildDesiredConfig(configResult.config, options);
       const registryState = await readWorkerRegistry(
         context.rootDir,
-        context.aoStorageDir
+        context.cwStorageDir
       );
       const profileState = await readPersistedWorkerProfiles(
         context.rootDir,
-        context.aoStorageDir
+        context.cwStorageDir
       );
-      const aoDir = context.aoStorageDir;
-      const auditDir = getAoWorkspaceAuditDirFromStorageDir(aoDir);
-      const runsDir = getAoWorkspaceRunsDirFromStorageDir(aoDir);
-      const configPath = getAoConfigPath(context.rootDir);
+      const cwDir = context.cwStorageDir;
+      const auditDir = getCwWorkspaceAuditDirFromStorageDir(cwDir);
+      const runsDir = getCwWorkspaceRunsDirFromStorageDir(cwDir);
+      const configPath = getCwConfigPath(context.rootDir);
       const registryPath = getWorkerRegistryPath(
         context.rootDir,
-        context.aoStorageDir
+        context.cwStorageDir
       );
       const profilesPath = getWorkerProfileStorePath(
         context.rootDir,
-        context.aoStorageDir
+        context.cwStorageDir
       );
 
-      const aoDirResult = await ensureDirectory(context, aoDir, options.allowWrite);
+      const cwDirResult = await ensureDirectory(context, cwDir, options.allowWrite);
       const auditDirResult = await ensureDirectory(context, auditDir, options.allowWrite);
       const runsDirResult = await ensureDirectory(context, runsDir, options.allowWrite);
 
@@ -387,10 +387,10 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
         id: "workspace-scaffold",
         status: options.allowWrite ? "completed" : "dry-run",
         summary: options.allowWrite
-          ? "Ensured user-scoped ao workspace directories exist for audit logs and task runs."
-          : "Would ensure user-scoped ao workspace directories exist for audit logs and task runs.",
+          ? "Ensured user-scoped cw workspace directories exist for audit logs and task runs."
+          : "Would ensure user-scoped cw workspace directories exist for audit logs and task runs.",
         details: {
-          aoDir: relativePath(context.rootDir, aoDirResult.path),
+          cwDir: relativePath(context.rootDir, cwDirResult.path),
           auditDir: relativePath(context.rootDir, auditDirResult.path),
           runsDir: relativePath(context.rootDir, runsDirResult.path)
         }
@@ -410,9 +410,9 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
         summary:
           configWrite.changed
             ? configWrite.mode === "execute"
-              ? "Updated the ao workspace config with the requested model and validation settings."
-              : "Would update the ao workspace config with the requested model and validation settings."
-            : "The ao workspace config already matches the requested model and validation settings.",
+              ? "Updated the cw workspace config with the requested model and validation settings."
+              : "Would update the cw workspace config with the requested model and validation settings."
+            : "The cw workspace config already matches the requested model and validation settings.",
         details: {
           replacedInvalidConfig: Boolean(configResult.error),
           workerModel: desiredConfig.workerModel
@@ -426,7 +426,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
           path: relativePath(context.rootDir, registryPath),
           summary:
             "Existing worker registry is invalid. Fix or replace it before setup can manage worker registrations safely.",
-          command: "ao doctor",
+          command: "cw doctor",
           details: {
             error: registryState.error
           }
@@ -465,7 +465,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
           path: relativePath(context.rootDir, profilesPath),
           summary:
             "Existing worker profile store is invalid. Fix it before setup tries to persist interviewed profiles.",
-          command: "ao doctor",
+          command: "cw doctor",
           details: {
             error: profileState.error
           }
@@ -509,7 +509,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
                 options.disableValidationAutoDiscover
               ? "dry-run"
               : "skipped",
-        command: "ao doctor",
+        command: "cw doctor",
         summary: buildValidationSummary(options),
         details: {
           validation: desiredConfig.validation
@@ -526,7 +526,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
             status: "blocked",
             summary:
               "Worker registration was requested, but the registry store is invalid.",
-            command: "ao doctor"
+            command: "cw doctor"
           });
         } else {
           const registrationResult = await saveWorkerRegistration(
@@ -551,7 +551,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
               registrationResult.mode === "execute"
                 ? `Registered worker ${workerId}.`
                 : `Would register worker ${workerId}.`,
-            command: "ao worker registry list",
+            command: "cw worker registry list",
             details: {
               workerId,
               provider: workerModel.provider,
@@ -566,7 +566,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
           summary:
             "Worker registration was skipped. This is fine unless you want explicit worker routing beyond the default worker.",
           command:
-            "ao worker register --provider <provider> --model <model> --allow-write"
+            "cw worker register --provider <provider> --model <model> --allow-write"
         });
       }
 
@@ -577,7 +577,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
             status: "blocked",
             summary:
               "Worker interview was requested, but the profile store is invalid.",
-            command: "ao doctor"
+            command: "cw doctor"
           });
         } else {
           const interviewResult = await runWorkerInterviewWorkflow({
@@ -591,7 +591,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
               id: "interview-worker",
               status: "blocked",
               summary: interviewResult.persistenceAdvice.reason,
-              command: "ao worker interview --save",
+              command: "cw worker interview --save",
               details: {
                 recommendedActions:
                   interviewResult.persistenceAdvice.recommendedActions,
@@ -609,7 +609,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
               status: "completed",
               path: relativePath(context.rootDir, profileSave.path),
               summary: `Interviewed and persisted worker profile ${workerId}.`,
-              command: "ao worker profile",
+              command: "cw worker profile",
               details: {
                 workerId,
                 profileStatus: interviewResult.profile.status,
@@ -623,7 +623,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
               path: relativePath(context.rootDir, profilesPath),
               summary:
                 `Would persist interviewed worker profile ${workerId} after rerunning with --allow-write.`,
-              command: "ao worker interview --save",
+              command: "cw worker interview --save",
               details: {
                 workerId,
                 profileStatus: interviewResult.profile.status,
@@ -638,7 +638,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
           status: "skipped",
           summary:
             "Worker interview was skipped. Run it when you want persisted routing confidence instead of default fallback behavior.",
-          command: "ao worker interview --save"
+          command: "cw worker interview --save"
         });
       }
 
@@ -668,7 +668,7 @@ export const registerSetupCommand = (program: Command, io: CliIo): void => {
             : finalDoctor.status === "degraded"
               ? "needs-input"
               : "blocked",
-        command: "ao doctor",
+        command: "cw doctor",
         summary: readinessSummary,
         details: readinessCapabilities
       });

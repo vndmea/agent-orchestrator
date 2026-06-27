@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 
 const {
   chatMock,
@@ -32,7 +32,7 @@ vi.mock("ai", () => ({
   generateText: generateTextMock
 }));
 
-import { AiSdkProvider } from "@agent-orchestrator/models";
+import { AiSdkProvider } from "@mcp-code-worker/models";
 
 const config: ModelConfig = {
   provider: "openai-compatible",

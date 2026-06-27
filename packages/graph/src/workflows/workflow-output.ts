@@ -4,7 +4,7 @@ import {
   summarizeValidationReport,
   type OutputDetailLevel,
   truncateText
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import type { FixErrorWorkflowOutput } from "./fix-error-workflow.js";
 import type { PatchProposalWorkflowOutput } from "./patch-proposal-workflow.js";

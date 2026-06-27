@@ -22,12 +22,12 @@ import type {
   WorkerTaskScoreCard,
   WorkflowState,
   WorkerTaskType
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   WorkerCapabilityProfileSchema,
   resolveExecutionContext
-} from "@agent-orchestrator/core";
-import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
+} from "@mcp-code-worker/core";
+import { ModelRouter, invokeStructured } from "@mcp-code-worker/models";
 
 import { createInitialWorkflowState } from "./workflow-state.js";
 
@@ -1372,7 +1372,7 @@ const providerFailureRecoveryActions = [
   "Verify the worker base URL and model name.",
   "Confirm WORKER_MODEL_API_KEY is populated in the current runtime.",
   "Run a direct provider health check before retrying the interview.",
-  "Re-run `ao worker interview --save` after connectivity is stable."
+  "Re-run `cw worker interview --save` after connectivity is stable."
 ];
 
 const repoGroundedTaskIds = new Set<WorkerInterviewTaskType>([

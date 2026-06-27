@@ -5,8 +5,8 @@ import {
   runDoctor,
   type DoctorReport,
   writeAuditEvent
-} from "@agent-orchestrator/core";
-import { createWorkerProfileDoctorChecks } from "@agent-orchestrator/models";
+} from "@mcp-code-worker/core";
+import { createWorkerProfileDoctorChecks } from "@mcp-code-worker/models";
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
@@ -26,7 +26,7 @@ const formatDoctorReport = (report: DoctorReport): string[] => {
   const capabilitySummary: string = capabilityPairs.join(", ");
   const lines: string[] = [];
 
-  lines.push(`ao doctor: ${doctorStatus}`);
+  lines.push(`cw doctor: ${doctorStatus}`);
   lines.push(doctorSummary);
   lines.push(`workspace: ${activeRootDir}`);
   lines.push(`capabilities: ${capabilitySummary}`);
@@ -69,7 +69,7 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
         actor: "cli",
         action: "doctor",
         mode: context.dryRun ? "dry-run" : "execute",
-        inputSummary: "ao doctor",
+        inputSummary: "cw doctor",
         outputSummary: `Doctor completed with ok=${String(report.ok)}.`,
         warnings: report.checks
           .filter((check) => check.status === "warning")

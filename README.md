@@ -1,8 +1,8 @@
-# agent-orchestrator
+# mcp-code-worker
 
-English | [简体中文](https://github.com/vndmea/agent-orchestrator/blob/master/README.zh-CN.md)
+English | [简体中文](https://github.com/vndmea/mcp-code-worker/blob/master/README.zh-CN.md)
 
-`agent-orchestrator` is a TypeScript orchestration runtime for multi-model engineering workflows. It is designed to keep worker execution, repository context selection, deterministic validation, and local task artifacts under explicit control through a CLI and MCP server.
+`mcp-code-worker` is a TypeScript orchestration runtime for multi-model engineering workflows. It is designed to keep worker execution, repository context selection, deterministic validation, and local task artifacts under explicit control through a CLI and MCP server.
 
 ## What this is
 
@@ -21,11 +21,11 @@ English | [简体中文](https://github.com/vndmea/agent-orchestrator/blob/maste
 
 ## Host relationship
 
-In host-driven use cases such as Codex, `ao` stays as the controlled execution/runtime layer.
+In host-driven use cases such as Codex, `cw` stays as the controlled execution/runtime layer.
 
 - The host agent stays responsible for user intent, final judgment, and acceptance.
-- `ao` provides the controlled runtime: worker routing, repository context packs, deterministic validation, artifact persistence, and patch gates.
-- The recommended host-facing path is `ao_start_task` and other host-managed tools.
+- `cw` provides the controlled runtime: worker routing, repository context packs, deterministic validation, artifact persistence, and patch gates.
+- The recommended host-facing path is `cw_start_task` and other host-managed tools.
 - For narrow repo-grounded checks, prefer explicit file lists with strict file mode so AO fails fast instead of silently widening or skipping critical evidence.
 
 ## Architecture diagram
@@ -34,7 +34,7 @@ In host-driven use cases such as Codex, `ao` stays as the controlled execution/r
 Human / Coding Agent / CI / MCP Client
                 |
                 v
-           ao CLI / MCP
+           cw CLI / MCP
                 |
                 v
    Orchestration Runtime Layer
@@ -76,9 +76,9 @@ This repository targets actively maintained Node.js LTS releases only. CI curren
 node --version
 pnpm install
 pnpm build
-pnpm exec ao doctor
-pnpm exec ao setup --allow-write
-pnpm exec ao doctor
+pnpm exec cw doctor
+pnpm exec cw setup --allow-write
+pnpm exec cw doctor
 pnpm typecheck
 pnpm test
 ```
@@ -86,19 +86,19 @@ pnpm test
 ## First run
 
 ```bash
-pnpm exec ao setup --allow-write
-pnpm exec ao doctor
-pnpm exec ao mcp config
+pnpm exec cw setup --allow-write
+pnpm exec cw doctor
+pnpm exec cw mcp config
 ```
 
 Internal-trial installation and MCP launch guidance lives in `docs/install.md`.
 The current official internal distribution shape is documented in `docs/distribution.md`.
 
-Unless noted otherwise, read every `ao ...` example below as `pnpm exec ao ...` from the repository root for the current internal-trial install path.
+Unless noted otherwise, read every `cw ...` example below as `pnpm exec cw ...` from the repository root for the current internal-trial install path.
 
-Legacy repository-local `.ao/` directories are unsupported and ignored by current builds.
+Legacy repository-local `.cw/` directories are unsupported and ignored by current builds.
 
-`ao setup` creates user-scoped AO workspace storage under `~/.ao/workspaces/<workspace-id>/` by default:
+`cw setup` creates user-scoped CW workspace storage under `~/.cw/workspaces/<workspace-id>/` by default:
 
 - `config.json`
 - `workers.json`
@@ -109,22 +109,22 @@ Legacy repository-local `.ao/` directories are unsupported and ignored by curren
 ## CLI usage
 
 ```bash
-ao review repo --scope packages/graph
-ao review diff --base main --head HEAD
-ao review files --file packages/graph/src/index.ts --strict-files
-ao validate --typecheck --lint --test
-ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
-ao task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
-ao task report <taskId>
-ao cleanup runs
-ao cleanup audit
-ao models list
-ao mcp config
-ao mcp serve
-ao mcp list-tools
+cw review repo --scope packages/graph
+cw review diff --base main --head HEAD
+cw review files --file packages/graph/src/index.ts --strict-files
+cw validate --typecheck --lint --test
+cw fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
+cw task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
+cw task report <taskId>
+cw cleanup runs
+cw cleanup audit
+cw models list
+cw mcp config
+cw mcp serve
+cw mcp list-tools
 ```
 
-`ao review files --strict-files` and `ao_run_host_worker` now expose debug evidence for host-managed worker runs, including requested files, selected files, worker metadata, and structured-output failure details.
+`cw review files --strict-files` and `cw_run_host_worker` now expose debug evidence for host-managed worker runs, including requested files, selected files, worker metadata, and structured-output failure details.
 
 ## Worker onboarding
 
@@ -133,10 +133,10 @@ Workers are not treated as automatically qualified just because a model endpoint
 Use onboarding evaluation before assigning real work:
 
 ```bash
-ao worker interview --provider litellm --model qwen3-coder
-ao worker interview --provider litellm --model qwen3-coder --save
-ao worker list
-ao worker profile litellm:qwen3-coder
+cw worker interview --provider litellm --model qwen3-coder
+cw worker interview --provider litellm --model qwen3-coder --save
+cw worker list
+cw worker profile litellm:qwen3-coder
 ```
 
 The interview workflow evaluates:
@@ -182,20 +182,20 @@ If the worker is significantly worse, the profile becomes `blocked` and producti
 Use `--save` if you want to persist the interview result:
 
 ```bash
-ao worker interview --provider litellm --model qwen3-coder --save
+cw worker interview --provider litellm --model qwen3-coder --save
 ```
 
 Saved profiles are written to:
 
 ```text
-~/.ao/workspaces/<workspace-id>/worker-profiles.json
+~/.cw/workspaces/<workspace-id>/worker-profiles.json
 ```
 
 You can inspect persisted profiles with:
 
 ```bash
-ao worker list
-ao worker profile litellm:qwen3-coder
+cw worker list
+cw worker profile litellm:qwen3-coder
 ```
 
 Current behavior is conservative: if a workflow is started without an explicit profile object, the system can re-run the interview instead of blindly trusting an old capability record.
@@ -205,20 +205,20 @@ Current behavior is conservative: if a workflow is started without an explicit p
 Register a reusable worker, evaluate it, and keep the assignment explicit:
 
 ```bash
-ao worker register \
+cw worker register \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
-ao worker interview --worker litellm:qwen3-coder --save
+cw worker interview --worker litellm:qwen3-coder --save
 
-ao task start \
+cw task start \
   --goal "Review this repository" \
   --worker litellm:qwen3-coder \
   --require-profile
 
-ao audit list
+cw audit list
 ```
 
 This flow keeps worker selection local, auditable, and gated by a persisted capability profile while leaving the host in control of the overall task.
@@ -228,11 +228,11 @@ This flow keeps worker selection local, auditable, and gated by a persisted capa
 Use the dedicated repository workflows for day-to-day engineering checks:
 
 ```bash
-ao review repo --scope packages/graph
-ao review diff --base main --head HEAD
-ao review files --file packages/graph/src/index.ts
-ao validate --typecheck --lint --test
-ao fix error --error-log-file ./tmp/tsc-error.log --scope packages/core
+cw review repo --scope packages/graph
+cw review diff --base main --head HEAD
+cw review files --file packages/graph/src/index.ts
+cw validate --typecheck --lint --test
+cw fix error --error-log-file ./tmp/tsc-error.log --scope packages/core
 ```
 
 These commands build repository context packs, read scoped files safely, and route deterministic validation into the review output.
@@ -242,17 +242,17 @@ These commands build repository context packs, read scoped files safely, and rou
 Patch handling is intentionally separated into proposal, inspection, and gated apply steps:
 
 ```bash
-ao fix error --error-log-file ./tmp/tsc.log --scope packages/core
+cw fix error --error-log-file ./tmp/tsc.log --scope packages/core
 
-ao patch propose \
+cw patch propose \
   --goal "Fix failing typecheck" \
   --scope packages/core
 
-ao patch inspect ./tmp/candidate.patch
+cw patch inspect ./tmp/candidate.patch
 
-ao patch apply ./tmp/candidate.patch --dry-run
+cw patch apply ./tmp/candidate.patch --dry-run
 
-ao patch apply ./tmp/candidate.patch \
+cw patch apply ./tmp/candidate.patch \
   --allow-write \
   --confirm-apply \
   --typecheck \
@@ -270,10 +270,10 @@ Safety constraints for patch lifecycle:
 
 ## Task sessions
 
-Task sessions keep local review artifacts and resumable state under `~/.ao/workspaces/<workspace-id>/runs` by default:
+Task sessions keep local review artifacts and resumable state under `~/.cw/workspaces/<workspace-id>/runs` by default:
 
 ```bash
-ao task start \
+cw task start \
   --goal "Fix failing typecheck in packages/core" \
   --scope packages/core \
   --worker litellm:qwen3-coder \
@@ -283,15 +283,15 @@ ao task start \
   --propose-patch \
   --allow-write-session
 
-ao task status <taskId>
-ao task resume <taskId>
-ao task report <taskId>
+cw task status <taskId>
+cw task resume <taskId>
+cw task report <taskId>
 ```
 
 Patch apply is still a separate explicit gate even inside task resume:
 
 ```bash
-ao task resume <taskId> \
+cw task resume <taskId> \
   --apply-patch \
   --allow-write \
   --confirm-apply
@@ -306,24 +306,24 @@ See `docs/permissions.md` for the full write-gate model.
 Start the stdio server:
 
 ```bash
-ao mcp serve
+cw mcp serve
 ```
 
 Print a generic stdio config snippet for local MCP clients:
 
 ```bash
-ao mcp config
+cw mcp config
 ```
 
 List exposed tool names:
 
 ```bash
-ao mcp list-tools
+cw mcp list-tools
 ```
 
 ## Environment variables
 
-See [.env.example](https://github.com/vndmea/agent-orchestrator/blob/master/.env.example).
+See [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.example).
 
 - `WORKER_MODEL_PROVIDER`
 - `WORKER_MODEL_NAME`
@@ -333,12 +333,12 @@ See [.env.example](https://github.com/vndmea/agent-orchestrator/blob/master/.env
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
-- `AO_ROOT_DIR`
-- `AO_HOME_DIR`
-- `AO_WORKER_CLIENT_COMMAND`
-- `AO_DRY_RUN`
-- `AO_ALLOW_WRITE`
-- `AO_ALLOWED_COMMANDS`
+- `CW_ROOT_DIR`
+- `CW_HOME_DIR`
+- `CW_WORKER_CLIENT_COMMAND`
+- `CW_DRY_RUN`
+- `CW_ALLOW_WRITE`
+- `CW_ALLOWED_COMMANDS`
 
 ## Config precedence
 
@@ -346,7 +346,7 @@ Runtime configuration resolves in this order:
 
 1. CLI flags
 2. Environment variables
-3. `~/.ao/workspaces/<workspace-id>/config.json`
+3. `~/.cw/workspaces/<workspace-id>/config.json`
 4. built-in defaults
 
 `config.json` no longer stores secret env-var names. Provide runtime secrets through fixed variables such as `WORKER_MODEL_API_KEY`.
@@ -402,14 +402,14 @@ Use `WORKER_MODEL_BASE_URL` when worker traffic should target a non-default endp
 - File writes require explicit policy allowance.
 - Shell execution is allowlisted.
 - Read-only git inspection commands such as `git diff` can still execute inside dry-run so review workflows keep working without enabling writes.
-- `ao setup`, `ao cleanup`, worker registry writes, and task session persistence remain local-only inside AO-managed storage.
+- `cw setup`, `cw cleanup`, worker registry writes, and task session persistence remain local-only inside CW-managed storage.
 - Repository reads stay inside the repo root and block secret-like files such as `.env` and private keys.
 - Dedicated review and fix flows return structured JSON and do not apply patches.
 - Patch proposal, inspection, and apply are separated to keep write actions reviewable.
 - If structured patch generation fails, the fallback proposal is marked as a blocked `[PLACEHOLDER]` artifact and cannot be applied.
 - Validation commands go through the safe command path and can be inspected through audit logs.
-- `ao audit list` exposes the local audit trail for workflow, file, and command events.
-- `ao cleanup runs` and `ao cleanup audit` only delete local AO artifacts and never touch project source files.
+- `cw audit list` exposes the local audit trail for workflow, file, and command events.
+- `cw cleanup runs` and `cw cleanup audit` only delete local AO artifacts and never touch project source files.
 - In host-driven flows, worker outputs are not final until the host accepts them.
 - Workers must pass onboarding evaluation before they should receive production tasks.
 - Workers that fail structured output or reliability checks are limited or blocked.

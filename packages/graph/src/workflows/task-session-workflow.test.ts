@@ -8,15 +8,15 @@ import {
   createExecutionContextFromEnv,
   readTaskArtifact,
   readTaskSession
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   getTaskSessionReport,
   resumeTaskSessionWorkflow,
   runTaskSessionWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 const createWorkspace = async (): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-task-workflow-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-task-workflow-"));
   await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
   await writeFile(
     join(rootDir, "packages", "core", "package.json"),

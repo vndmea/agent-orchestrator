@@ -2,15 +2,15 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import {
-  getAoWorkspaceFilePath,
-  getAoWorkspaceFilePathFromStorageDir,
+  getCwWorkspaceFilePath,
+  getCwWorkspaceFilePathFromStorageDir,
   WorkerCapabilityProfileSchema
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import type {
   ExecutionContext,
   ModelConfig,
   WorkerCapabilityProfile
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 const inMemoryProfiles = new Map<string, WorkerCapabilityProfile>();
 export interface PersistedWorkerProfilesReadResult {
@@ -22,11 +22,11 @@ export interface PersistedWorkerProfilesReadResult {
 
 export const getWorkerProfileStorePath = (
   rootDir: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): string =>
-  aoStorageDir
-    ? getAoWorkspaceFilePathFromStorageDir(aoStorageDir, "worker-profiles.json")
-    : getAoWorkspaceFilePath(rootDir, "worker-profiles.json");
+  cwStorageDir
+    ? getCwWorkspaceFilePathFromStorageDir(cwStorageDir, "worker-profiles.json")
+    : getCwWorkspaceFilePath(rootDir, "worker-profiles.json");
 
 const safeParseProfiles = (value: string): WorkerCapabilityProfile[] => {
   try {
@@ -43,17 +43,17 @@ export const deriveWorkerProfileId = (config: ModelConfig): string =>
 
 export const listPersistedWorkerProfiles = async (
   rootDir: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<WorkerCapabilityProfile[]> => {
-  const result = await readPersistedWorkerProfiles(rootDir, aoStorageDir);
+  const result = await readPersistedWorkerProfiles(rootDir, cwStorageDir);
   return result.profiles;
 };
 
 export const readPersistedWorkerProfiles = async (
   rootDir: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<PersistedWorkerProfilesReadResult> => {
-  const path = getWorkerProfileStorePath(rootDir, aoStorageDir);
+  const path = getWorkerProfileStorePath(rootDir, cwStorageDir);
 
   try {
     const contents = await readFile(path, "utf8");
@@ -88,9 +88,9 @@ export const readPersistedWorkerProfiles = async (
 
 export const listWorkerProfiles = async (
   rootDir: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<WorkerCapabilityProfile[]> => {
-  const persisted = await listPersistedWorkerProfiles(rootDir, aoStorageDir);
+  const persisted = await listPersistedWorkerProfiles(rootDir, cwStorageDir);
   const merged = new Map<string, WorkerCapabilityProfile>();
 
   persisted.forEach((profile) => {
@@ -106,14 +106,14 @@ export const listWorkerProfiles = async (
 export const getWorkerProfile = async (
   rootDir: string,
   workerId: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<WorkerCapabilityProfile | null> => {
   const inMemory = inMemoryProfiles.get(workerId);
   if (inMemory) {
     return inMemory;
   }
 
-  const persisted = await listPersistedWorkerProfiles(rootDir, aoStorageDir);
+  const persisted = await listPersistedWorkerProfiles(rootDir, cwStorageDir);
   return persisted.find((profile) => profile.workerId === workerId) ?? null;
 };
 
@@ -126,7 +126,7 @@ export const saveWorkerProfile = async (
 
   const storePath = getWorkerProfileStorePath(
     context.rootDir,
-    context.aoStorageDir
+    context.cwStorageDir
   );
   const evaluation = context.writePolicy.evaluate(storePath, explicitAllowWrite);
 
@@ -139,7 +139,7 @@ export const saveWorkerProfile = async (
 
   const existing = await listPersistedWorkerProfiles(
     context.rootDir,
-    context.aoStorageDir
+    context.cwStorageDir
   );
   const merged = new Map(existing.map((item) => [item.workerId, item]));
   merged.set(profile.workerId, profile);

@@ -6,12 +6,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   createExecutionContextFromEnv,
-  getAoConfigPath
-} from "@agent-orchestrator/core";
-import { runRepositoryValidation } from "@agent-orchestrator/tools";
+  getCwConfigPath
+} from "@mcp-code-worker/core";
+import { runRepositoryValidation } from "@mcp-code-worker/tools";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-validation-"));
+  mkdtemp(join(tmpdir(), "cw-validation-"));
 
 const writePackage = async (
   rootDir: string,
@@ -70,9 +70,9 @@ describe("runRepositoryValidation", () => {
     expect(result.warnings[0]).toContain("not configured");
   });
 
-  it("uses validation script mappings from ao config", async () => {
+  it("uses validation script mappings from cw config", async () => {
     const rootDir = await createRootDir();
-    const configPath = getAoConfigPath(rootDir);
+    const configPath = getCwConfigPath(rootDir);
     await mkdir(dirname(configPath), { recursive: true });
     await writePackage(rootDir, "package.json", {
       "check-types": "node -e \"process.exit(0)\""

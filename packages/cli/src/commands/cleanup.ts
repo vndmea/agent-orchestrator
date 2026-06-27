@@ -4,14 +4,14 @@ import { basename, relative, resolve } from "node:path";
 import type { Command } from "commander";
 
 import {
-  getAoWorkspaceAuditDir,
-  getAoWorkspaceAuditDirFromStorageDir,
-  getAoWorkspaceRunsDir,
-  getAoWorkspaceRunsDirFromStorageDir,
-  loadAoConfig,
+  getCwWorkspaceAuditDir,
+  getCwWorkspaceAuditDirFromStorageDir,
+  getCwWorkspaceRunsDir,
+  getCwWorkspaceRunsDirFromStorageDir,
+  loadCwConfig,
   resolveExecutionContext,
   writeAuditEvent
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import type { CliIo } from "../index.js";
 import { formatDisplayPath, writeOutput } from "../output.js";
@@ -51,7 +51,7 @@ interface CleanupTargetValidation {
   warning?: string;
 }
 
-const PROTECTED_AO_FILES = new Set([
+const PROTECTED_CW_FILES = new Set([
   "config.json",
   "worker-profiles.json",
   "workers.json"
@@ -76,9 +76,9 @@ export const resolveCleanupTargetPath = async (
   );
   const candidateName = basename(normalizedCandidatePath);
 
-  if (PROTECTED_AO_FILES.has(candidateName)) {
+  if (PROTECTED_CW_FILES.has(candidateName)) {
     return {
-      warning: `Skipped protected ao workspace file ${candidateName}.`
+      warning: `Skipped protected cw workspace file ${candidateName}.`
     };
   }
 
@@ -100,16 +100,16 @@ const listCleanupTargets = async (
   rootDir: string,
   target: CleanupResult["target"],
   olderThanDays: number,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): Promise<{ targets: string[]; warnings: string[] }> => {
   const targetDir =
     target === "runs"
-      ? aoStorageDir
-        ? getAoWorkspaceRunsDirFromStorageDir(aoStorageDir)
-        : getAoWorkspaceRunsDir(rootDir)
-      : aoStorageDir
-        ? getAoWorkspaceAuditDirFromStorageDir(aoStorageDir)
-        : getAoWorkspaceAuditDir(rootDir);
+      ? cwStorageDir
+        ? getCwWorkspaceRunsDirFromStorageDir(cwStorageDir)
+        : getCwWorkspaceRunsDir(rootDir)
+      : cwStorageDir
+        ? getCwWorkspaceAuditDirFromStorageDir(cwStorageDir)
+        : getCwWorkspaceAuditDir(rootDir);
   const cutoff = Date.now() - olderThanDays * 86_400_000;
 
   try {
@@ -198,7 +198,7 @@ const registerCleanupSubcommand = (
             dryRun: !options.allowWrite
           }
         });
-        const config = await loadAoConfig(context.rootDir);
+        const config = await loadCwConfig(context.rootDir);
         const retentionDays = Number.parseInt(
           options.olderThanDays ?? `${config.config.sessions.retentionDays}`,
           10
@@ -207,7 +207,7 @@ const registerCleanupSubcommand = (
           context.rootDir,
           target,
           Number.isNaN(retentionDays) ? config.config.sessions.retentionDays : retentionDays,
-          context.aoStorageDir
+          context.cwStorageDir
         );
         const deletion = await deleteTargets(cleanupTargets.targets, options.allowWrite);
         const result: CleanupResult = {
@@ -225,7 +225,7 @@ const registerCleanupSubcommand = (
               actor: "cli",
               action: `cleanup-${target}`,
               mode: "execute",
-              inputSummary: `ao cleanup ${target}`,
+              inputSummary: `cw cleanup ${target}`,
               outputSummary: `Deleted ${result.deleted.length} ${target} artifact(s).`,
               warnings: [],
               errors: [],
@@ -246,7 +246,7 @@ const registerCleanupSubcommand = (
 export const registerCleanupCommand = (program: Command, io: CliIo): void => {
   const cleanup = program
     .command("cleanup")
-    .description("Remove aged user-scoped ao run and audit artifacts.");
+    .description("Remove aged user-scoped cw run and audit artifacts.");
 
   registerCleanupSubcommand(cleanup, io, "runs");
   registerCleanupSubcommand(cleanup, io, "audit");

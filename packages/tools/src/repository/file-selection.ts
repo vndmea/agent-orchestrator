@@ -6,7 +6,7 @@ import {
   type RepositoryFileContent,
   type RepositoryFileSummary,
   type SelectionReason
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { rankRepositoryContextFiles } from "./context-ranker.js";
 

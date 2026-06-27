@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  AoConfigSchema,
+  CwConfigSchema,
   AgentResultSchema,
   AgentTaskSchema,
   ModelConfigSchema,
@@ -18,7 +18,7 @@ import {
   WorkerRegistrationSchema,
   WorkerRegistrySchema,
   WorkflowStateSchema
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 describe("core schemas", () => {
   it("parses valid agent task and result data", () => {
@@ -320,7 +320,7 @@ describe("core schemas", () => {
     ).not.toThrow();
 
     expect(() =>
-      AoConfigSchema.parse({
+      CwConfigSchema.parse({
         version: 1,
         safety: {},
         context: {},
@@ -329,7 +329,7 @@ describe("core schemas", () => {
     ).not.toThrow();
 
     expect(() =>
-      AoConfigSchema.parse({
+      CwConfigSchema.parse({
         version: 1,
         workerModel: {
           provider: "litellm",

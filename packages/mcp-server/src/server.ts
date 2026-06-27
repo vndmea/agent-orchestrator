@@ -2,70 +2,70 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ZodError } from "zod";
 
-import { AgentError, resolveExecutionContext } from "@agent-orchestrator/core";
+import { AgentError, resolveExecutionContext } from "@mcp-code-worker/core";
 
-import { aoBenchmarkWorkerTool } from "./tools/ao-benchmark-worker.tool.js";
-import { aoDoctorTool } from "./tools/ao-doctor.tool.js";
-import { aoApplyPatchTool } from "./tools/ao-apply-patch.tool.js";
-import { aoFixErrorTool } from "./tools/ao-fix-error.tool.js";
-import { aoGetTaskReportTool } from "./tools/ao-get-task-report.tool.js";
-import { aoGetTaskStatusTool } from "./tools/ao-get-task-status.tool.js";
-import { aoReadTaskArtifactTool } from "./tools/ao-read-task-artifact.tool.js";
-import { aoGetWorkerRegistrationTool } from "./tools/ao-get-worker-registration.tool.js";
-import { aoGetWorkerProfileTool } from "./tools/ao-get-worker-profile.tool.js";
-import { aoInspectPatchTool } from "./tools/ao-inspect-patch.tool.js";
+import { cwBenchmarkWorkerTool } from "./tools/cw-benchmark-worker.tool.js";
+import { cwDoctorTool } from "./tools/cw-doctor.tool.js";
+import { cwApplyPatchTool } from "./tools/cw-apply-patch.tool.js";
+import { cwFixErrorTool } from "./tools/cw-fix-error.tool.js";
+import { cwGetTaskReportTool } from "./tools/cw-get-task-report.tool.js";
+import { cwGetTaskStatusTool } from "./tools/cw-get-task-status.tool.js";
+import { cwReadTaskArtifactTool } from "./tools/cw-read-task-artifact.tool.js";
+import { cwGetWorkerRegistrationTool } from "./tools/cw-get-worker-registration.tool.js";
+import { cwGetWorkerProfileTool } from "./tools/cw-get-worker-profile.tool.js";
+import { cwInspectPatchTool } from "./tools/cw-inspect-patch.tool.js";
 import {
-  aoInterviewWorkerTool,
-  aoRunWorkerInterviewTool
-} from "./tools/ao-interview-worker.tool.js";
-import { aoListAuditEventsTool } from "./tools/ao-list-audit-events.tool.js";
-import { aoListModelsTool } from "./tools/ao-list-models.tool.js";
-import { aoListTasksTool } from "./tools/ao-list-tasks.tool.js";
-import { aoListToolsTool } from "./tools/ao-list-tools.tool.js";
-import { aoListWorkerRegistryTool } from "./tools/ao-list-worker-registry.tool.js";
-import { aoListWorkersTool } from "./tools/ao-list-workers.tool.js";
-import { aoListWorkflowsTool } from "./tools/ao-list-workflows.tool.js";
-import { aoProposePatchTool } from "./tools/ao-propose-patch.tool.js";
-import { aoRegisterWorkerTool } from "./tools/ao-register-worker.tool.js";
-import { aoReviewDiffTool } from "./tools/ao-review-diff.tool.js";
-import { aoReviewFilesTool } from "./tools/ao-review-files.tool.js";
-import { aoReviewRepositoryTool } from "./tools/ao-review-repository.tool.js";
-import { aoResumeTaskTool } from "./tools/ao-resume-task.tool.js";
-import { aoRunHostWorkerTool } from "./tools/ao-run-host-worker.tool.js";
-import { aoStartTaskTool } from "./tools/ao-start-task.tool.js";
-import { aoUnregisterWorkerTool } from "./tools/ao-unregister-worker.tool.js";
-import { aoValidateRepositoryTool } from "./tools/ao-validate-repository.tool.js";
+  cwInterviewWorkerTool,
+  cwRunWorkerInterviewTool
+} from "./tools/cw-interview-worker.tool.js";
+import { cwListAuditEventsTool } from "./tools/cw-list-audit-events.tool.js";
+import { cwListModelsTool } from "./tools/cw-list-models.tool.js";
+import { cwListTasksTool } from "./tools/cw-list-tasks.tool.js";
+import { cwListToolsTool } from "./tools/cw-list-tools.tool.js";
+import { cwListWorkerRegistryTool } from "./tools/cw-list-worker-registry.tool.js";
+import { cwListWorkersTool } from "./tools/cw-list-workers.tool.js";
+import { cwListWorkflowsTool } from "./tools/cw-list-workflows.tool.js";
+import { cwProposePatchTool } from "./tools/cw-propose-patch.tool.js";
+import { cwRegisterWorkerTool } from "./tools/cw-register-worker.tool.js";
+import { cwReviewDiffTool } from "./tools/cw-review-diff.tool.js";
+import { cwReviewFilesTool } from "./tools/cw-review-files.tool.js";
+import { cwReviewRepositoryTool } from "./tools/cw-review-repository.tool.js";
+import { cwResumeTaskTool } from "./tools/cw-resume-task.tool.js";
+import { cwRunHostWorkerTool } from "./tools/cw-run-host-worker.tool.js";
+import { cwStartTaskTool } from "./tools/cw-start-task.tool.js";
+import { cwUnregisterWorkerTool } from "./tools/cw-unregister-worker.tool.js";
+import { cwValidateRepositoryTool } from "./tools/cw-validate-repository.tool.js";
 
-export const aoToolDefinitions = [
-  aoRunHostWorkerTool,
-  aoProposePatchTool,
-  aoInspectPatchTool,
-  aoApplyPatchTool,
-  aoReviewRepositoryTool,
-  aoReviewDiffTool,
-  aoReviewFilesTool,
-  aoValidateRepositoryTool,
-  aoFixErrorTool,
-  aoStartTaskTool,
-  aoResumeTaskTool,
-  aoGetTaskStatusTool,
-  aoListTasksTool,
-  aoGetTaskReportTool,
-  aoReadTaskArtifactTool,
-  aoListModelsTool,
-  aoListWorkflowsTool,
-  aoListToolsTool,
-  aoListAuditEventsTool,
-  aoRegisterWorkerTool,
-  aoUnregisterWorkerTool,
-  aoListWorkerRegistryTool,
-  aoGetWorkerRegistrationTool,
-  aoRunWorkerInterviewTool,
-  aoInterviewWorkerTool,
-  aoBenchmarkWorkerTool,
-  aoListWorkersTool,
-  aoGetWorkerProfileTool,
-  aoDoctorTool
+export const cwToolDefinitions = [
+  cwRunHostWorkerTool,
+  cwProposePatchTool,
+  cwInspectPatchTool,
+  cwApplyPatchTool,
+  cwReviewRepositoryTool,
+  cwReviewDiffTool,
+  cwReviewFilesTool,
+  cwValidateRepositoryTool,
+  cwFixErrorTool,
+  cwStartTaskTool,
+  cwResumeTaskTool,
+  cwGetTaskStatusTool,
+  cwListTasksTool,
+  cwGetTaskReportTool,
+  cwReadTaskArtifactTool,
+  cwListModelsTool,
+  cwListWorkflowsTool,
+  cwListToolsTool,
+  cwListAuditEventsTool,
+  cwRegisterWorkerTool,
+  cwUnregisterWorkerTool,
+  cwListWorkerRegistryTool,
+  cwGetWorkerRegistrationTool,
+  cwRunWorkerInterviewTool,
+  cwInterviewWorkerTool,
+  cwBenchmarkWorkerTool,
+  cwListWorkersTool,
+  cwGetWorkerProfileTool,
+  cwDoctorTool
 ] as const;
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
@@ -87,14 +87,14 @@ export const formatUserFacingToolErrorMessage = (error: unknown): string => {
   if (error instanceof AgentError) {
     const userMessage =
       error.code === "TASK_SESSION_NOT_FOUND"
-        ? "ao is connected to this workspace, but the requested task session was not found here."
+        ? "cw is connected to this workspace, but the requested task session was not found here."
         : error.code === "TASK_ARTIFACT_NOT_FOUND"
-          ? "ao found the task session, but this artifact is not registered for it, so it cannot be read safely."
+          ? "cw found the task session, but this artifact is not registered for it, so it cannot be read safely."
           : error.code === "TASK_PATCH_PROPOSAL_MISSING"
             ? "This step needs a stored patch proposal before it can continue."
             : error.code === "WRITE_BLOCKED"
-              ? "ao refused to write because the current safety mode does not allow that path yet."
-              : "ao reached the tool, but the request could not be completed cleanly.";
+              ? "cw refused to write because the current safety mode does not allow that path yet."
+              : "cw reached the tool, but the request could not be completed cleanly.";
 
     return `${userMessage} Technical details: ${message}`;
   }
@@ -118,7 +118,7 @@ export const formatUserFacingToolErrorMessage = (error: unknown): string => {
       normalizedMessage.includes("missing") ||
       normalizedMessage.includes("parse"))
   ) {
-    return `The service is connected, but ao found a workspace or user-scoped storage configuration problem. Technical details: ${message}`;
+    return `The service is connected, but cw found a workspace or user-scoped storage configuration problem. Technical details: ${message}`;
   }
 
   if (
@@ -130,19 +130,19 @@ export const formatUserFacingToolErrorMessage = (error: unknown): string => {
     return `The service is connected, but the configured model credentials were rejected or are incomplete. Technical details: ${message}`;
   }
 
-  return `ao reached the tool, but it failed unexpectedly. Technical details: ${message}`;
+  return `cw reached the tool, but it failed unexpectedly. Technical details: ${message}`;
 };
 
 const toUserFacingToolError = (error: unknown): Error => {
   return new Error(formatUserFacingToolErrorMessage(error));
 };
 
-export interface AoMcpServerOptions {
+export interface CwMcpServerOptions {
   rootDir?: string;
 }
 
-export const createAoMcpServer = async (
-  options: AoMcpServerOptions = {}
+export const createCwMcpServer = async (
+  options: CwMcpServerOptions = {}
 ) => {
   const context = await resolveExecutionContext({
     ...(options.rootDir ? { rootDir: options.rootDir } : {})
@@ -152,7 +152,7 @@ export const createAoMcpServer = async (
     version: context.serverVersion
   });
 
-  aoToolDefinitions.forEach((tool) => {
+  cwToolDefinitions.forEach((tool) => {
     server.registerTool(
       tool.name,
       {
@@ -183,10 +183,10 @@ export const createAoMcpServer = async (
   return server;
 };
 
-export const serveAoMcpServer = async (
-  options: AoMcpServerOptions = {}
+export const serveCwMcpServer = async (
+  options: CwMcpServerOptions = {}
 ): Promise<void> => {
-  const server = await createAoMcpServer(options);
+  const server = await createCwMcpServer(options);
   const transport = new StdioServerTransport();
   await server.connect(transport);
 };

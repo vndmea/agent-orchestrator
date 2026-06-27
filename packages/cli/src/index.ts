@@ -33,8 +33,8 @@ export const buildCli = (io: CliIo = defaultIo): Command => {
   const program = new Command();
 
   program
-    .name("ao")
-    .description("Agent Orchestrator CLI for controlled worker execution, validation, and task artifacts.")
+    .name("cw")
+    .description("MCP Code Worker CLI for controlled worker execution, validation, and task artifacts.")
     .showHelpAfterError()
     .configureOutput({
       writeErr: io.error,

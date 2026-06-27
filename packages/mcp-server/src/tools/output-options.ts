@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { WorkflowOutputOptions } from "@agent-orchestrator/graph";
+import type { WorkflowOutputOptions } from "@mcp-code-worker/graph";
 
 export const workflowOutputOptionShape = {
   detailLevel: z.enum(["summary", "full"]).optional(),

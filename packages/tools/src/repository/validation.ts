@@ -5,12 +5,12 @@ import type {
   ExecutionContext,
   ValidationCheck,
   ValidationReport
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   createExecutionContextFromEnv,
-  loadAoConfig,
+  loadCwConfig,
   resolveValidationScript
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { runSafeCommand } from "../shell/safe-command.js";
 import { resolveRepositoryScope } from "./file-selection.js";
@@ -101,7 +101,7 @@ export const runRepositoryValidation = async (
 ): Promise<ValidationReport> => {
   const scopedContext = createScopedContext(context, options.scope);
   const scripts = await readScripts(scopedContext.rootDir);
-  const rootConfig = await loadAoConfig(context.rootDir);
+  const rootConfig = await loadCwConfig(context.rootDir);
   const checks: ValidationCheck[] = [];
   const warnings: string[] = [];
   const requestedChecks = [
@@ -162,7 +162,7 @@ export const runRepositoryValidation = async (
 
     if (resolution.source === "auto-discovered") {
       warnings.push(
-        `Validation for ${check.name} auto-discovered script ${resolution.scriptName}. Consider persisting a mapping in the ao workspace config.`
+        `Validation for ${check.name} auto-discovered script ${resolution.scriptName}. Consider persisting a mapping in the cw workspace config.`
       );
     }
   }

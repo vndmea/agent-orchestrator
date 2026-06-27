@@ -1,5 +1,5 @@
 {
-  "name": "@agent-orchestrator/core",
+  "name": "@mcp-code-worker/core",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",

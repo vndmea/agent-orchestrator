@@ -4,13 +4,13 @@ import type {
   RepositoryContextPack,
   ReviewSummary,
   ValidationReport
-} from "@agent-orchestrator/core";
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   buildRepositoryContextPack,
   readGitDiff,
   runRepositoryValidation
-} from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/tools";
 
 import type {
   HostWorkerWorkflowOutput,

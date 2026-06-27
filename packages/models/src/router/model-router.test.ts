@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ModelRouter } from "@agent-orchestrator/models";
+import { ModelRouter } from "@mcp-code-worker/models";
 
 describe("model router", () => {
   it("routes every role to the configured worker model", () => {

@@ -1,7 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 
 import type {
   ModelInvocationRequest,

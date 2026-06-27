@@ -4,18 +4,18 @@ import {
   resolveExecutionContext,
   runDoctor,
   writeAuditEvent
-} from "@agent-orchestrator/core";
-import { createWorkerProfileDoctorChecks } from "@agent-orchestrator/models";
+} from "@mcp-code-worker/core";
+import { createWorkerProfileDoctorChecks } from "@mcp-code-worker/models";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({});
 
-export const aoDoctorTool: AoToolDefinition<
+export const cwDoctorTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof runDoctor>>
 > = {
-  name: "ao_doctor",
+  name: "cw_doctor",
   description: "Inspect resolved configuration and local workflow prerequisites.",
   inputSchema,
   execute: async () => {
@@ -27,8 +27,8 @@ export const aoDoctorTool: AoToolDefinition<
       actor: "mcp",
       action: "tool-call",
       mode: context.dryRun ? "dry-run" : "execute",
-      tool: "ao_doctor",
-      inputSummary: "ao_doctor",
+      tool: "cw_doctor",
+      inputSummary: "cw_doctor",
       outputSummary: `Doctor completed with ok=${String(report.ok)}.`,
       warnings: report.checks
         .filter((check) => check.status === "warning")

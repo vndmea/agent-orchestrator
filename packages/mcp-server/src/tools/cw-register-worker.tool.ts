@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   deriveWorkerRegistrationId,
   getWorkerRegistration,
   saveWorkerRegistration
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   workerId: z.string().optional(),
@@ -19,11 +19,11 @@ const inputSchema = z.object({
   allowWrite: z.boolean().optional()
 });
 
-export const aoRegisterWorkerTool: AoToolDefinition<
+export const cwRegisterWorkerTool: CwToolDefinition<
   typeof inputSchema.shape,
   { mode: "execute" | "dry-run"; path: string; workerId: string }
 > = {
-  name: "ao_register_worker",
+  name: "cw_register_worker",
   description: "Register a worker model in the local worker registry.",
   inputSchema,
   execute: async (args) => {
@@ -42,7 +42,7 @@ export const aoRegisterWorkerTool: AoToolDefinition<
     const existing = await getWorkerRegistration(
       context.rootDir,
       workerId,
-      context.aoStorageDir
+      context.cwStorageDir
     );
     const now = new Date().toISOString();
     const result = await saveWorkerRegistration(

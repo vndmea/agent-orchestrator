@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 import { toJSONSchema } from "zod";
 
 import type {
@@ -23,7 +23,7 @@ interface ClientPayload {
 }
 
 const resolveClientCommand = (): string =>
-  process.env.AO_WORKER_CLIENT_COMMAND?.trim() || "opencode";
+  process.env.CW_WORKER_CLIENT_COMMAND?.trim() || "opencode";
 
 const summarizePrompt = (prompt: string): string =>
   prompt.replaceAll(/\s+/gu, " ").trim().slice(0, 160);

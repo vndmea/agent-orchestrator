@@ -8,17 +8,17 @@ import {
   type ValidationReport,
   resolveExecutionContext,
   writeAuditEvent
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   assessWorkerTaskEligibility,
   ModelRouter,
   resolveWorkerModel,
   resolveWorkerProfile
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 import {
   buildRepositoryContextPack,
   inspectPatch
-} from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/tools";
 
 import {
   buildFallbackPatchProposal,

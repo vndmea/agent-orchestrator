@@ -1,4 +1,4 @@
-# agent-orchestrator agent rules
+# mcp-code-worker agent rules
 
 - Keep TypeScript strict.
 - Prefer small packages with clear boundaries.

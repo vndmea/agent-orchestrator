@@ -9,7 +9,7 @@ import {
   type PatchInspection,
   type PatchProposal,
   evaluateFileWritePath
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { parseUnifiedDiff, type ParsedPatchFile } from "./patch-parser.js";
 import {

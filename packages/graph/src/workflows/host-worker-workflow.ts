@@ -8,18 +8,18 @@ import type {
   RepositoryContextPack,
   WorkerCapabilityProfile,
   WorkerTaskType
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   resolveExecutionContext,
   createExecutionContextWithWorkerModel,
   writeAuditEvent
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   assessWorkerTaskEligibility,
   resolveWorkerModel,
   resolveWorkerProfile
-} from "@agent-orchestrator/models";
-import { buildRepositoryContextPack } from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/models";
+import { buildRepositoryContextPack } from "@mcp-code-worker/tools";
 
 import { CodegenWorker } from "../workers/codegen-worker.js";
 import { ReviewWorker } from "../workers/review-worker.js";

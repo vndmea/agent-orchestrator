@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
-import type { PackageMetadata } from "@agent-orchestrator/core";
+import type { PackageMetadata } from "@mcp-code-worker/core";
 
 import { resolveRepositoryScope } from "./file-selection.js";
 

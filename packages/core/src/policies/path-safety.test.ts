@@ -4,10 +4,10 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { WritePolicy } from "@agent-orchestrator/core";
+import { WritePolicy } from "@mcp-code-worker/core";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-path-safety-"));
+  mkdtemp(join(tmpdir(), "cw-path-safety-"));
 
 describe("write path safety", () => {
   it("blocks traversal outside the repository root", async () => {

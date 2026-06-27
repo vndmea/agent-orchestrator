@@ -8,20 +8,20 @@ import {
   createExecutionContextFromEnv,
   type ValidationReport,
   WorkerCapabilityProfileSchema
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   saveWorkerProfile,
   saveWorkerRegistration
-} from "@agent-orchestrator/models";
-import * as models from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
+import * as models from "@mcp-code-worker/models";
 import {
   runFixErrorWorkflow,
   runPatchProposalWorkflow
-} from "@agent-orchestrator/graph";
-import { applyPatchProposal } from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/graph";
+import { applyPatchProposal } from "@mcp-code-worker/tools";
 
 const createWorkspace = async (): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-patch-proposal-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-patch-proposal-"));
   await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
   await writeFile(
     join(rootDir, "packages", "core", "package.json"),

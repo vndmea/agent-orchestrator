@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatTaskSessionListOutput,
   formatTaskSessionReportOutput,
@@ -11,7 +11,7 @@ import {
   listStoredTaskSessions,
   resumeTaskSessionWorkflow,
   runTaskSessionWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 import type { CliIo } from "../index.js";
 import {
@@ -117,7 +117,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
     .option("--allow-write", "Allow repository writes for patch apply", false)
     .option("--allow-dirty-worktree", "Allow patch apply when the git worktree is dirty", false)
     .option("--confirm-apply", "Confirm patch application", false)
-    .option("--allow-write-session", "Persist session files under user-scoped ao workspace storage", false)
+    .option("--allow-write-session", "Persist session files under user-scoped cw workspace storage", false)
     .option("--summary", "Print a summary instead of the full workflow output", false)
     .option("--full", "Force the full workflow output", false)
     .option("--max-bytes <bytes>", "Limit preview fields in summary output", Number)
@@ -213,7 +213,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
       const session = await getTaskSessionStatus(
         context.rootDir,
         taskId,
-        context.aoStorageDir
+        context.cwStorageDir
       );
       const formatted = formatTaskSessionStatusOutput(
         session,
@@ -241,7 +241,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
     .option("--allow-write", "Allow repository writes for patch apply", false)
     .option("--allow-dirty-worktree", "Allow patch apply when the git worktree is dirty", false)
     .option("--confirm-apply", "Confirm patch application", false)
-    .option("--allow-write-session", "Persist session files under user-scoped ao workspace storage", false)
+    .option("--allow-write-session", "Persist session files under user-scoped cw workspace storage", false)
     .option("--summary", "Print a summary instead of the full workflow output", false)
     .option("--full", "Force the full workflow output", false)
     .option("--max-bytes <bytes>", "Limit preview fields in summary output", Number)
@@ -327,7 +327,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
       const report = await getTaskSessionReport(
         context.rootDir,
         taskId,
-        context.aoStorageDir
+        context.cwStorageDir
       );
 
       if (options.summary || options.full) {
@@ -357,7 +357,7 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
       const sessions = await listStoredTaskSessions(
         context.rootDir,
         Number.isNaN(limit) ? 50 : limit,
-        context.aoStorageDir
+        context.cwStorageDir
       );
       const formatted = formatTaskSessionListOutput(
         sessions,

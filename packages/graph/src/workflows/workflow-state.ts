@@ -1,4 +1,4 @@
-import type { AgentTask, WorkflowState } from "@agent-orchestrator/core";
+import type { AgentTask, WorkflowState } from "@mcp-code-worker/core";
 
 export const createInitialWorkflowState = (
   task: AgentTask

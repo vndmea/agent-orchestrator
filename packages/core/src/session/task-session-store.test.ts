@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createExecutionContextFromEnv,
-  getAoWorkspaceRunsDir,
+  getCwWorkspaceRunsDir,
   createTaskSession,
   getTaskArtifactPath,
   getTaskSessionPath,
@@ -16,10 +16,10 @@ import {
   scanTaskSessions,
   updateTaskSession,
   writeTaskArtifact
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 const createWorkspace = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-task-session-"));
+  mkdtemp(join(tmpdir(), "cw-task-session-"));
 
 const createContext = (
   rootDir: string,
@@ -120,7 +120,7 @@ describe("task session store", () => {
       },
       true
     );
-    const runsDir = getAoWorkspaceRunsDir(rootDir);
+    const runsDir = getCwWorkspaceRunsDir(rootDir);
     await mkdir(join(runsDir, "broken"), { recursive: true });
     await writeFile(
       join(runsDir, "broken", "session.json"),

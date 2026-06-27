@@ -13,7 +13,7 @@ Use this document when qualifying DeepSeek through the OpenAI-compatible worker 
 ## Recommended Registration
 
 ```bash
-pnpm exec ao worker register \
+pnpm exec cw worker register \
   --worker openai-compatible:deepseek-v4-flash \
   --provider openai-compatible \
   --model deepseek-v4-flash \
@@ -23,8 +23,8 @@ pnpm exec ao worker register \
 
 ## Qualification Sequence
 
-1. Run `pnpm exec ao worker interview --worker openai-compatible:deepseek-v4-flash --save`.
-2. Run `pnpm exec ao worker benchmark --suite coding-v1 --worker openai-compatible:deepseek-v4-flash --save`.
+1. Run `pnpm exec cw worker interview --worker openai-compatible:deepseek-v4-flash --save`.
+2. Run `pnpm exec cw worker benchmark --suite coding-v1 --worker openai-compatible:deepseek-v4-flash --save`.
 3. Only use `--update-profile-capabilities` after the benchmark result is explicitly reviewed.
 
 ## Expected Persisted Artifacts
@@ -32,7 +32,7 @@ pnpm exec ao worker register \
 By default, saved DeepSeek-related AO artifacts live under:
 
 ```text
-~/.ao/workspaces/<workspace-id>/
+~/.cw/workspaces/<workspace-id>/
 ```
 
 Expected files:

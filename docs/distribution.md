@@ -1,6 +1,6 @@
 # Distribution Strategy
 
-`agent-orchestrator` does not currently ship through npm, Docker, or GitHub release artifacts as its primary distribution path.
+`mcp-code-worker` does not currently ship through npm, Docker, or GitHub release artifacts as its primary distribution path.
 
 ## Official Internal Distribution Shape
 
@@ -9,25 +9,25 @@ The supported internal distribution path is:
 1. a pinned git checkout of this repository
 2. `pnpm install`
 3. `pnpm build`
-4. `pnpm exec ao ...` from the repository root
+4. `pnpm exec cw ...` from the repository root
 
 This is the only documented distribution shape for the current internal RC line.
 
 ## Experimental Single-Package CLI Path
 
-An experimental npm package path now exists for local packaging validation of `@agent-orchestrator/cli`.
+An experimental npm package path now exists for local packaging validation of `@mcp-code-worker/cli`.
 
 Current intent:
 
 - validate that the CLI can be packed as a single installable npm package
-- bundle AO workspace packages into the CLI build output
+- bundle CW workspace packages into the CLI build output
 - keep third-party runtime dependencies as normal npm dependencies
 
 Current constraints:
 
 - this path is not yet the default install method
 - treat it as a release-candidate packaging target until install, upgrade, and rollback guidance are finalized
-- when launching outside the repository checkout, prefer `ao mcp serve --root <workspace-path>` or set `AO_ROOT_DIR`
+- when launching outside the repository checkout, prefer `cw mcp serve --root <workspace-path>` or set `CW_ROOT_DIR`
 
 ## Why This Is The Current Standard
 
@@ -49,6 +49,6 @@ Promote a new distribution shape only after:
 
 - CI evidence is stable for the intended release branch
 - install and upgrade instructions are documented end-to-end
-- AO storage and workspace binding behavior are verified in that packaging mode
+- CW storage and workspace binding behavior are verified in that packaging mode
 - smoke coverage exists for the new install path
 - `npm pack` output is validated without `workspace:*` dependencies in the published manifest

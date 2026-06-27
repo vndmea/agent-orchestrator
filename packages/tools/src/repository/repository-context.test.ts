@@ -4,14 +4,14 @@ import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { createExecutionContextFromEnv } from "@mcp-code-worker/core";
 import {
   buildRepositoryContextPack,
   selectRepositoryFiles
-} from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/tools";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-repository-context-"));
+  mkdtemp(join(tmpdir(), "cw-repository-context-"));
 
 const writeText = async (
   rootDir: string,

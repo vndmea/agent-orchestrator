@@ -4,7 +4,7 @@ import { PassThrough } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 
 interface MockChildProcess extends EventEmitter {
   stderr: PassThrough;
@@ -36,7 +36,7 @@ vi.mock("node:child_process", () => ({
   spawn: spawnMock
 }));
 
-import { LocalClientProvider } from "@agent-orchestrator/models";
+import { LocalClientProvider } from "@mcp-code-worker/models";
 
 const config: ModelConfig = {
   provider: "client",
@@ -46,7 +46,7 @@ const config: ModelConfig = {
 describe("LocalClientProvider", () => {
   beforeEach(() => {
     spawnMock.mockReset();
-    delete process.env.AO_WORKER_CLIENT_COMMAND;
+    delete process.env.CW_WORKER_CLIENT_COMMAND;
   });
 
   it("returns text results from client json output", async () => {
@@ -186,7 +186,7 @@ describe("LocalClientProvider", () => {
   });
 
   it("uses the configured client command override when provided", async () => {
-    process.env.AO_WORKER_CLIENT_COMMAND = "custom-client";
+    process.env.CW_WORKER_CLIENT_COMMAND = "custom-client";
     const child = createMockChildProcess();
     spawnMock.mockReturnValue(child);
 

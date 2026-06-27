@@ -8,15 +8,15 @@ import {
   createExecutionContextFromEnv,
   listAuditEvents,
   WorkerCapabilityProfileSchema
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   applyBenchmarkCapabilityUpdate,
   runWorkerBenchmarkWorkflow,
   saveWorkerBenchmarkArtifact
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-worker-benchmark-"));
+  mkdtemp(join(tmpdir(), "cw-worker-benchmark-"));
 
 const createContext = (rootDir: string) =>
   createExecutionContextFromEnv(undefined, {

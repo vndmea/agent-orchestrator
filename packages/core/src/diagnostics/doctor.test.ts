@@ -6,14 +6,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   createExecutionContextFromEnv,
-  getAoConfigPath,
-  getAoWorkspaceAuditDir,
-  getAoWorkspaceRunsDir,
+  getCwConfigPath,
+  getCwWorkspaceAuditDir,
+  getCwWorkspaceRunsDir,
   runDoctor
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 const createWorkspace = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-doctor-"));
+  mkdtemp(join(tmpdir(), "cw-doctor-"));
 
 describe("doctor", () => {
   it("works before init and warns about missing config and runs dir", async () => {
@@ -24,16 +24,16 @@ describe("doctor", () => {
       })
     );
 
-    expect(report.checks.find((check) => check.name === "ao-config")?.status).toBe("warning");
+    expect(report.checks.find((check) => check.name === "cw-config")?.status).toBe("warning");
     expect(report.checks.find((check) => check.name === "runs-dir")?.status).toBe("warning");
   });
 
   it("fails on invalid config and warns about invalid task sessions", async () => {
     const rootDir = await createWorkspace();
-    const runsDir = getAoWorkspaceRunsDir(rootDir);
+    const runsDir = getCwWorkspaceRunsDir(rootDir);
     await mkdir(join(runsDir, "broken"), { recursive: true });
     await writeFile(
-      getAoConfigPath(rootDir),
+      getCwConfigPath(rootDir),
       JSON.stringify({
         version: 1,
         workerModel: {
@@ -60,17 +60,17 @@ describe("doctor", () => {
       })
     );
 
-    expect(report.checks.find((check) => check.name === "ao-config")?.status).toBe("fail");
+    expect(report.checks.find((check) => check.name === "cw-config")?.status).toBe("fail");
     expect(report.checks.find((check) => check.name === "task-sessions")?.status).toBe("warning");
     expect(report.checks.find((check) => check.name === "worker-api-key")?.status).toBe("warning");
   });
 
   it("passes after init-like setup with retained directories", async () => {
     const rootDir = await createWorkspace();
-    await mkdir(getAoWorkspaceRunsDir(rootDir), { recursive: true });
-    await mkdir(getAoWorkspaceAuditDir(rootDir), { recursive: true });
+    await mkdir(getCwWorkspaceRunsDir(rootDir), { recursive: true });
+    await mkdir(getCwWorkspaceAuditDir(rootDir), { recursive: true });
     await writeFile(
-      getAoConfigPath(rootDir),
+      getCwConfigPath(rootDir),
       JSON.stringify(
         {
           version: 1,
@@ -106,18 +106,18 @@ describe("doctor", () => {
       })
     );
 
-    expect(report.checks.find((check) => check.name === "ao-config")?.status).toBe("pass");
+    expect(report.checks.find((check) => check.name === "cw-config")?.status).toBe("pass");
     expect(report.checks.find((check) => check.name === "runs-dir")?.status).toBe("pass");
     expect(report.checks.find((check) => check.name === "validation-scripts")?.status).toBe("pass");
     expect(report.status).toBe("ready");
     expect(report.summary).toContain("ready:");
-    expect(report.recommendedEntrypoints.map((entry) => entry.toolName)).toContain("ao_start_task");
+    expect(report.recommendedEntrypoints.map((entry) => entry.toolName)).toContain("cw_start_task");
   });
 
   it("checks the local client command when client providers are configured", async () => {
     const rootDir = await createWorkspace();
-    const originalCommand = process.env.AO_WORKER_CLIENT_COMMAND;
-    process.env.AO_WORKER_CLIENT_COMMAND = "node";
+    const originalCommand = process.env.CW_WORKER_CLIENT_COMMAND;
+    process.env.CW_WORKER_CLIENT_COMMAND = "node";
 
     try {
       const report = await runDoctor(
@@ -138,9 +138,9 @@ describe("doctor", () => {
       ).toBe("pass");
     } finally {
       if (originalCommand === undefined) {
-        delete process.env.AO_WORKER_CLIENT_COMMAND;
+        delete process.env.CW_WORKER_CLIENT_COMMAND;
       } else {
-        process.env.AO_WORKER_CLIENT_COMMAND = originalCommand;
+        process.env.CW_WORKER_CLIENT_COMMAND = originalCommand;
       }
     }
   });

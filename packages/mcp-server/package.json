@@ -1,5 +1,5 @@
 {
-  "name": "@agent-orchestrator/mcp-server",
+  "name": "@mcp-code-worker/mcp-server",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,10 +11,10 @@
     "build": "tsup src/index.ts --format esm --dts --clean"
   },
   "dependencies": {
-    "@agent-orchestrator/core": "workspace:*",
-    "@agent-orchestrator/graph": "workspace:*",
-    "@agent-orchestrator/models": "workspace:*",
-    "@agent-orchestrator/tools": "workspace:*",
+    "@mcp-code-worker/core": "workspace:*",
+    "@mcp-code-worker/graph": "workspace:*",
+    "@mcp-code-worker/models": "workspace:*",
+    "@mcp-code-worker/tools": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.1.12"
   }

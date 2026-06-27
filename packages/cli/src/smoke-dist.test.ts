@@ -12,7 +12,7 @@ const distCliPath = join(process.cwd(), "packages", "cli", "dist", "main.js");
 const withTempCwd = async (
   callback: (rootDir: string) => Promise<void>
 ): Promise<void> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-smoke-dist-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-smoke-dist-"));
   await callback(rootDir);
 };
 
@@ -36,7 +36,7 @@ describe("cli dist smoke", () => {
       const help = await execFile("node", [distCliPath, "--help"], {
         cwd: rootDir
       });
-      expect(help.stdout).toContain("Agent Orchestrator CLI");
+      expect(help.stdout).toContain("MCP Code Worker CLI");
 
       const doctor = await execFile("node", [distCliPath, "doctor"], {
         cwd: rootDir
@@ -47,14 +47,14 @@ describe("cli dist smoke", () => {
         cwd: rootDir
       });
       const toolNames = listToolNames(tools.stdout);
-      expect(toolNames).toContain("ao_start_task");
+      expect(toolNames).toContain("cw_start_task");
 
       const config = await execFile("node", [distCliPath, "mcp", "config"], {
         cwd: rootDir
       });
       expect(
         (JSON.parse(config.stdout) as { mcpServers: Record<string, unknown> }).mcpServers[
-          "agent-orchestrator"
+          "mcp-code-worker"
         ]
       ).toBeTruthy();
     });

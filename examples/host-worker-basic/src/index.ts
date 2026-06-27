@@ -1,4 +1,4 @@
-import { runHostWorkerWorkflow } from "@agent-orchestrator/graph";
+import { runHostWorkerWorkflow } from "@mcp-code-worker/graph";
 
 const result = await runHostWorkerWorkflow({
   goal: "Review schema-parser files for missing test coverage",

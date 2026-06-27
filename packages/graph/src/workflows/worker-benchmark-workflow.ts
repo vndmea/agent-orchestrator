@@ -10,15 +10,15 @@ import type {
   WorkerBenchmarkFixtureResult,
   WorkerBenchmarkResult,
   WorkerEvaluationSummary
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
-  getAoWorkspaceDir,
+  getCwWorkspaceDir,
   WorkerCapabilityProfileSchema,
   WorkerBenchmarkResultSchema,
   resolveExecutionContext,
   writeAuditEvent
-} from "@agent-orchestrator/core";
-import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
+} from "@mcp-code-worker/core";
+import { ModelRouter, invokeStructured } from "@mcp-code-worker/models";
 
 const CODING_V1_SUITE_NAME = "coding-v1";
 const CODING_V1_SUITE_VERSION = "2";
@@ -326,10 +326,10 @@ export const getWorkerBenchmarkArtifactPath = (
   rootDir: string,
   workerId: string,
   suite: string,
-  aoStorageDir?: string
+  cwStorageDir?: string
 ): string =>
   join(
-    aoStorageDir ?? getAoWorkspaceDir(rootDir),
+    cwStorageDir ?? getCwWorkspaceDir(rootDir),
     "worker-benchmarks",
     workerId.replace(/[^a-z0-9._-]+/giu, "_"),
     `${suite}.json`
@@ -344,7 +344,7 @@ export const saveWorkerBenchmarkArtifact = async (
     context.rootDir,
     result.workerId,
     result.suiteName,
-    context.aoStorageDir
+    context.cwStorageDir
   );
   const evaluation = context.writePolicy.evaluate(artifactPath, explicitAllowWrite);
 

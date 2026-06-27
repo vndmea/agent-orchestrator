@@ -6,19 +6,19 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { createExecutionContextFromEnv, listAuditEvents } from "@agent-orchestrator/core";
+import { createExecutionContextFromEnv, listAuditEvents } from "@mcp-code-worker/core";
 
 import { runSafeCommand } from "./safe-command.js";
 
 const execFile = promisify(execFileCallback);
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-safe-command-"));
+  mkdtemp(join(tmpdir(), "cw-safe-command-"));
 
 const initGitRepo = async (rootDir: string): Promise<void> => {
   await execFile("git", ["init"], { cwd: rootDir });
-  await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
-  await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+  await execFile("git", ["config", "user.email", "cw@example.com"], { cwd: rootDir });
+  await execFile("git", ["config", "user.name", "MCP Code Worker"], { cwd: rootDir });
   await writeFile(join(rootDir, "README.md"), "first\n", "utf8");
   await execFile("git", ["add", "."], { cwd: rootDir });
   await execFile("git", ["commit", "-m", "init"], { cwd: rootDir });

@@ -1,4 +1,4 @@
-import { runHostWorkerWorkflow } from "@agent-orchestrator/graph";
+import { runHostWorkerWorkflow } from "@mcp-code-worker/graph";
 
 const result = await runHostWorkerWorkflow({
   goal: "Demonstrate host-managed worker execution in dry-run mode.",

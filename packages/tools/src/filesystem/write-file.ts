@@ -1,12 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { ExecutionContext } from "@agent-orchestrator/core";
+import type { ExecutionContext } from "@mcp-code-worker/core";
 import {
   AgentError,
   createExecutionContextFromEnv,
   writeAuditEvent
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 export interface WriteFileResult {
   mode: "execute" | "dry-run";

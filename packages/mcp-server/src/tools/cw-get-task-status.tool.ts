@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatTaskSessionStatusOutput,
   getTaskSessionStatus
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
@@ -17,11 +17,11 @@ const inputSchema = z.object({
   ...workflowOutputOptionShape
 });
 
-export const aoGetTaskStatusTool: AoToolDefinition<
+export const cwGetTaskStatusTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<typeof formatTaskSessionStatusOutput>
 > = {
-  name: "ao_get_task_status",
+  name: "cw_get_task_status",
   description: "Get the current persisted state for one local task session.",
   inputSchema,
   execute: async (args) => {
@@ -29,7 +29,7 @@ export const aoGetTaskStatusTool: AoToolDefinition<
     const session = await getTaskSessionStatus(
       context.rootDir,
       args.taskId,
-      context.aoStorageDir
+      context.cwStorageDir
     );
     return formatTaskSessionStatusOutput(session, resolveWorkflowOutputOptions(args));
   }

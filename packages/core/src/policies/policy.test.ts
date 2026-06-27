@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SafetyPolicy, WritePolicy } from "@agent-orchestrator/core";
+import { SafetyPolicy, WritePolicy } from "@mcp-code-worker/core";
 
 describe("safety policy", () => {
   it("blocks commands outside the allowlist", () => {

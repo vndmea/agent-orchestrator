@@ -1,4 +1,4 @@
-import type { DoctorCheck, ExecutionContext } from "@agent-orchestrator/core";
+import type { DoctorCheck, ExecutionContext } from "@mcp-code-worker/core";
 
 import { resolveWorkerProfile } from "./worker-profile-resolution.js";
 import { readWorkerRegistry } from "./worker-registry-store.js";
@@ -10,11 +10,11 @@ export const createWorkerProfileDoctorChecks = async (
   const checks: DoctorCheck[] = [];
   const persisted = await readPersistedWorkerProfiles(
     context.rootDir,
-    context.aoStorageDir
+    context.cwStorageDir
   );
   const registry = await readWorkerRegistry(
     context.rootDir,
-    context.aoStorageDir
+    context.cwStorageDir
   );
 
   if (!persisted.exists) {

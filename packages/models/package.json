@@ -1,5 +1,5 @@
 {
-  "name": "@agent-orchestrator/models",
+  "name": "@mcp-code-worker/models",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,7 +11,7 @@
     "build": "tsup src/index.ts --format esm --dts --clean"
   },
   "dependencies": {
-    "@agent-orchestrator/core": "workspace:*",
+    "@mcp-code-worker/core": "workspace:*",
     "@ai-sdk/openai": "^3.0.74",
     "ai": "^6.0.209",
     "zod": "^4.1.12"

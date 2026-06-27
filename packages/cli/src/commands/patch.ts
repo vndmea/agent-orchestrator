@@ -1,16 +1,16 @@
 import type { Command } from "commander";
 
-import { PatchProposalSchema, resolveExecutionContext } from "@agent-orchestrator/core";
+import { PatchProposalSchema, resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   applyPatchProposal,
   inspectPatch,
   readRepositoryFile,
   writeRepositoryFile
-} from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/tools";
 import {
   formatPatchProposalWorkflowOutput,
   runPatchProposalWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 import type { CliIo } from "../index.js";
 import {

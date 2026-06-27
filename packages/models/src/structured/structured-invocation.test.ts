@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 import {
   MockModelProvider,
   invokeStructured,
   type ModelInvocationRequest,
   type ModelInvocationResult,
   type ModelProvider
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
 const config: ModelConfig = {
   provider: "mock",

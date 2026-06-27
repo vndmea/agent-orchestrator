@@ -6,9 +6,9 @@ import {
   readTaskSession,
   resolveExecutionContext,
   truncateText
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   taskId: z.string().min(1),
@@ -16,7 +16,7 @@ const inputSchema = z.object({
   maxBytes: z.number().int().positive().max(200_000).optional()
 });
 
-export const aoReadTaskArtifactTool: AoToolDefinition<
+export const cwReadTaskArtifactTool: CwToolDefinition<
   typeof inputSchema.shape,
   {
     artifactName: string;
@@ -29,9 +29,9 @@ export const aoReadTaskArtifactTool: AoToolDefinition<
     value?: unknown;
   }
 > = {
-  name: "ao_read_task_artifact",
+  name: "cw_read_task_artifact",
   description:
-    "Read one persisted task artifact from user-scoped ao storage using a session-scoped artifact name.",
+    "Read one persisted task artifact from user-scoped cw storage using a session-scoped artifact name.",
   inputSchema,
   execute: async (args) => {
     const context = await resolveExecutionContext();
@@ -39,7 +39,7 @@ export const aoReadTaskArtifactTool: AoToolDefinition<
     const session = await readTaskSession(
       rootDir,
       args.taskId,
-      context.aoStorageDir
+      context.cwStorageDir
     );
 
     if (!session) {
@@ -67,7 +67,7 @@ export const aoReadTaskArtifactTool: AoToolDefinition<
       rootDir,
       args.taskId,
       args.artifactName,
-      context.aoStorageDir
+      context.cwStorageDir
     );
     const serialized =
       typeof artifact.value === "string"

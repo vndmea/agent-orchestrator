@@ -1,6 +1,6 @@
 # Architecture
 
-`agent-orchestrator` is an orchestration runtime built as a pnpm monorepo.
+`mcp-code-worker` is an orchestration runtime built as a pnpm monorepo.
 
 ## Package map
 
@@ -9,7 +9,7 @@
 - `packages/graph`: LangGraph-based workflows, host-managed execution, and agent logic
 - `packages/tools`: deterministic engineering tool wrappers
 - `packages/mcp-server`: MCP transport and tool bindings
-- `packages/cli`: the `ao` CLI
+- `packages/cli`: the `cw` CLI
 
 ## Text diagram
 

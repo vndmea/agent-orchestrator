@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MockModelProvider } from "@agent-orchestrator/models";
+import { MockModelProvider } from "@mcp-code-worker/models";
 
 describe("mock model provider", () => {
   it("returns deterministic structured output without API keys", async () => {

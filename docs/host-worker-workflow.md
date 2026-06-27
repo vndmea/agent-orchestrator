@@ -2,7 +2,7 @@
 
 ## Steps
 
-1. The host frames the task and decides whether to use AO-managed workflows.
+1. The host frames the task and decides whether to use CW-managed workflows.
 2. Worker onboarding evaluation produces or loads a capability profile.
 3. Only qualified workers produce candidate outputs and artifacts.
 4. Deterministic tools validate outputs.

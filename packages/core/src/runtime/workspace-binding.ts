@@ -26,7 +26,7 @@ export const buildWorkspaceBindingSummary = (
       : {
           switchedFrom: normalizedCallerWorkingDirectory,
           warning:
-            `ao is currently bound to ${normalizedRootDir} instead of the caller working directory ${normalizedCallerWorkingDirectory}.`
+            `cw is currently bound to ${normalizedRootDir} instead of the caller working directory ${normalizedCallerWorkingDirectory}.`
         })
   };
 };

@@ -7,14 +7,14 @@ import { describe, expect, it } from "vitest";
 import {
   createExecutionContextFromEnv,
   type WorkerCapabilityProfile
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   runHostWorkerWorkflow,
   runWorkerInterviewWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 const createWorkspace = async (): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-host-worker-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-host-worker-"));
   await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
   await writeFile(
     join(rootDir, "packages", "core", "src", "generateId.ts"),

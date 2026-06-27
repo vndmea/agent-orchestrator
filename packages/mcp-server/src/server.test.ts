@@ -9,46 +9,46 @@ import { z } from "zod";
 
 import {
   AgentError,
-  getAoConfigPath,
-  getAoWorkspaceFilePath,
+  getCwConfigPath,
+  getCwWorkspaceFilePath,
   PatchProposalSchema,
   type TaskSession
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import type {
   FixErrorWorkflowOutput,
   ReviewWorkflowOutput,
   TaskSessionWorkflowOutput
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 import {
-  aoBenchmarkWorkerTool,
-  aoApplyPatchTool,
-  aoDoctorTool,
-  aoFixErrorTool,
-  aoGetTaskReportTool,
-  aoGetTaskStatusTool,
-  aoReadTaskArtifactTool,
-  aoGetWorkerRegistrationTool,
-  aoInspectPatchTool,
-  aoListTasksTool,
-  aoListModelsTool,
-  aoListToolsTool,
-  aoReviewDiffTool,
-  aoReviewFilesTool,
-  aoReviewRepositoryTool,
-  aoResumeTaskTool,
-  aoListWorkerRegistryTool,
-  aoProposePatchTool,
-  aoRegisterWorkerTool,
-  aoRunWorkerInterviewTool,
-  aoRunHostWorkerTool,
-  aoStartTaskTool,
-  aoToolDefinitions,
+  cwBenchmarkWorkerTool,
+  cwApplyPatchTool,
+  cwDoctorTool,
+  cwFixErrorTool,
+  cwGetTaskReportTool,
+  cwGetTaskStatusTool,
+  cwReadTaskArtifactTool,
+  cwGetWorkerRegistrationTool,
+  cwInspectPatchTool,
+  cwListTasksTool,
+  cwListModelsTool,
+  cwListToolsTool,
+  cwReviewDiffTool,
+  cwReviewFilesTool,
+  cwReviewRepositoryTool,
+  cwResumeTaskTool,
+  cwListWorkerRegistryTool,
+  cwProposePatchTool,
+  cwRegisterWorkerTool,
+  cwRunWorkerInterviewTool,
+  cwRunHostWorkerTool,
+  cwStartTaskTool,
+  cwToolDefinitions,
   formatUserFacingToolErrorMessage,
   toStructuredContent,
-  aoUnregisterWorkerTool,
-  aoValidateRepositoryTool,
+  cwUnregisterWorkerTool,
+  cwValidateRepositoryTool,
   mcpToolCatalog
-} from "@agent-orchestrator/mcp-server";
+} from "@mcp-code-worker/mcp-server";
 
 const execFile = promisify(execFileCallback);
 
@@ -56,7 +56,7 @@ const withTempCwd = async (
   callback: (rootDir: string) => Promise<void>
 ): Promise<void> => {
   const originalCwd = process.cwd();
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-mcp-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-mcp-"));
 
   try {
     process.chdir(rootDir);
@@ -67,7 +67,7 @@ const withTempCwd = async (
 };
 
 const writeProfiles = async (rootDir: string, profiles: unknown[]): Promise<void> => {
-  const profilePath = getAoWorkspaceFilePath(rootDir, "worker-profiles.json");
+  const profilePath = getCwWorkspaceFilePath(rootDir, "worker-profiles.json");
   await mkdir(dirname(profilePath), { recursive: true });
   await writeFile(
     profilePath,
@@ -151,8 +151,8 @@ const writeWorkspaceFixture = async (rootDir: string): Promise<void> => {
   );
 };
 
-const writeAoConfig = async (rootDir: string, config: Record<string, unknown>): Promise<void> => {
-  const configPath = getAoConfigPath(rootDir);
+const writeCwConfig = async (rootDir: string, config: Record<string, unknown>): Promise<void> => {
+  const configPath = getCwConfigPath(rootDir);
   await mkdir(dirname(configPath), { recursive: true });
   await writeFile(
     configPath,
@@ -170,8 +170,8 @@ const writeAoConfig = async (rootDir: string, config: Record<string, unknown>): 
 
 const initGitRepo = async (rootDir: string): Promise<void> => {
   await execFile("git", ["init"], { cwd: rootDir });
-  await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
-  await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+  await execFile("git", ["config", "user.email", "cw@example.com"], { cwd: rootDir });
+  await execFile("git", ["config", "user.name", "MCP Code Worker"], { cwd: rootDir });
   await execFile("git", ["add", "."], { cwd: rootDir });
   await execFile("git", ["commit", "-m", "initial"], { cwd: rootDir });
   await writeFile(
@@ -299,7 +299,7 @@ const extractCodeBulletList = (markdown: string, heading: string): string[] => {
 
 describe("mcp tool registration", () => {
   it("registers the expected MCP tool names", () => {
-    expect(aoToolDefinitions.map((tool) => tool.name)).toEqual(
+    expect(cwToolDefinitions.map((tool) => tool.name)).toEqual(
       mcpToolCatalog.map((tool) => tool.name)
     );
   });
@@ -313,7 +313,7 @@ describe("mcp tool registration", () => {
   });
 
   it("lists configured models", async () => {
-    const models = await aoListModelsTool.execute({});
+    const models = await cwListModelsTool.execute({});
     expect(models).toEqual([
       expect.objectContaining({
         role: "worker"
@@ -322,35 +322,35 @@ describe("mcp tool registration", () => {
   });
 
   it("lists MCP tool definitions including dedicated workflow tools", async () => {
-    const tools = await aoListToolsTool.execute({});
+    const tools = await cwListToolsTool.execute({});
     const names = tools.groups.flatMap((group) => group.tools.map((tool) => tool.name));
 
-    expect(names).toContain("ao_list_audit_events");
-    expect(names).toContain("ao_register_worker");
-    expect(names).toContain("ao_run_worker_interview");
-    expect(names).toContain("ao_interview_worker");
-    expect(names).toContain("ao_benchmark_worker");
-    expect(names).toContain("ao_run_host_worker");
-    expect(names).toContain("ao_propose_patch");
-    expect(names).toContain("ao_review_repository");
-    expect(names).toContain("ao_validate_repository");
-    expect(names).toContain("ao_start_task");
-    expect(names).toContain("ao_doctor");
+    expect(names).toContain("cw_list_audit_events");
+    expect(names).toContain("cw_register_worker");
+    expect(names).toContain("cw_run_worker_interview");
+    expect(names).toContain("cw_interview_worker");
+    expect(names).toContain("cw_benchmark_worker");
+    expect(names).toContain("cw_run_host_worker");
+    expect(names).toContain("cw_propose_patch");
+    expect(names).toContain("cw_review_repository");
+    expect(names).toContain("cw_validate_repository");
+    expect(names).toContain("cw_start_task");
+    expect(names).toContain("cw_doctor");
     expect(tools.recommendedEntrypoints.map((tool) => tool.name)).toEqual(
-      expect.arrayContaining(["ao_start_task", "ao_resume_task", "ao_get_task_report"])
+      expect.arrayContaining(["cw_start_task", "cw_resume_task", "cw_get_task_report"])
     );
   });
 
   it("wraps array results into record-shaped structured content", () => {
-    expect(toStructuredContent([{ name: "ao_list_tools" }])).toEqual({
-      result: [{ name: "ao_list_tools" }]
+    expect(toStructuredContent([{ name: "cw_list_tools" }])).toEqual({
+      result: [{ name: "cw_list_tools" }]
     });
   });
 
   it("preserves plain object results as structured content", () => {
-    expect(toStructuredContent({ ok: true, tool: "ao_doctor" })).toEqual({
+    expect(toStructuredContent({ ok: true, tool: "cw_doctor" })).toEqual({
       ok: true,
-      tool: "ao_doctor"
+      tool: "cw_doctor"
     });
   });
 
@@ -392,21 +392,21 @@ describe("mcp tool registration", () => {
 
   it("manages worker registry through MCP tools", async () => {
     await withTempCwd(async () => {
-      const dryRun = await aoRegisterWorkerTool.execute({
+      const dryRun = await cwRegisterWorkerTool.execute({
         provider: "mock",
         model: "registered-worker"
       });
 
       expect(dryRun.mode).toBe("dry-run");
 
-      const registered = await aoRegisterWorkerTool.execute({
+      const registered = await cwRegisterWorkerTool.execute({
         provider: "mock",
         model: "registered-worker",
         tags: ["coding"],
         allowWrite: true
       });
-      const registrations = await aoListWorkerRegistryTool.execute({});
-      const registration = await aoGetWorkerRegistrationTool.execute({
+      const registrations = await cwListWorkerRegistryTool.execute({});
+      const registration = await cwGetWorkerRegistrationTool.execute({
         workerId: "mock:registered-worker"
       });
 
@@ -414,7 +414,7 @@ describe("mcp tool registration", () => {
       expect(registrations).toHaveLength(1);
       expect(JSON.stringify(registration)).not.toContain("secret");
 
-      const removed = await aoUnregisterWorkerTool.execute({
+      const removed = await cwUnregisterWorkerTool.execute({
         workerId: "mock:registered-worker",
         allowWrite: true
       });
@@ -427,7 +427,7 @@ describe("mcp tool registration", () => {
     await withTempCwd(async (rootDir) => {
       await writeProfiles(rootDir, [createLimitedProfile()]);
 
-      const result = await aoBenchmarkWorkerTool.execute({
+      const result = await cwBenchmarkWorkerTool.execute({
         persistArtifact: true,
         updateProfileCapabilities: true
       });
@@ -442,7 +442,7 @@ describe("mcp tool registration", () => {
 
   it("runs a fresh worker interview and can persist the generated profile through MCP", async () => {
     await withTempCwd(async () => {
-      const result = await aoRunWorkerInterviewTool.execute({
+      const result = await cwRunWorkerInterviewTool.execute({
         provider: "mock",
         model: "interview-worker",
         persistProfile: true
@@ -459,7 +459,7 @@ describe("mcp tool registration", () => {
   });
 
   it("executes the dedicated host-worker MCP tool", async () => {
-    const result = await aoRunHostWorkerTool.execute({
+    const result = await cwRunHostWorkerTool.execute({
       goal: "Review the selected repository files for direct implementation risks",
       taskType: "review-lite",
       files: ["packages/core/src/index.ts"],
@@ -477,7 +477,7 @@ describe("mcp tool registration", () => {
     await withTempCwd(async (rootDir) => {
       await writeProfiles(rootDir, [createProfile()]);
 
-      const result = await aoDoctorTool.execute({});
+      const result = await cwDoctorTool.execute({});
 
       expect(result.checks.some((check) => check.name === "worker-profile-store")).toBe(true);
       expect(result.checks.some((check) => check.name === "default-worker-profile")).toBe(true);
@@ -489,26 +489,26 @@ describe("mcp tool registration", () => {
       await writeWorkspaceFixture(rootDir);
       await initGitRepo(rootDir);
 
-      const repoReview = await aoReviewRepositoryTool.execute({
+      const repoReview = await cwReviewRepositoryTool.execute({
         scope: "packages/core",
         typecheck: true,
         detailLevel: "full"
       }) as ReviewWorkflowOutput;
-      const diffReview = await aoReviewDiffTool.execute({
+      const diffReview = await cwReviewDiffTool.execute({
         base: "HEAD",
         head: "HEAD",
         scope: "packages/core",
         detailLevel: "full"
       }) as ReviewWorkflowOutput;
-      const fileReview = await aoReviewFilesTool.execute({
+      const fileReview = await cwReviewFilesTool.execute({
         files: ["packages/core/src/index.ts"],
         detailLevel: "full"
       }) as ReviewWorkflowOutput;
-      const validation = await aoValidateRepositoryTool.execute({
+      const validation = await cwValidateRepositoryTool.execute({
         typecheck: true,
         detailLevel: "full"
       });
-      const fix = await aoFixErrorTool.execute({
+      const fix = await cwFixErrorTool.execute({
         errorLogFile: "tmp/error.log",
         scope: "packages/core",
         detailLevel: "full"
@@ -524,17 +524,17 @@ describe("mcp tool registration", () => {
     });
   }, 15_000);
 
-  it("uses ao config for repository review entrypoints", async () => {
+  it("uses cw config for repository review entrypoints", async () => {
     await withTempCwd(async (rootDir) => {
       await writeWorkspaceFixture(rootDir);
       await initGitRepo(rootDir);
-      await writeAoConfig(rootDir, {
+      await writeCwConfig(rootDir, {
         context: {
           ignoredPaths: ["tmp"]
         }
       });
 
-      const repoReview = await aoReviewRepositoryTool.execute({
+      const repoReview = await cwReviewRepositoryTool.execute({
         scope: "packages/core",
         detailLevel: "full"
       }) as ReviewWorkflowOutput;
@@ -559,7 +559,7 @@ describe("mcp tool registration", () => {
         "utf8"
       );
 
-      const result = await aoReviewFilesTool.execute({
+      const result = await cwReviewFilesTool.execute({
         files: [
           "packages/core/src/index.ts",
           "packages/core/src/wide.ts"
@@ -582,11 +582,11 @@ describe("mcp tool registration", () => {
       await initGitRepo(rootDir);
       const proposal = await createPatchProposal(rootDir);
 
-      const proposed = await aoProposePatchTool.execute({
+      const proposed = await cwProposePatchTool.execute({
         goal: "Fix typecheck",
         scope: "packages/core"
       }) as Record<string, unknown>;
-      const proposedFull = await aoProposePatchTool.execute({
+      const proposedFull = await cwProposePatchTool.execute({
         goal: "Fix typecheck",
         scope: "packages/core",
         detailLevel: "full"
@@ -595,13 +595,13 @@ describe("mcp tool registration", () => {
           unifiedDiff: string;
         };
       };
-      const inspected = await aoInspectPatchTool.execute({
+      const inspected = await cwInspectPatchTool.execute({
         patchProposal: proposal
       });
-      const dryRunApply = await aoApplyPatchTool.execute({
+      const dryRunApply = await cwApplyPatchTool.execute({
         patchProposal: proposal
       });
-      const blockedApply = await aoApplyPatchTool.execute({
+      const blockedApply = await cwApplyPatchTool.execute({
         patchProposal: proposal,
         allowWrite: true
       });
@@ -618,31 +618,31 @@ describe("mcp tool registration", () => {
   it("executes task session tools", async () => {
     await withTempCwd(async (rootDir) => {
       await writeWorkspaceFixture(rootDir);
-      const started = await aoStartTaskTool.execute({
+      const started = await cwStartTaskTool.execute({
         goal: "Review packages/core",
         scope: "packages/core",
         typecheck: true,
         allowWriteSession: true,
         detailLevel: "full"
       }) as TaskSessionWorkflowOutput;
-      const listed = await aoListTasksTool.execute({
+      const listed = await cwListTasksTool.execute({
         detailLevel: "full"
       }) as TaskSession[];
-      const status = await aoGetTaskStatusTool.execute({
+      const status = await cwGetTaskStatusTool.execute({
         taskId: started.session.taskId,
         detailLevel: "full"
       }) as TaskSession;
-      const report = await aoGetTaskReportTool.execute({
+      const report = await cwGetTaskReportTool.execute({
         taskId: started.session.taskId,
         detailLevel: "full"
       }) as { report: string; session: TaskSession };
       const artifactName = Object.keys(started.session.artifacts)[0] ?? "report.md";
-      const artifact = await aoReadTaskArtifactTool.execute({
+      const artifact = await cwReadTaskArtifactTool.execute({
         taskId: started.session.taskId,
         artifactName,
         maxBytes: 256
       });
-      const resumed = await aoResumeTaskTool.execute({
+      const resumed = await cwResumeTaskTool.execute({
         taskId: started.session.taskId,
         proposePatch: true,
         inspectPatch: true,

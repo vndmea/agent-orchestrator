@@ -4,15 +4,15 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { createExecutionContextFromEnv } from "@mcp-code-worker/core";
 import {
   createDefaultWorkerEvaluationSuite,
   runHostWorkerWorkflow,
   runWorkerInterviewWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 const createWorkspace = async (): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-worker-interview-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-worker-interview-"));
   await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
   await writeFile(
     join(rootDir, "packages", "core", "src", "generateId.ts"),

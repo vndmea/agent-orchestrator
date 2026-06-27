@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { createExecutionContextFromEnv, listAuditEvents } from "@agent-orchestrator/core";
+import { createExecutionContextFromEnv, listAuditEvents } from "@mcp-code-worker/core";
 import { runHostWorkerWorkflow } from "./host-worker-workflow.js";
 import { describe, expect, it } from "vitest";
 

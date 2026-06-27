@@ -1,4 +1,4 @@
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 import type * as z from "zod";
 
 import type {
@@ -72,7 +72,7 @@ const formatUnknownError = (error: unknown): string =>
 const areModelMocksDisabled = (
   env: NodeJS.ProcessEnv = process.env
 ): boolean => {
-  const value = env.AO_DISABLE_MODEL_MOCKS?.trim().toLowerCase();
+  const value = env.CW_DISABLE_MODEL_MOCKS?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes";
 };
 

@@ -1,5 +1,5 @@
 {
-  "name": "@agent-orchestrator/example-host-worker-basic",
+  "name": "@mcp-code-worker/example-host-worker-basic",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -8,6 +8,6 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@agent-orchestrator/graph": "workspace:*"
+    "@mcp-code-worker/graph": "workspace:*"
   }
 }

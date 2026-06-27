@@ -1,19 +1,19 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
-import { getWorkerRegistration } from "@agent-orchestrator/models";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
+import { getWorkerRegistration } from "@mcp-code-worker/models";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   workerId: z.string().min(1)
 });
 
-export const aoGetWorkerRegistrationTool: AoToolDefinition<
+export const cwGetWorkerRegistrationTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof getWorkerRegistration>>
 > = {
-  name: "ao_get_worker_registration",
+  name: "cw_get_worker_registration",
   description: "Get one registered worker model.",
   inputSchema,
   execute: async (args) => {
@@ -21,7 +21,7 @@ export const aoGetWorkerRegistrationTool: AoToolDefinition<
     return getWorkerRegistration(
       context.rootDir,
       args.workerId,
-      context.aoStorageDir
+      context.cwStorageDir
     );
   }
 };

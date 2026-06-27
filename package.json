@@ -1,5 +1,5 @@
 {
-  "name": "agent-orchestrator",
+  "name": "mcp-code-worker",
   "version": "0.1.0",
   "private": true,
   "description": "Controlled execution runtime for multi-model engineering workflows via CLI and MCP.",
@@ -13,14 +13,14 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --exclude packages/cli/src/smoke-dist.test.ts",
     "smoke": "vitest run packages/cli/src/smoke.test.ts",
-    "smoke:pack": "pnpm --filter @agent-orchestrator/cli... build && vitest run packages/cli/src/smoke-pack.test.ts",
+    "smoke:pack": "pnpm --filter @mcp-code-worker/cli... build && vitest run packages/cli/src/smoke-pack.test.ts",
     "smoke:dist": "pnpm build && vitest run packages/cli/src/smoke-dist.test.ts",
     "test:watch": "vitest --exclude packages/cli/src/smoke-dist.test.ts",
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
-    "dev:playground": "pnpm --filter @agent-orchestrator/playground dev",
-    "example:host-worker-basic": "pnpm --filter @agent-orchestrator/example-host-worker-basic dev"
+    "dev:playground": "pnpm --filter @mcp-code-worker/playground dev",
+    "example:host-worker-basic": "pnpm --filter @mcp-code-worker/example-host-worker-basic dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

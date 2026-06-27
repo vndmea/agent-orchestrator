@@ -6,17 +6,17 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { createExecutionContextFromEnv } from "@mcp-code-worker/core";
 import {
   formatReviewWorkflowOutput,
   runFixErrorWorkflow,
   runReviewWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
 const execFile = promisify(execFileCallback);
 
 const createWorkspace = async (withGit = false): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-review-fix-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-review-fix-"));
   await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
   await writeFile(
     join(rootDir, "packages", "core", "package.json"),
@@ -38,8 +38,8 @@ const createWorkspace = async (withGit = false): Promise<string> => {
   );
   if (withGit) {
     await execFile("git", ["init"], { cwd: rootDir });
-    await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
-    await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+    await execFile("git", ["config", "user.email", "cw@example.com"], { cwd: rootDir });
+    await execFile("git", ["config", "user.name", "MCP Code Worker"], { cwd: rootDir });
     await execFile("git", ["add", "."], { cwd: rootDir });
     await execFile("git", ["commit", "-m", "initial"], { cwd: rootDir });
     await writeFile(

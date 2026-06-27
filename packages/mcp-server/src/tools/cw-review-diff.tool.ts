@@ -1,18 +1,20 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatReviewWorkflowOutput,
   runReviewWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
 } from "./output-options.js";
 
 const inputSchema = z.object({
+  base: z.string().optional(),
+  head: z.string().optional(),
   scope: z.string().optional(),
   typecheck: z.boolean().optional(),
   lint: z.boolean().optional(),
@@ -21,17 +23,20 @@ const inputSchema = z.object({
   ...workflowOutputOptionShape
 });
 
-export const aoReviewRepositoryTool: AoToolDefinition<
+export const cwReviewDiffTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<typeof formatReviewWorkflowOutput>
 > = {
-  name: "ao_review_repository",
-  description: "Review repository context for a scope and return structured findings.",
+  name: "cw_review_diff",
+  description: "Review a git diff and return structured impact analysis.",
   inputSchema,
   execute: async (args) => {
     const context = await resolveExecutionContext();
     const result = await runReviewWorkflow({
       context,
+      includeDiff: true,
+      diffBase: args.base,
+      diffHead: args.head,
       scope: args.scope,
       strictFiles: args.strictFiles,
       validate: {

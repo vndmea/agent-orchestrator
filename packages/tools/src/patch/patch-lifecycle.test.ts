@@ -9,17 +9,17 @@ import { describe, expect, it } from "vitest";
 import {
   createExecutionContextFromEnv,
   PatchProposalSchema
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   applyPatchProposal,
   inspectPatch,
   parseUnifiedDiff
-} from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/tools";
 
 const execFile = promisify(execFileCallback);
 
 const createGitRoot = async (): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-patch-lifecycle-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-patch-lifecycle-"));
   await writeFile(
     join(rootDir, "package.json"),
     JSON.stringify(
@@ -37,8 +37,8 @@ const createGitRoot = async (): Promise<string> => {
   await writeFile(join(rootDir, ".gitignore"), "tmp\n", "utf8");
   await writeFile(join(rootDir, "demo.ts"), "export const value = 1;\n", "utf8");
   await execFile("git", ["init"], { cwd: rootDir });
-  await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
-  await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+  await execFile("git", ["config", "user.email", "cw@example.com"], { cwd: rootDir });
+  await execFile("git", ["config", "user.name", "MCP Code Worker"], { cwd: rootDir });
   await execFile("git", ["add", "."], { cwd: rootDir });
   await execFile("git", ["commit", "-m", "initial"], { cwd: rootDir });
   return rootDir;

@@ -4,7 +4,7 @@ import {
   type ModelConfig,
   type WorkerCapabilityProfile,
   type WorkerStatus
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { getWorkerProfile } from "./worker-profile-store.js";
 import { deriveWorkerProfileId } from "./worker-profile-store.js";
@@ -89,7 +89,7 @@ export const resolveWorkerProfile = async ({
   const profile = await getWorkerProfile(
     context.rootDir,
     resolvedWorkerId,
-    context.aoStorageDir
+    context.cwStorageDir
   );
 
   if (!profile) {
@@ -149,7 +149,7 @@ export const resolveWorkerProfile = async ({
         resolvedWorkerId,
         profile,
         "provider-error",
-        `Persisted worker profile ${resolvedWorkerId} looks like a provider/configuration failure rather than a completed interview. Re-run 'ao worker interview --save' after checking base URL, API key, and network access.`
+        `Persisted worker profile ${resolvedWorkerId} looks like a provider/configuration failure rather than a completed interview. Re-run 'cw worker interview --save' after checking base URL, API key, and network access.`
       ),
       requireProfile
     );
@@ -161,7 +161,7 @@ export const resolveWorkerProfile = async ({
         resolvedWorkerId,
         profile,
         "stale",
-        `Persisted worker profile ${resolvedWorkerId} was created without the current repo-grounded interview signals. Re-run 'ao worker interview --save'.`
+        `Persisted worker profile ${resolvedWorkerId} was created without the current repo-grounded interview signals. Re-run 'cw worker interview --save'.`
       ),
       requireProfile
     );

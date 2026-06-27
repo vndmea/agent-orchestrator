@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ExecutionContext, WorkerCapability } from "@agent-orchestrator/core";
+import type { ExecutionContext, WorkerCapability } from "@mcp-code-worker/core";
 
 import {
   buildRepositoryContextPromptLines,

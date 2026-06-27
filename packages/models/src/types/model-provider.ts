@@ -1,4 +1,4 @@
-import type { ModelConfig } from "@agent-orchestrator/core";
+import type { ModelConfig } from "@mcp-code-worker/core";
 import type * as z from "zod";
 
 export interface ModelInvocationRequest {

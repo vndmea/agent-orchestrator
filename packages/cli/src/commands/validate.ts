@@ -3,8 +3,8 @@ import type { Command } from "commander";
 import {
   resolveExecutionContext,
   summarizeValidationReport
-} from "@agent-orchestrator/core";
-import { runRepositoryValidation } from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/core";
+import { runRepositoryValidation } from "@mcp-code-worker/tools";
 
 import type { CliIo } from "../index.js";
 import { isHumanOutput, writeJson, writeText } from "../output.js";

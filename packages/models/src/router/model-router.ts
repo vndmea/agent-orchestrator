@@ -4,7 +4,7 @@ import {
   type ModelConfig,
   type WorkerCapabilityProfile,
   type WorkerTaskType
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { AiSdkProvider } from "../providers/ai-sdk-provider.js";
 import { LiteLlmProvider } from "../providers/litellm-provider.js";

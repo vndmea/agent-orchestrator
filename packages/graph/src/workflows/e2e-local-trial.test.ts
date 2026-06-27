@@ -7,21 +7,21 @@ import { describe, expect, it } from "vitest";
 import {
   createExecutionContextFromEnv,
   listAuditEvents
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   getTaskSessionReport,
   runPatchProposalWorkflow,
   runTaskSessionWorkflow,
   runWorkerInterviewWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 import {
   deriveWorkerRegistrationId,
   saveWorkerProfile,
   saveWorkerRegistration
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
 const createWorkspace = async (): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-e2e-trial-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-e2e-trial-"));
   await mkdir(join(rootDir, "packages", "core", "src"), { recursive: true });
   await writeFile(
     join(rootDir, "package.json"),

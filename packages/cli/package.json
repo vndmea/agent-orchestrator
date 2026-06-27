@@ -1,12 +1,12 @@
 {
-  "name": "@agent-orchestrator/cli",
+  "name": "@mcp-code-worker/cli",
   "version": "0.1.0",
-  "description": "Agent Orchestrator CLI for controlled host-worker workflows over local repositories.",
+  "description": "MCP Code Worker CLI for controlled host-worker workflows over local repositories.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "ao": "./dist/main.js"
+    "cw": "./dist/main.js"
   },
   "exports": {
     ".": "./dist/index.js"
@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepack": "pnpm --dir ../.. --filter @agent-orchestrator/cli... build"
+    "prepack": "pnpm --dir ../.. --filter @mcp-code-worker/cli... build"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.74",

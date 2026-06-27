@@ -8,16 +8,16 @@ import {
   createExecutionContextFromEnv,
   listAuditEvents,
   type WorkerRegistration
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 import {
   getWorkerRegistryPath,
   readWorkerRegistry,
   removeWorkerRegistration,
   saveWorkerRegistration
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-worker-registry-"));
+  mkdtemp(join(tmpdir(), "cw-worker-registry-"));
 
 const createRegistration = (
   overrides: Partial<WorkerRegistration> = {}

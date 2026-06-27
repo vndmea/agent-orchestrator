@@ -1,4 +1,4 @@
-import type { AoConfig } from "../schemas/config.schema.js";
+import type { CwConfig } from "../schemas/config.schema.js";
 
 export type ValidationCheckName = "lint" | "test" | "typecheck";
 export type ValidationScriptResolutionSource =
@@ -44,7 +44,7 @@ const DEFAULT_SCRIPT_CANDIDATES: Record<ValidationCheckName, string[]> = {
 const unique = (values: string[]): string[] => Array.from(new Set(values));
 
 const normalizeConfiguredScripts = (
-  config: AoConfig["validation"] | undefined,
+  config: CwConfig["validation"] | undefined,
   checkName: ValidationCheckName
 ): string[] => config?.scripts?.[checkName] ?? [];
 
@@ -57,7 +57,7 @@ const buildCommand = (scriptName: string): string => `pnpm run ${scriptName}`;
 
 export const resolveValidationScript = (
   availableScripts: Record<string, string>,
-  config: AoConfig["validation"] | undefined,
+  config: CwConfig["validation"] | undefined,
   checkName: ValidationCheckName
 ): ValidationScriptResolution => {
   if (availableScripts[checkName]) {
@@ -119,7 +119,7 @@ export const resolveValidationScript = (
 
 export const resolveValidationScripts = (
   availableScripts: Record<string, string>,
-  config: AoConfig["validation"] | undefined
+  config: CwConfig["validation"] | undefined
 ): Record<ValidationCheckName, ValidationScriptResolution> => ({
   typecheck: resolveValidationScript(availableScripts, config, "typecheck"),
   lint: resolveValidationScript(availableScripts, config, "lint"),

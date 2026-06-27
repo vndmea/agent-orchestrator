@@ -6,16 +6,16 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
-import { readGitDiff } from "@agent-orchestrator/tools";
+import { createExecutionContextFromEnv } from "@mcp-code-worker/core";
+import { readGitDiff } from "@mcp-code-worker/tools";
 
 const execFile = promisify(execFileCallback);
 
 const createGitRoot = async (): Promise<string> => {
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-git-diff-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-git-diff-"));
   await execFile("git", ["init"], { cwd: rootDir });
-  await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
-  await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+  await execFile("git", ["config", "user.email", "cw@example.com"], { cwd: rootDir });
+  await execFile("git", ["config", "user.name", "MCP Code Worker"], { cwd: rootDir });
   return rootDir;
 };
 

@@ -6,11 +6,11 @@ import type {
   ExecutionContextOverrides
 } from "../runtime/execution-context.js";
 import { createExecutionContextFromEnv } from "../runtime/execution-context.js";
-import { getAoWorkspaceFilePath } from "../storage/ao-paths.js";
-import { AoConfigSchema, type AoConfig, type AoModelConfig } from "../schemas/config.schema.js";
+import { getCwWorkspaceFilePath } from "../storage/cw-paths.js";
+import { CwConfigSchema, type CwConfig, type CwModelConfig } from "../schemas/config.schema.js";
 
-export interface LoadAoConfigResult {
-  config: AoConfig;
+export interface LoadCwConfigResult {
+  config: CwConfig;
   error?: string;
   exists: boolean;
   path: string;
@@ -22,13 +22,13 @@ export interface ResolveExecutionContextOptions {
   rootDir?: string;
 }
 
-export const getAoConfigPath = (
+export const getCwConfigPath = (
   rootDir: string,
   env: NodeJS.ProcessEnv = process.env
-): string => getAoWorkspaceFilePath(rootDir, "config.json", env);
+): string => getCwWorkspaceFilePath(rootDir, "config.json", env);
 
-const buildDefaultConfig = (): AoConfig =>
-  AoConfigSchema.parse({
+const buildDefaultConfig = (): CwConfig =>
+  CwConfigSchema.parse({
     version: 1
   });
 
@@ -44,14 +44,14 @@ const resolveRootDir = (
 ): string => {
   const cliOverrides = options.cliOverrides ?? {};
   const configuredRootDir =
-    options.rootDir ?? cliOverrides.rootDir ?? env.AO_ROOT_DIR ?? process.cwd();
+    options.rootDir ?? cliOverrides.rootDir ?? env.CW_ROOT_DIR ?? process.cwd();
 
   return normalizeRootDir(configuredRootDir);
 };
 
 const mergeModelConfig = (
   base: ExecutionContext["workerModel"],
-  configModel: AoModelConfig | undefined,
+  configModel: CwModelConfig | undefined,
   env: NodeJS.ProcessEnv,
   envPrefix: "WORKER",
   cliOverride?: ExecutionContextOverrides["workerModel"]
@@ -79,16 +79,16 @@ const mergeModelConfig = (
   };
 };
 
-export async function loadAoConfig(
+export async function loadCwConfig(
   rootDir: string,
   env: NodeJS.ProcessEnv = process.env
-): Promise<LoadAoConfigResult> {
-  const path = getAoConfigPath(rootDir, env);
+): Promise<LoadCwConfigResult> {
+  const path = getCwConfigPath(rootDir, env);
 
   try {
     const contents = await readFile(path, "utf8");
     const parsed = JSON.parse(contents) as unknown;
-    const config = AoConfigSchema.safeParse(parsed);
+    const config = CwConfigSchema.safeParse(parsed);
 
     if (!config.success) {
       return {
@@ -125,7 +125,7 @@ export async function resolveExecutionContext(
   const env = options.env ?? process.env;
   const cliOverrides = options.cliOverrides ?? {};
   const rootDir = resolveRootDir(env, options);
-  const configResult = await loadAoConfig(rootDir, env);
+  const configResult = await loadCwConfig(rootDir, env);
   const baseContext = createExecutionContextFromEnv(env, {
     ...cliOverrides,
     rootDir
@@ -134,15 +134,15 @@ export async function resolveExecutionContext(
 
   const dryRun =
     cliOverrides.dryRun ??
-    (hasEnvValue(env, "AO_DRY_RUN") ? baseContext.dryRun : config.safety.dryRun);
+    (hasEnvValue(env, "CW_DRY_RUN") ? baseContext.dryRun : config.safety.dryRun);
   const allowWrite =
     cliOverrides.allowWrite ??
-    (hasEnvValue(env, "AO_ALLOW_WRITE")
+    (hasEnvValue(env, "CW_ALLOW_WRITE")
       ? baseContext.allowWrite
       : config.safety.allowWrite);
   const allowedCommands =
     cliOverrides.allowedCommands ??
-    (hasEnvValue(env, "AO_ALLOWED_COMMANDS")
+    (hasEnvValue(env, "CW_ALLOWED_COMMANDS")
       ? baseContext.allowedCommands
       : config.safety.allowedCommands);
   const contextBudget = {

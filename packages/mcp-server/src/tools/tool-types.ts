@@ -1,6 +1,6 @@
 import type { ZodObject, ZodRawShape } from "zod";
 
-export interface AoToolDefinition<TArgs extends ZodRawShape, TResult> {
+export interface CwToolDefinition<TArgs extends ZodRawShape, TResult> {
   description: string;
   execute: (
     args: ZodObject<TArgs>["_output"]

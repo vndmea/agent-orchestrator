@@ -1,18 +1,18 @@
 import { z } from "zod";
 
-import { listAuditEvents, resolveExecutionContext } from "@agent-orchestrator/core";
+import { listAuditEvents, resolveExecutionContext } from "@mcp-code-worker/core";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   limit: z.number().int().positive().max(100).optional()
 });
 
-export const aoListAuditEventsTool: AoToolDefinition<
+export const cwListAuditEventsTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof listAuditEvents>>
 > = {
-  name: "ao_list_audit_events",
+  name: "cw_list_audit_events",
   description: "List local audit events in reverse chronological order.",
   inputSchema,
   execute: async (args) => {
@@ -20,7 +20,7 @@ export const aoListAuditEventsTool: AoToolDefinition<
     return listAuditEvents(
       context.rootDir,
       args.limit ?? 50,
-      context.aoStorageDir
+      context.cwStorageDir
     );
   }
 };

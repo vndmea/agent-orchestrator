@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatTaskSessionReportOutput,
   getTaskSessionReport
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
@@ -17,11 +17,11 @@ const inputSchema = z.object({
   ...workflowOutputOptionShape
 });
 
-export const aoGetTaskReportTool: AoToolDefinition<
+export const cwGetTaskReportTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<typeof formatTaskSessionReportOutput>
 > = {
-  name: "ao_get_task_report",
+  name: "cw_get_task_report",
   description: "Render a readable markdown report for one local task session.",
   inputSchema,
   execute: async (args) => {
@@ -29,7 +29,7 @@ export const aoGetTaskReportTool: AoToolDefinition<
     const report = await getTaskSessionReport(
       context.rootDir,
       args.taskId,
-      context.aoStorageDir
+      context.cwStorageDir
     );
     return formatTaskSessionReportOutput(report, resolveWorkflowOutputOptions(args));
   }

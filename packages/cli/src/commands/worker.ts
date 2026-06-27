@@ -1,12 +1,12 @@
 import type { Command } from "commander";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   applyBenchmarkCapabilityUpdate,
   runWorkerBenchmarkWorkflow,
   runWorkerInterviewWorkflow,
   saveWorkerBenchmarkArtifact
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 import {
   deriveWorkerRegistrationId,
   getWorkerRegistration,
@@ -18,7 +18,7 @@ import {
   resolveWorkerModel,
   saveWorkerRegistration,
   saveWorkerProfile
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
@@ -121,7 +121,7 @@ const formatWorkerInterviewResult = (result: {
       lines.push(`profile saved: ${result.persistence.path ?? "persisted"}`);
     } else if (result.persistence.mode === "dry-run") {
       lines.push(
-        `dry-run: profile would be saved to ${result.persistence.path ?? "the ao workspace profile store"}`
+        `dry-run: profile would be saved to ${result.persistence.path ?? "the cw workspace profile store"}`
       );
     } else {
       lines.push(result.persistence.reason ?? "profile was not persisted");
@@ -214,7 +214,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         const existing = await getWorkerRegistration(
           context.rootDir,
           workerId,
-          context.aoStorageDir
+          context.cwStorageDir
         );
         const now = new Date().toISOString();
         const result = await saveWorkerRegistration(
@@ -279,7 +279,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
       const context = await resolveExecutionContext();
       const registrations = await listWorkerRegistrations(
         context.rootDir,
-        context.aoStorageDir
+        context.cwStorageDir
       );
       writeOutput(io, registrations, formatWorkerList("worker registry", registrations));
     });
@@ -293,7 +293,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
       const registration = await getWorkerRegistration(
         context.rootDir,
         workerId,
-        context.aoStorageDir
+        context.cwStorageDir
       );
 
       if (!registration) {
@@ -326,7 +326,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
           ? await getWorkerRegistration(
               context.rootDir,
               options.worker,
-              context.aoStorageDir
+              context.cwStorageDir
             )
           : null;
         const resolved = registeredWorker
@@ -414,7 +414,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
           ? await getWorkerRegistration(
               context.rootDir,
               options.worker,
-              context.aoStorageDir
+              context.cwStorageDir
             )
           : null;
         const resolved = registeredWorker
@@ -446,11 +446,11 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         const existingProfile = await getWorkerProfile(
           context.rootDir,
           result.workerId,
-          context.aoStorageDir
+          context.cwStorageDir
         );
         if (options.updateProfileCapabilities && !existingProfile) {
           throw new Error(
-            `No persisted worker profile found for ${result.workerId}; run 'ao worker interview --save' first.`
+            `No persisted worker profile found for ${result.workerId}; run 'cw worker interview --save' first.`
           );
         }
         const profileUpdate = existingProfile
@@ -496,7 +496,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
       const context = await resolveExecutionContext();
       const profiles = await listWorkerProfiles(
         context.rootDir,
-        context.aoStorageDir
+        context.cwStorageDir
       );
       writeOutput(io, profiles, formatWorkerList("worker profiles", profiles));
     });
@@ -512,7 +512,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
       const profile = await getWorkerProfile(
         context.rootDir,
         resolvedWorkerId,
-        context.aoStorageDir
+        context.cwStorageDir
       );
 
       if (!profile) {

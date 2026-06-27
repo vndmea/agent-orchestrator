@@ -1,10 +1,10 @@
-import type { ExecutionContext } from "@agent-orchestrator/core";
+import type { ExecutionContext } from "@mcp-code-worker/core";
 import {
   AgentError,
   createExecutionContextFromEnv,
   type CommandKind,
   writeAuditEvent
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { runCommand, type RunCommandResult } from "./run-command.js";
 

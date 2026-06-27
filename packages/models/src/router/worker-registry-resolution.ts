@@ -3,7 +3,7 @@ import {
   type ExecutionContext,
   type ModelConfig,
   type WorkerRegistration
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import {
   deriveWorkerRegistrationId,
@@ -47,7 +47,7 @@ export const resolveWorkerModel = async ({
   const registration = await getWorkerRegistration(
     context.rootDir,
     resolvedWorkerId,
-    context.aoStorageDir
+    context.cwStorageDir
   );
 
   if (registration) {

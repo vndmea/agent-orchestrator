@@ -1,6 +1,6 @@
-# @agent-orchestrator/cli
+# @mcp-code-worker/cli
 
-Experimental npm packaging target for the Agent Orchestrator CLI.
+Experimental npm packaging target for the MCP Code Worker CLI.
 
 ## Status
 
@@ -11,16 +11,16 @@ This package is prepared for single-package distribution validation, but the rep
 From the repository root:
 
 ```bash
-pnpm --filter @agent-orchestrator/cli... build
+pnpm --filter @mcp-code-worker/cli... build
 pnpm smoke:pack
 ```
 
 ## Workspace Binding
 
-When `ao` is launched outside the repository checkout, pass an explicit workspace root:
+When `cw` is launched outside the repository checkout, pass an explicit workspace root:
 
 ```bash
-ao mcp serve --root /path/to/project
+cw mcp serve --root /path/to/project
 ```
 
-or set `AO_ROOT_DIR`.
+or set `CW_ROOT_DIR`.

@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { PatchProposalSchema, resolveExecutionContext } from "@agent-orchestrator/core";
-import { applyPatchProposal } from "@agent-orchestrator/tools";
+import { PatchProposalSchema, resolveExecutionContext } from "@mcp-code-worker/core";
+import { applyPatchProposal } from "@mcp-code-worker/tools";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   patchProposal: z.unknown(),
@@ -17,11 +17,11 @@ const inputSchema = z.object({
   test: z.boolean().optional()
 });
 
-export const aoApplyPatchTool: AoToolDefinition<
+export const cwApplyPatchTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof applyPatchProposal>>
 > = {
-  name: "ao_apply_patch",
+  name: "cw_apply_patch",
   description: "Apply a structured patch proposal with dry-run default and explicit confirmation gates.",
   inputSchema,
   execute: async (args) => {

@@ -1,17 +1,17 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
-import { ModelRouter } from "@agent-orchestrator/models";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
+import { ModelRouter } from "@mcp-code-worker/models";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({});
 
-export const aoListModelsTool: AoToolDefinition<
+export const cwListModelsTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<ModelRouter["listModels"]>
 > = {
-  name: "ao_list_models",
+  name: "cw_list_models",
   description: "List configured worker models.",
   inputSchema,
   execute: async () => {

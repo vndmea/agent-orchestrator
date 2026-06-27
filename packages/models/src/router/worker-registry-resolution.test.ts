@@ -4,14 +4,14 @@ import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { AgentError, createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import { AgentError, createExecutionContextFromEnv } from "@mcp-code-worker/core";
 import {
   getWorkerRegistryPath,
   resolveWorkerModel
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-worker-model-resolution-"));
+  mkdtemp(join(tmpdir(), "cw-worker-model-resolution-"));
 
 const writeRegistry = async (
   rootDir: string,

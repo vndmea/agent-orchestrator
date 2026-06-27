@@ -2,8 +2,8 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { buildCli } from "@agent-orchestrator/cli";
-import { listAuditEvents } from "@agent-orchestrator/core";
+import { buildCli } from "@mcp-code-worker/cli";
+import { listAuditEvents } from "@mcp-code-worker/core";
 import { describe, expect, it } from "vitest";
 
 const createIo = () => {
@@ -28,28 +28,28 @@ const withWritableAuditEnv = async (
   callback: (rootDir: string) => Promise<void>
 ): Promise<void> => {
   const originalCwd = process.cwd();
-  const previousAllowWrite = process.env.AO_ALLOW_WRITE;
-  const previousDryRun = process.env.AO_DRY_RUN;
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-cli-audit-effects-"));
+  const previousAllowWrite = process.env.CW_ALLOW_WRITE;
+  const previousDryRun = process.env.CW_DRY_RUN;
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-cli-audit-effects-"));
 
   try {
     process.chdir(rootDir);
-    process.env.AO_ALLOW_WRITE = "true";
-    process.env.AO_DRY_RUN = "false";
+    process.env.CW_ALLOW_WRITE = "true";
+    process.env.CW_DRY_RUN = "false";
     await callback(rootDir);
   } finally {
     process.chdir(originalCwd);
 
     if (previousAllowWrite === undefined) {
-      delete process.env.AO_ALLOW_WRITE;
+      delete process.env.CW_ALLOW_WRITE;
     } else {
-      process.env.AO_ALLOW_WRITE = previousAllowWrite;
+      process.env.CW_ALLOW_WRITE = previousAllowWrite;
     }
 
     if (previousDryRun === undefined) {
-      delete process.env.AO_DRY_RUN;
+      delete process.env.CW_DRY_RUN;
     } else {
-      process.env.AO_DRY_RUN = previousDryRun;
+      process.env.CW_DRY_RUN = previousDryRun;
     }
   }
 };
@@ -60,7 +60,7 @@ describe("cli audit side effects", () => {
       const { io } = createIo();
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "ao", "doctor"]);
+      await cli.parseAsync(["node", "cw", "doctor"]);
       const events = await listAuditEvents(rootDir, 20);
 
       expect(

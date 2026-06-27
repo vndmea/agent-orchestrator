@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const AoModelConfigSchema = z.object({
+export const CwModelConfigSchema = z.object({
   provider: z.string().min(1),
   model: z.string().min(1),
   baseURL: z.string().url().optional(),
@@ -8,13 +8,13 @@ export const AoModelConfigSchema = z.object({
   maxTokens: z.number().int().positive().optional()
 });
 
-export const AoSafetyConfigSchema = z.object({
+export const CwSafetyConfigSchema = z.object({
   dryRun: z.boolean().default(true),
   allowWrite: z.boolean().default(false),
   allowedCommands: z.array(z.string()).default(["git", "node", "pnpm"])
 });
 
-export const AoContextConfigSchema = z.object({
+export const CwContextConfigSchema = z.object({
   strictFiles: z.boolean().default(false),
   ignoredPaths: z.array(z.string()).default([
     "node_modules",
@@ -27,7 +27,7 @@ export const AoContextConfigSchema = z.object({
   ])
 });
 
-export const AoSessionConfigSchema = z.object({
+export const CwSessionConfigSchema = z.object({
   retentionDays: z.number().int().positive().default(30),
   maxStoredSessions: z.number().int().positive().default(100)
 });
@@ -38,7 +38,7 @@ const ValidationScriptMappingSchema = z.object({
   test: z.array(z.string().min(1)).default([])
 });
 
-export const AoValidationConfigSchema = z.object({
+export const CwValidationConfigSchema = z.object({
   autoDiscover: z.boolean().default(true),
   scripts: ValidationScriptMappingSchema.default({
     typecheck: [],
@@ -47,15 +47,15 @@ export const AoValidationConfigSchema = z.object({
   })
 });
 
-export const AoConfigSchema = z.object({
+export const CwConfigSchema = z.object({
   version: z.literal(1),
-  workerModel: AoModelConfigSchema.optional(),
-  safety: AoSafetyConfigSchema.default({
+  workerModel: CwModelConfigSchema.optional(),
+  safety: CwSafetyConfigSchema.default({
     dryRun: true,
     allowWrite: false,
     allowedCommands: ["git", "node", "pnpm"]
   }),
-  context: AoContextConfigSchema.default({
+  context: CwContextConfigSchema.default({
     strictFiles: false,
     ignoredPaths: [
       "node_modules",
@@ -67,11 +67,11 @@ export const AoConfigSchema = z.object({
       ".next"
     ]
   }),
-  sessions: AoSessionConfigSchema.default({
+  sessions: CwSessionConfigSchema.default({
     retentionDays: 30,
     maxStoredSessions: 100
   }),
-  validation: AoValidationConfigSchema.default({
+  validation: CwValidationConfigSchema.default({
     autoDiscover: true,
     scripts: {
       typecheck: [],
@@ -81,5 +81,5 @@ export const AoConfigSchema = z.object({
   })
 });
 
-export type AoModelConfig = z.infer<typeof AoModelConfigSchema>;
-export type AoConfig = z.infer<typeof AoConfigSchema>;
+export type CwModelConfig = z.infer<typeof CwModelConfigSchema>;
+export type CwConfig = z.infer<typeof CwConfigSchema>;

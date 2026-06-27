@@ -1,7 +1,7 @@
 import type {
   ExecutionContext,
   RepositoryContextPack
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { readGitDiff, type ReadGitDiffOptions } from "./git-diff.js";
 import { readPackageMetadata } from "./package-metadata.js";

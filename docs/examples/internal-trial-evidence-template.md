@@ -2,7 +2,7 @@
 
 Use one copy of this template for each real worker end-to-end trial.
 
-Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.ao`, or `<ao-home>` instead of raw operator usernames or machine-specific absolute paths.
+Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.cw`, or `<cw-home>` instead of raw operator usernames or machine-specific absolute paths.
 
 ## Run Identity
 
@@ -10,9 +10,9 @@ Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.ao`, o
 - Operator:
 - Commit SHA:
 - Runtime trial target:
-- `ao` package version:
+- `cw` package version:
 - Workspace root:
-- AO home override:
+- CW home override:
 - Note if later documentation-only commits differ from the runtime trial target:
 
 ## Worker Configuration
@@ -48,8 +48,8 @@ Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.ao`, o
 
 ## MCP / Artifact Verification
 
-- `ao_get_task_report` checked:
-- `ao_read_task_artifact` checked:
+- `cw_get_task_report` checked:
+- `cw_read_task_artifact` checked:
 - Artifact names read:
 
 ## Outcome

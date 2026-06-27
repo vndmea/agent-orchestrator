@@ -6,8 +6,8 @@ import type {
   RepositoryContextPack,
   WorkerCapability,
   WorkerCapabilityProfile
-} from "@agent-orchestrator/core";
-import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
+} from "@mcp-code-worker/core";
+import { ModelRouter, invokeStructured } from "@mcp-code-worker/models";
 import type { ZodType } from "zod";
 
 export interface WorkerExecutionInput {

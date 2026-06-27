@@ -38,13 +38,13 @@ importers:
 
   apps/playground:
     dependencies:
-      '@agent-orchestrator/graph':
+      '@mcp-code-worker/graph':
         specifier: workspace:*
         version: link:../../packages/graph
 
   examples/host-worker-basic:
     dependencies:
-      '@agent-orchestrator/graph':
+      '@mcp-code-worker/graph':
         specifier: workspace:*
         version: link:../../packages/graph
 
@@ -80,10 +80,10 @@ importers:
 
   packages/graph:
     dependencies:
-      '@agent-orchestrator/core':
+      '@mcp-code-worker/core':
         specifier: workspace:*
         version: link:../core
-      '@agent-orchestrator/models':
+      '@mcp-code-worker/models':
         specifier: workspace:*
         version: link:../models
       '@langchain/langgraph':
@@ -95,16 +95,16 @@ importers:
 
   packages/mcp-server:
     dependencies:
-      '@agent-orchestrator/core':
+      '@mcp-code-worker/core':
         specifier: workspace:*
         version: link:../core
-      '@agent-orchestrator/graph':
+      '@mcp-code-worker/graph':
         specifier: workspace:*
         version: link:../graph
-      '@agent-orchestrator/models':
+      '@mcp-code-worker/models':
         specifier: workspace:*
         version: link:../models
-      '@agent-orchestrator/tools':
+      '@mcp-code-worker/tools':
         specifier: workspace:*
         version: link:../tools
       '@modelcontextprotocol/sdk':
@@ -116,7 +116,7 @@ importers:
 
   packages/models:
     dependencies:
-      '@agent-orchestrator/core':
+      '@mcp-code-worker/core':
         specifier: workspace:*
         version: link:../core
       '@ai-sdk/openai':
@@ -131,7 +131,7 @@ importers:
 
   packages/tools:
     dependencies:
-      '@agent-orchestrator/core':
+      '@mcp-code-worker/core':
         specifier: workspace:*
         version: link:../core
       zod:

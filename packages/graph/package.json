@@ -1,5 +1,5 @@
 {
-  "name": "@agent-orchestrator/graph",
+  "name": "@mcp-code-worker/graph",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,8 +11,8 @@
     "build": "tsup src/index.ts --format esm --dts --clean"
   },
   "dependencies": {
-    "@agent-orchestrator/core": "workspace:*",
-    "@agent-orchestrator/models": "workspace:*",
+    "@mcp-code-worker/core": "workspace:*",
+    "@mcp-code-worker/models": "workspace:*",
     "@langchain/langgraph": "^1.4.5",
     "zod": "^4.1.12"
   }

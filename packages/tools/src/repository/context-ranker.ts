@@ -1,4 +1,4 @@
-import type { RepositoryFileContent, SelectionReason } from "@agent-orchestrator/core";
+import type { RepositoryFileContent, SelectionReason } from "@mcp-code-worker/core";
 
 import { buildLocalDependencyGraph } from "./dependency-graph.js";
 import { locateErrorLogPaths } from "./error-log-locator.js";

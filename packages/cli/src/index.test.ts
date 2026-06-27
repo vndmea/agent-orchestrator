@@ -6,14 +6,14 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import { buildCli } from "@agent-orchestrator/cli";
+import { buildCli } from "@mcp-code-worker/cli";
 import {
-  getAoConfigPath,
-  getAoWorkspaceAuditDir,
-  getAoWorkspaceFilePath,
-  getAoWorkspaceRunsDir,
+  getCwConfigPath,
+  getCwWorkspaceAuditDir,
+  getCwWorkspaceFilePath,
+  getCwWorkspaceRunsDir,
   PatchProposalSchema
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 const execFile = promisify(execFileCallback);
 
@@ -40,7 +40,7 @@ const withTempCwd = async (
   callback: (rootDir: string) => Promise<void>
 ): Promise<void> => {
   const originalCwd = process.cwd();
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-cli-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-cli-"));
 
   try {
     process.chdir(rootDir);
@@ -54,7 +54,7 @@ const parseLastJson = <T>(output: string[]): T =>
   JSON.parse(output.at(-1) ?? "{}") as T;
 
 const writeProfiles = async (rootDir: string, profiles: unknown[]): Promise<void> => {
-  const profilePath = getAoWorkspaceFilePath(rootDir, "worker-profiles.json");
+  const profilePath = getCwWorkspaceFilePath(rootDir, "worker-profiles.json");
   await mkdir(dirname(profilePath), { recursive: true });
   await writeFile(
     profilePath,
@@ -64,7 +64,7 @@ const writeProfiles = async (rootDir: string, profiles: unknown[]): Promise<void
 };
 
 const writeRegistry = async (rootDir: string, workers: unknown[]): Promise<void> => {
-  const registryPath = getAoWorkspaceFilePath(rootDir, "workers.json");
+  const registryPath = getCwWorkspaceFilePath(rootDir, "workers.json");
   await mkdir(dirname(registryPath), { recursive: true });
   await writeFile(
     registryPath,
@@ -116,8 +116,8 @@ const writeWorkspaceFixture = async (rootDir: string): Promise<void> => {
   );
 };
 
-const writeAoConfig = async (rootDir: string, config: Record<string, unknown>): Promise<void> => {
-  const configPath = getAoConfigPath(rootDir);
+const writeCwConfig = async (rootDir: string, config: Record<string, unknown>): Promise<void> => {
+  const configPath = getCwConfigPath(rootDir);
   await mkdir(dirname(configPath), { recursive: true });
   await writeFile(
     configPath,
@@ -135,8 +135,8 @@ const writeAoConfig = async (rootDir: string, config: Record<string, unknown>): 
 
 const initGitRepo = async (rootDir: string): Promise<void> => {
   await execFile("git", ["init"], { cwd: rootDir });
-  await execFile("git", ["config", "user.email", "ao@example.com"], { cwd: rootDir });
-  await execFile("git", ["config", "user.name", "Agent Orchestrator"], { cwd: rootDir });
+  await execFile("git", ["config", "user.email", "cw@example.com"], { cwd: rootDir });
+  await execFile("git", ["config", "user.name", "MCP Code Worker"], { cwd: rootDir });
   await execFile("git", ["add", "."], { cwd: rootDir });
   await execFile("git", ["commit", "-m", "initial"], { cwd: rootDir });
   await writeFile(
@@ -279,7 +279,7 @@ describe("cli parsing", () => {
     const { io, output } = createIo();
     const cli = buildCli(io);
 
-    await cli.parseAsync(["node", "ao", "models", "list"]);
+    await cli.parseAsync(["node", "cw", "models", "list"]);
 
     expect(output.join("\n")).toContain("\"role\": \"worker\"");
   });
@@ -288,19 +288,19 @@ describe("cli parsing", () => {
     const { io, output } = createIo();
     const cli = buildCli(io);
 
-    await cli.parseAsync(["node", "ao", "mcp", "list-tools"]);
+    await cli.parseAsync(["node", "cw", "mcp", "list-tools"]);
 
-    expect(output.join("\n")).toContain("ao_run_host_worker");
-    expect(output.join("\n")).toContain("ao_list_tools");
+    expect(output.join("\n")).toContain("cw_run_host_worker");
+    expect(output.join("\n")).toContain("cw_list_tools");
   });
 
   it("prints a generic mcp config snippet", async () => {
     const { io, output } = createIo();
     const cli = buildCli(io);
 
-    await cli.parseAsync(["node", "ao", "mcp", "config"]);
+    await cli.parseAsync(["node", "cw", "mcp", "config"]);
 
-    expect(output.join("\n")).toContain("\"agent-orchestrator\"");
+    expect(output.join("\n")).toContain("\"mcp-code-worker\"");
     expect(output.join("\n")).toContain("\"mcp\"");
     expect(output.join("\n")).toContain("\"serve\"");
   });
@@ -336,21 +336,21 @@ describe("cli parsing", () => {
       "--worker-client-command",
       "custom-client",
       "--env",
-      "AO_HOME_DIR=C:\\Users\\me\\.ao"
+      "CW_HOME_DIR=C:\\Users\\me\\.cw"
     ]);
 
     expect(output.join("\n")).toContain("\"env\"");
     expect(output.join("\n")).toContain(
-      "\"AO_WORKER_CLIENT_COMMAND\": \"custom-client\""
+      "\"CW_WORKER_CLIENT_COMMAND\": \"custom-client\""
     );
-    expect(output.join("\n")).toContain("\"AO_HOME_DIR\": \"C:\\\\Users\\\\me\\\\.ao\"");
+    expect(output.join("\n")).toContain("\"CW_HOME_DIR\": \"C:\\\\Users\\\\me\\\\.cw\"");
   });
 
   it("runs worker list", async () => {
     const { io, output } = createIo();
     const cli = buildCli(io);
 
-    await cli.parseAsync(["node", "ao", "worker", "list"]);
+    await cli.parseAsync(["node", "cw", "worker", "list"]);
 
     expect(output.join("\n")).toContain("[");
   });
@@ -361,7 +361,7 @@ describe("cli parsing", () => {
       const { io, output } = createIo();
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "ao", "doctor"]);
+      await cli.parseAsync(["node", "cw", "doctor"]);
 
       expect(output.join("\n")).toContain("\"checks\"");
       expect(output.join("\n")).toContain("\"worker-profile-store\"");
@@ -374,9 +374,9 @@ describe("cli parsing", () => {
       const { io, output } = createIo("human");
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "ao", "doctor"]);
+      await cli.parseAsync(["node", "cw", "doctor"]);
 
-      expect(output.at(-1)).toContain("ao doctor:");
+      expect(output.at(-1)).toContain("cw doctor:");
       expect(output.at(-1)).not.toContain("\"checks\"");
     });
   });
@@ -387,7 +387,7 @@ describe("cli parsing", () => {
       const { io, output } = createIo();
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "ao", "setup"]);
+      await cli.parseAsync(["node", "cw", "setup"]);
 
       const result = parseLastJson<{
         minimalSuccessPath: string[];
@@ -441,7 +441,7 @@ describe("cli parsing", () => {
       ).toBe(true);
 
       const savedConfig = JSON.parse(
-        await readFile(getAoConfigPath(rootDir), "utf8")
+        await readFile(getCwConfigPath(rootDir), "utf8")
       ) as {
         workerModel?: { model?: string };
         validation?: {
@@ -452,12 +452,12 @@ describe("cli parsing", () => {
         };
       };
       const savedRegistry = JSON.parse(
-        await readFile(getAoWorkspaceFilePath(rootDir, "workers.json"), "utf8")
+        await readFile(getCwWorkspaceFilePath(rootDir, "workers.json"), "utf8")
       ) as {
         workers: Array<{ workerId: string }>;
       };
       const savedProfiles = JSON.parse(
-        await readFile(getAoWorkspaceFilePath(rootDir, "worker-profiles.json"), "utf8")
+        await readFile(getCwWorkspaceFilePath(rootDir, "worker-profiles.json"), "utf8")
       ) as Array<{ workerId: string }>;
 
       expect(savedConfig.workerModel?.model).toBe("setup-worker");
@@ -502,7 +502,7 @@ describe("cli parsing", () => {
         "coding",
         "--allow-write"
       ]);
-      await cli.parseAsync(["node", "ao", "worker", "registry", "list"]);
+      await cli.parseAsync(["node", "cw", "worker", "registry", "list"]);
       await cli.parseAsync([
         "node",
         "ao",
@@ -622,7 +622,7 @@ describe("cli parsing", () => {
       ]);
 
       let savedProfiles = JSON.parse(
-        await readFile(getAoWorkspaceFilePath(rootDir, "worker-profiles.json"), "utf8")
+        await readFile(getCwWorkspaceFilePath(rootDir, "worker-profiles.json"), "utf8")
       ) as Array<{
         routingPolicy?: { allowPatchGeneration?: boolean };
         supportedTaskTypes?: string[];
@@ -645,7 +645,7 @@ describe("cli parsing", () => {
       ]);
 
       savedProfiles = JSON.parse(
-        await readFile(getAoWorkspaceFilePath(rootDir, "worker-profiles.json"), "utf8")
+        await readFile(getCwWorkspaceFilePath(rootDir, "worker-profiles.json"), "utf8")
       ) as Array<{
         routingPolicy?: { allowPatchGeneration?: boolean };
         supportedTaskTypes?: string[];
@@ -728,7 +728,7 @@ describe("cli parsing", () => {
       const { io, output } = createIo("human");
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "ao", "validate", "--typecheck"]);
+      await cli.parseAsync(["node", "cw", "validate", "--typecheck"]);
 
       expect(output.at(-1)).toContain("validation");
       expect(output.at(-1)).not.toContain("\"checks\"");
@@ -766,10 +766,10 @@ describe("cli parsing", () => {
     });
   });
 
-  it("uses ao config for review, validate, and task entrypoints", async () => {
+  it("uses cw config for review, validate, and task entrypoints", async () => {
     await withTempCwd(async (rootDir) => {
       await writeWorkspaceFixture(rootDir);
-      await writeAoConfig(rootDir, {
+      await writeCwConfig(rootDir, {
         context: {
           ignoredPaths: ["tmp"]
         },
@@ -863,7 +863,7 @@ describe("cli parsing", () => {
       ]);
       expect(output.at(-1)).toContain("\"taskId\"");
 
-      await cli.parseAsync(["node", "ao", "task", "list"]);
+      await cli.parseAsync(["node", "cw", "task", "list"]);
       expect(output.at(-1)).toContain(started.session?.taskId ?? "");
 
       await cli.parseAsync([
@@ -917,8 +917,8 @@ describe("cli parsing", () => {
   it("cleans up old runs and audit logs without touching registry files", async () => {
     await withTempCwd(async (rootDir) => {
       const oldTime = new Date(Date.now() - 40 * 86_400_000);
-      const runsDir = getAoWorkspaceRunsDir(rootDir);
-      const auditDir = getAoWorkspaceAuditDir(rootDir);
+      const runsDir = getCwWorkspaceRunsDir(rootDir);
+      const auditDir = getCwWorkspaceAuditDir(rootDir);
       await mkdir(join(runsDir, "task-old"), { recursive: true });
       await mkdir(auditDir, { recursive: true });
       await writeFile(
@@ -944,7 +944,7 @@ describe("cli parsing", () => {
         "utf8"
       );
       await writeFile(
-        getAoWorkspaceFilePath(rootDir, "workers.json"),
+        getCwWorkspaceFilePath(rootDir, "workers.json"),
         JSON.stringify({ version: 1, workers: [] }, null, 2),
         "utf8"
       );

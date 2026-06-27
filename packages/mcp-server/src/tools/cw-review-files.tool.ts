@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatReviewWorkflowOutput,
   runReviewWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
@@ -22,11 +22,11 @@ const inputSchema = z.object({
   ...workflowOutputOptionShape
 });
 
-export const aoReviewFilesTool: AoToolDefinition<
+export const cwReviewFilesTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<typeof formatReviewWorkflowOutput>
 > = {
-  name: "ao_review_files",
+  name: "cw_review_files",
   description: "Review selected repository files and return structured findings.",
   inputSchema,
   execute: async (args) => {

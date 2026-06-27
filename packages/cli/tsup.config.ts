@@ -15,11 +15,11 @@ export default defineConfig({
   ],
   format: ["esm"],
   noExternal: [
-    /^@agent-orchestrator\/core$/,
-    /^@agent-orchestrator\/models$/,
-    /^@agent-orchestrator\/tools$/,
-    /^@agent-orchestrator\/graph$/,
-    /^@agent-orchestrator\/mcp-server$/
+    /^@mcp-code-worker\/core$/,
+    /^@mcp-code-worker\/models$/,
+    /^@mcp-code-worker\/tools$/,
+    /^@mcp-code-worker\/graph$/,
+    /^@mcp-code-worker\/mcp-server$/
   ],
   platform: "node",
   splitting: false,

@@ -14,8 +14,8 @@ import {
   type ValidationReport,
   type WorkerCapability,
   type WorkerCapabilityProfile
-} from "@agent-orchestrator/core";
-import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
+} from "@mcp-code-worker/core";
+import { ModelRouter, invokeStructured } from "@mcp-code-worker/models";
 
 const PatchGenerationInputSchema = z.object({
   errorLog: z.string().optional(),

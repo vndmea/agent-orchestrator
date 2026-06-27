@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { renderTaskSessionReport } from "@agent-orchestrator/core";
+import { renderTaskSessionReport } from "@mcp-code-worker/core";
 
 describe("task session report", () => {
   it("renders a readable markdown summary", () => {

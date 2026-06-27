@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatPatchProposalWorkflowOutput,
   runPatchProposalWorkflow
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
@@ -22,11 +22,11 @@ const inputSchema = z.object({
   maxBytes: workflowOutputOptionShape.maxBytes
 });
 
-export const aoProposePatchTool: AoToolDefinition<
+export const cwProposePatchTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof runPatchProposalWorkflow>> | Record<string, unknown>
 > = {
-  name: "ao_propose_patch",
+  name: "cw_propose_patch",
   description: "Generate a structured patch proposal and inspect it without applying changes.",
   inputSchema,
   execute: async (args) => {

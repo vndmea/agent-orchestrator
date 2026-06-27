@@ -1,14 +1,14 @@
 # Permissions
 
-`agent-orchestrator` uses a layered permission model so read, local artifact writes, and repository writes do not collapse into a single switch.
+`mcp-code-worker` uses a layered permission model so read, local artifact writes, and repository writes do not collapse into a single switch.
 
 ## Permission Layers
 
 - `read-only`: repository reads, diff inspection, task/status/report reads, and validation planning.
-- `session-write`: local task artifacts under `aoStorageDir/runs/<taskId>`.
+- `session-write`: local task artifacts under `cwStorageDir/runs/<taskId>`.
 - `project-write`: repository file writes when a command explicitly supports them.
 - `patch-apply`: the second gate for mutating source files through patch application.
-- `audit-write`: local audit events under `aoStorageDir/audit`.
+- `audit-write`: local audit events under `cwStorageDir/audit`.
 
 ## Default Behavior
 
@@ -19,7 +19,7 @@
 
 ## Gates
 
-- `--allow-write-session` allows `aoStorageDir/runs` persistence only.
+- `--allow-write-session` allows `cwStorageDir/runs` persistence only.
 - `--allow-write` allows commands with write support to modify local managed files or repository files, depending on the command.
 - `--confirm-apply` is required in addition to `--allow-write` before `patch apply` can touch project files.
 
@@ -33,12 +33,12 @@ Patch apply stays explicitly two-step:
 By default, local AO state is stored under:
 
 ```text
-~/.ao/workspaces/<workspace-id>/
+~/.cw/workspaces/<workspace-id>/
 ```
 
-`AO_HOME_DIR` overrides the `~/.ao` root. `AO_ROOT_DIR` or explicit `--root` flags affect which repository path maps to `<workspace-id>`.
+`CW_HOME_DIR` overrides the `~/.cw` root. `CW_ROOT_DIR` or explicit `--root` flags affect which repository path maps to `<workspace-id>`.
 
-## What Writes Under `aoStorageDir`
+## What Writes Under `cwStorageDir`
 
 Local-managed artifacts include:
 
@@ -53,13 +53,13 @@ Local-managed artifacts include:
 
 ## What Can Modify Project Files
 
-- `ao patch apply ... --allow-write --confirm-apply`
+- `cw patch apply ... --allow-write --confirm-apply`
 - task-session resume paths only when they explicitly reach patch apply with both gates
 
-`ao fix error`, `ao review ...`, `ao validate`, and `ao patch propose` do not apply repository changes by themselves.
+`cw fix error`, `cw review ...`, `cw validate`, and `cw patch propose` do not apply repository changes by themselves.
 
 ## Cleanup Scope
 
-- `ao cleanup runs` only removes local task-session artifacts under `aoStorageDir/runs`.
-- `ao cleanup audit` only removes local audit artifacts under `aoStorageDir/audit`.
+- `cw cleanup runs` only removes local task-session artifacts under `cwStorageDir/runs`.
+- `cw cleanup audit` only removes local audit artifacts under `cwStorageDir/audit`.
 - Cleanup commands do not touch project source files.

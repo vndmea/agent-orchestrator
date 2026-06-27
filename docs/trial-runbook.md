@@ -24,7 +24,7 @@ CI currently validates Node 22. Other Node.js `>=22` versions are best-effort un
 ```bash
 pnpm install
 pnpm build
-pnpm exec ao doctor
+pnpm exec cw doctor
 pnpm smoke
 pnpm smoke:dist
 pnpm typecheck
@@ -35,25 +35,25 @@ pnpm test
 ## Local Setup
 
 ```bash
-pnpm exec ao setup --allow-write
-pnpm exec ao doctor
+pnpm exec cw setup --allow-write
+pnpm exec cw doctor
 ```
 
 Recommended next checks:
 
-- Confirm `~/.ao/workspaces/<workspace-id>/config.json` exists, or the equivalent path under `AO_HOME_DIR`.
-- Confirm `worker-profiles.json` and `workers.json` were created in user-scoped AO storage, not in the repository checkout.
+- Confirm `~/.cw/workspaces/<workspace-id>/config.json` exists, or the equivalent path under `CW_HOME_DIR`.
+- Confirm `worker-profiles.json` and `workers.json` were created in user-scoped CW storage, not in the repository checkout.
 - Confirm no API key was written into the persisted `config.json`.
-- Confirm no workflow depends on a repository-local legacy `.ao/` directory. Current builds do not read it.
+- Confirm no workflow depends on a repository-local legacy `.cw/` directory. Current builds do not read it.
 
 ## Write Modes And Safety Gates
 
 - Dry-run: default for commands that could affect repository state or local managed artifacts.
-- `--allow-write-session`: allows `aoStorageDir/runs/<taskId>` artifact persistence only.
+- `--allow-write-session`: allows `cwStorageDir/runs/<taskId>` artifact persistence only.
 - `--allow-write`: allows repository writes when the command supports them.
 - `--confirm-apply`: the second explicit gate for patch application. `--allow-write` alone is not enough.
 
-Dry-run does not create audit files by default for ordinary evaluation paths. Audit artifacts are local `aoStorageDir/audit` writes.
+Dry-run does not create audit files by default for ordinary evaluation paths. Audit artifacts are local `cwStorageDir/audit` writes.
 
 Patch apply remains two-step:
 
@@ -69,8 +69,8 @@ Interview and benchmark serve different purposes:
 
 `patch-generation` should only be enabled after:
 
-1. `ao worker interview --save`
-2. `ao worker benchmark --suite coding-v1 --save`
+1. `cw worker interview --save`
+2. `cw worker benchmark --suite coding-v1 --save`
 3. explicit `--update-profile-capabilities`
 
 ## Example: DeepSeek / OpenAI-Compatible Worker
@@ -88,18 +88,18 @@ Compatibility path worth testing in some SDKs:
 ```powershell
 $env:WORKER_MODEL_API_KEY="..."
 
-ao worker register `
+cw worker register `
   --worker openai-compatible:deepseek-v4-flash `
   --provider openai-compatible `
   --model deepseek-v4-flash `
   --base-url https://api.deepseek.com `
   --allow-write
 
-ao worker interview `
+cw worker interview `
   --worker openai-compatible:deepseek-v4-flash `
   --save
 
-ao worker benchmark `
+cw worker benchmark `
   --suite coding-v1 `
   --worker openai-compatible:deepseek-v4-flash `
   --save `
@@ -127,25 +127,25 @@ curl https://api.deepseek.com/chat/completions \
 
 If you get `Not Found`, test both base URLs, verify the model name, and confirm that `WORKER_MODEL_API_KEY` is populated in the current runtime.
 
-If interview output reports provider invocation failures, do not treat the resulting blocked status as a completed onboarding result. `ao worker interview --save` now skips persistence in that case and returns recovery actions instead.
+If interview output reports provider invocation failures, do not treat the resulting blocked status as a completed onboarding result. `cw worker interview --save` now skips persistence in that case and returns recovery actions instead.
 
 ## Example: LiteLLM / Local Worker
 
 ```bash
-ao worker register \
+cw worker register \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
-ao worker interview --worker litellm:qwen3-coder --save
-ao worker benchmark --suite coding-v1 --worker litellm:qwen3-coder --save --update-profile-capabilities
+cw worker interview --worker litellm:qwen3-coder --save
+cw worker benchmark --suite coding-v1 --worker litellm:qwen3-coder --save --update-profile-capabilities
 ```
 
 ## End-To-End Task Session
 
 ```bash
-ao task start \
+cw task start \
   --goal "Review packages/core and propose safe improvements" \
   --scope packages/core \
   --worker openai-compatible:deepseek-v4-flash \
@@ -156,22 +156,22 @@ ao task start \
   --allow-write-session
 ```
 
-After `ao task start`, capture the returned `taskId`, then:
+After `cw task start`, capture the returned `taskId`, then:
 
 ```bash
-ao task report <taskId>
-ao audit list
+cw task report <taskId>
+cw audit list
 ```
 
-For MCP clients, use `ao_get_task_report` and `ao_read_task_artifact` against the returned artifact refs instead of rehydrating large task payloads eagerly.
+For MCP clients, use `cw_get_task_report` and `cw_read_task_artifact` against the returned artifact refs instead of rehydrating large task payloads eagerly.
 
-If onboarding is driven from an MCP client rather than the CLI, use `ao_run_worker_interview` first and then `ao_benchmark_worker` so benchmark evidence and optional capability promotion stay inside the same reviewed tool surface. `ao_interview_worker` remains as a compatibility alias.
+If onboarding is driven from an MCP client rather than the CLI, use `cw_run_worker_interview` first and then `cw_benchmark_worker` so benchmark evidence and optional capability promotion stay inside the same reviewed tool surface. `cw_interview_worker` remains as a compatibility alias.
 
 If a patch proposal was generated and inspection passed:
 
 ```bash
-ao task resume <taskId> --apply-patch
-ao task resume <taskId> --apply-patch --allow-write --confirm-apply
+cw task resume <taskId> --apply-patch
+cw task resume <taskId> --apply-patch --allow-write --confirm-apply
 ```
 
 ## Evidence To Keep
@@ -179,12 +179,12 @@ ao task resume <taskId> --apply-patch --allow-write --confirm-apply
 For each internal trial run, keep:
 
 - commit SHA
-- `ao` package version
+- `cw` package version
 - worker id, provider, model, base URL
 - interview/profile artifact path
 - benchmark artifact path
 - task session id
-- `aoStorageDir/runs/<taskId>/report.md`
+- `cwStorageDir/runs/<taskId>/report.md`
 - patch proposal / inspection artifact paths
 - sanitized failure reason if the run failed
 - any returned re-interview guidance when provider invocation failed
@@ -194,11 +194,11 @@ Do not keep:
 - raw API keys
 - bearer tokens
 - full sensitive request headers
-- raw operator usernames or machine-specific absolute paths when a sanitized placeholder such as `<workspace-root>` or `%USERPROFILE%\.ao` is enough
+- raw operator usernames or machine-specific absolute paths when a sanitized placeholder such as `<workspace-root>` or `%USERPROFILE%\.cw` is enough
 
 ## Rollback Notes
 
-- Task session artifacts can be removed with `ao cleanup runs`.
-- Audit artifacts can be removed with `ao cleanup audit`.
+- Task session artifacts can be removed with `cw cleanup runs`.
+- Audit artifacts can be removed with `cw cleanup audit`.
 - Repository changes are never auto-committed.
 - Patch apply validation failures should be handled through the recorded recovery guidance in the task report.

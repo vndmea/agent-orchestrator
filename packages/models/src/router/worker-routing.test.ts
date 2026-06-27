@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { WorkerCapabilityProfile } from "@agent-orchestrator/core";
+import type { WorkerCapabilityProfile } from "@mcp-code-worker/core";
 
 import { assessWorkerTaskEligibility } from "./worker-routing.js";
 

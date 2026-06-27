@@ -1,5 +1,5 @@
-import type { ExecutionContext } from "@agent-orchestrator/core";
-import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
+import type { ExecutionContext } from "@mcp-code-worker/core";
+import { createExecutionContextFromEnv } from "@mcp-code-worker/core";
 
 import { runSafeCommand } from "../shell/safe-command.js";
 

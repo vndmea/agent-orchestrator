@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { buildCli } from "@agent-orchestrator/cli";
-import { getAoWorkspaceAuditDir } from "@agent-orchestrator/core";
+import { buildCli } from "@mcp-code-worker/cli";
+import { getCwWorkspaceAuditDir } from "@mcp-code-worker/core";
 
 const createIo = () => {
   const output: string[] = [];
@@ -29,7 +29,7 @@ const withTempCwd = async (
   callback: (rootDir: string) => Promise<void>
 ): Promise<void> => {
   const originalCwd = process.cwd();
-  const rootDir = await mkdtemp(join(tmpdir(), "ao-cli-audit-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "cw-cli-audit-"));
 
   try {
     process.chdir(rootDir);
@@ -45,7 +45,7 @@ describe("audit cli", () => {
       const { io, output } = createIo();
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "ao", "audit", "list"]);
+      await cli.parseAsync(["node", "cw", "audit", "list"]);
 
       expect(output.join("\n")).toContain("[]");
     });
@@ -53,7 +53,7 @@ describe("audit cli", () => {
 
   it("lists audit events and respects limit", async () => {
     await withTempCwd(async (rootDir) => {
-      const auditDir = getAoWorkspaceAuditDir(rootDir);
+      const auditDir = getCwWorkspaceAuditDir(rootDir);
       await mkdir(auditDir, { recursive: true });
       await writeFile(
         join(auditDir, "2026-06-25.jsonl"),
@@ -84,7 +84,7 @@ describe("audit cli", () => {
       const { io, output } = createIo();
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "ao", "audit", "list", "--limit", "1"]);
+      await cli.parseAsync(["node", "cw", "audit", "list", "--limit", "1"]);
 
       expect(output.join("\n")).toContain("\"id\": \"2\"");
       expect(output.join("\n")).not.toContain("\"id\": \"1\"");

@@ -1,23 +1,28 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatTaskSessionWorkflowOutput,
-  resumeTaskSessionWorkflow
-} from "@agent-orchestrator/graph";
+  runTaskSessionWorkflow
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
 } from "./output-options.js";
 
 const inputSchema = z.object({
-  taskId: z.string().min(1),
-  fromStep: z.string().optional(),
+  goal: z.string().min(1),
+  scope: z.string().optional(),
+  workerId: z.string().optional(),
+  requireProfile: z.boolean().optional(),
   errorLog: z.string().optional(),
   errorLogFile: z.string().optional(),
   runFix: z.boolean().optional(),
+  typecheck: z.boolean().optional(),
+  lint: z.boolean().optional(),
+  test: z.boolean().optional(),
   proposePatch: z.boolean().optional(),
   inspectPatch: z.boolean().optional(),
   applyPatch: z.boolean().optional(),
@@ -28,12 +33,12 @@ const inputSchema = z.object({
   ...workflowOutputOptionShape
 });
 
-export const aoResumeTaskTool: AoToolDefinition<
+export const cwStartTaskTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<typeof formatTaskSessionWorkflowOutput>
 > = {
-  name: "ao_resume_task",
-  description: "Resume a stored local task session, skip successful steps unless told otherwise, and return updated next recommended actions.",
+  name: "cw_start_task",
+  description: "Recommended host-facing coding entrypoint. Keep the host in control while cw manages repository context, validation, task artifacts, and patch gates.",
   inputSchema,
   execute: async (args) => {
     const context = await resolveExecutionContext({
@@ -47,15 +52,22 @@ export const aoResumeTaskTool: AoToolDefinition<
       }
     });
 
-    const result = await resumeTaskSessionWorkflow({
+    const result = await runTaskSessionWorkflow({
       context,
-      taskId: args.taskId,
       errorLog: args.errorLog,
       errorLogFile: args.errorLogFile,
-      fromStep: args.fromStep,
+      goal: args.goal,
+      scope: args.scope,
+      workerId: args.workerId,
+      requireProfile: args.requireProfile,
+      runFix: args.runFix,
+      validate: {
+        typecheck: args.typecheck,
+        lint: args.lint,
+        test: args.test
+      },
       proposePatch: args.proposePatch,
       inspectPatch: args.inspectPatch,
-      runFix: args.runFix,
       applyPatch: args.applyPatch,
       allowWrite: args.allowWrite,
       allowDirtyWorktree: args.allowDirtyWorktree,

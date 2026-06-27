@@ -1,22 +1,22 @@
 # Codex Usage
 
-Use `ao_start_task` as the default high-level coding task entrypoint for Codex and GPT clients.
+Use `cw_start_task` as the default high-level coding task entrypoint for Codex and GPT clients.
 
-Codex stays in charge. `ao` should be treated as the controlled execution/runtime layer that narrows repository context, routes workers, records artifacts, and runs validation.
+Codex stays in charge. `cw` should be treated as the controlled execution/runtime layer that narrows repository context, routes workers, records artifacts, and runs validation.
 
 Recommended call order:
 
-1. Call `ao_start_task` with `goal`, optional `scope`, and deterministic validation flags.
+1. Call `cw_start_task` with `goal`, optional `scope`, and deterministic validation flags.
 2. Read `nextRecommendedActions` from the result instead of guessing the next step.
-3. Review `aoStorageDir/runs/<taskId>/report.md` or call `ao_get_task_report` before any patch apply attempt.
+3. Review `cwStorageDir/runs/<taskId>/report.md` or call `cw_get_task_report` before any patch apply attempt.
 4. Prefer `proposePatch=true` and `inspectPatch=true` first.
 5. Use patch apply only after manual review. Keep the first apply in dry-run mode unless a human explicitly wants writes.
 
-When to use `ao_run_host_worker`:
+When to use `cw_run_host_worker`:
 
 - Use it only when Codex wants one explicit worker task such as `review-lite` or `summarization`.
 - Treat it as a narrow worker invocation surface, not as a second planning or acceptance layer.
-- If the task needs multi-step orchestration or patch lifecycle management, go back to `ao_start_task`.
+- If the task needs multi-step orchestration or patch lifecycle management, go back to `cw_start_task`.
 
 When to require a profile:
 
@@ -32,13 +32,13 @@ When to propose but not apply:
 
 How to read task artifacts:
 
-- `aoStorageDir/runs/<taskId>/report.md` is the fastest human-readable summary.
+- `cwStorageDir/runs/<taskId>/report.md` is the fastest human-readable summary.
 - `patch-proposal.json`, `patch-inspection.json`, and `patch-apply-result.json` contain the structured patch lifecycle.
 - `validation-report.json` and `fix-result.json` explain deterministic failures and recovery guidance.
 
 Worker evaluation layers:
 
-- `ao worker interview --save` establishes onboarding trust and baseline routing limits.
-- `ao worker benchmark --suite coding-v1 --save` records coding benchmark results under `aoStorageDir/worker-benchmarks/<sanitized-worker-id>/coding-v1.json`.
-- `ao worker benchmark --suite coding-v1 --save --update-profile-capabilities` is the explicit step that can enable `patch-generation` on an existing persisted profile when the benchmark passes the required fixtures.
+- `cw worker interview --save` establishes onboarding trust and baseline routing limits.
+- `cw worker benchmark --suite coding-v1 --save` records coding benchmark results under `cwStorageDir/worker-benchmarks/<sanitized-worker-id>/coding-v1.json`.
+- `cw worker benchmark --suite coding-v1 --save --update-profile-capabilities` is the explicit step that can enable `patch-generation` on an existing persisted profile when the benchmark passes the required fixtures.
 - Benchmark results alone do not bypass patch inspection, dry-run apply, `allowWrite`, or `confirmApply`.

@@ -1,15 +1,15 @@
 import { z } from "zod";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({});
 
-export const aoListWorkflowsTool: AoToolDefinition<
+export const cwListWorkflowsTool: CwToolDefinition<
   typeof inputSchema.shape,
   Array<{ description: string; name: string }>
 > = {
-  name: "ao_list_workflows",
-  description: "List host-managed workflows that remain available through public ao tools.",
+  name: "cw_list_workflows",
+  description: "List host-managed workflows that remain available through public cw tools.",
   inputSchema,
   execute: () => [
     {

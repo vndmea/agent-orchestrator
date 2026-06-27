@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import { delimiter, isAbsolute, join } from "node:path";
 
 import { listAuditEvents } from "../audit/audit-log.js";
-import { loadAoConfig } from "../config/ao-config.js";
+import { loadCwConfig } from "../config/cw-config.js";
 import type { ExecutionContext } from "../runtime/execution-context.js";
 import {
   buildWorkspaceBindingSummary,
@@ -16,9 +16,9 @@ import {
   type ValidationScriptResolution
 } from "../validation/validation-scripts.js";
 import {
-  getAoWorkspaceAuditDirFromStorageDir,
-  getAoWorkspaceRunsDirFromStorageDir
-} from "../storage/ao-paths.js";
+  getCwWorkspaceAuditDirFromStorageDir,
+  getCwWorkspaceRunsDirFromStorageDir
+} from "../storage/cw-paths.js";
 
 export interface DoctorCheck {
   message: string;
@@ -60,18 +60,18 @@ export interface RunDoctorOptions {
 
 const WHY_THIS_MATTERS: Record<string, string> = {
   "root-dir":
-    "If the active root directory is wrong, ao can inspect or persist work against the wrong repository.",
+    "If the active root directory is wrong, cw can inspect or persist work against the wrong repository.",
   "worker-model":
     "The worker model handles scoped execution steps such as review, validation guidance, and patch generation.",
   "local-client-command":
-    "When ao uses a local client provider, this command is the bridge to the real model backend.",
-  "ao-dir":
-    "The user-scoped ao workspace directory stores local runs, audit logs, configuration, and task artifacts outside the repository.",
+    "When cw uses a local client provider, this command is the bridge to the real model backend.",
+  "cw-dir":
+    "The user-scoped cw workspace directory stores local runs, audit logs, configuration, and task artifacts outside the repository.",
   "execution-mode":
     "Repository writes and session writes are separate concerns; this check explains the repository-side default only.",
   "allowed-commands":
-    "These are the only shell commands ao can run through its safe command layer.",
-  "ao-config":
+    "These are the only shell commands cw can run through its safe command layer.",
+  "cw-config":
     "Local configuration controls safety defaults, model resolution, validation mappings, and session retention.",
   "worker-api-key":
     "Without a worker credential for non-mock providers, worker-routed tasks can degrade or fail.",
@@ -82,25 +82,25 @@ const WHY_THIS_MATTERS: Record<string, string> = {
   "task-sessions":
     "Broken or failed sessions can make follow-up resume and artifact reads unreliable.",
   "audit-log":
-    "Audit logs help explain what ao wrote and why, especially when explicit write gates are used.",
+    "Audit logs help explain what cw wrote and why, especially when explicit write gates are used.",
   "validation-scripts":
-    "Deterministic validation is how ao proves a result instead of just sounding confident.",
+    "Deterministic validation is how cw proves a result instead of just sounding confident.",
   "cli-entrypoint":
     "The CLI entrypoint is required for local command-based integrations and MCP launch snippets.",
   "mcp-config-hint":
-    "This is the quickest way to connect an MCP client to the local ao server.",
+    "This is the quickest way to connect an MCP client to the local cw server.",
   "retention-summary":
     "Retention limits control how long session artifacts stay available for resume and audit.",
   "worker-profile-store":
-    "Persisted worker profiles let ao reuse capability interviews instead of rediscovering routing quality every time.",
+    "Persisted worker profiles let cw reuse capability interviews instead of rediscovering routing quality every time.",
   "worker-registry":
     "The worker registry enables explicit worker routing beyond the default fallback worker.",
   "registered-worker":
     "Disabled workers stay on record but are not eligible for routing.",
   "registered-worker-profile":
-    "Registered worker profiles determine whether ao can route specialized tasks confidently.",
+    "Registered worker profiles determine whether cw can route specialized tasks confidently.",
   "default-worker-profile":
-    "The default worker profile determines whether ao can route without interviewing or guessing at runtime."
+    "The default worker profile determines whether cw can route without interviewing or guessing at runtime."
 };
 
 const checkExists = async (path: string): Promise<boolean> => {
@@ -134,7 +134,7 @@ const LOCAL_CLIENT_PROVIDERS = new Set(["client", "local-client"]);
 
 const resolveLocalClientCommand = (
   env: NodeJS.ProcessEnv = process.env
-): string => env.AO_WORKER_CLIENT_COMMAND?.trim() || "opencode";
+): string => env.CW_WORKER_CLIENT_COMMAND?.trim() || "opencode";
 
 const hasPathSeparator = (value: string): boolean =>
   value.includes("/") || value.includes("\\");
@@ -359,30 +359,30 @@ export const runDoctor = async (
       metadata: {
         command: localClientCommand,
         resolvedPath: localClientPath,
-        configuredByEnv: Boolean(process.env.AO_WORKER_CLIENT_COMMAND?.trim())
+        configuredByEnv: Boolean(process.env.CW_WORKER_CLIENT_COMMAND?.trim())
       }
     });
   }
 
-  const aoDir = context.aoStorageDir;
-  const aoDirExists = await checkExists(aoDir);
-  const aoDirWritable = aoDirExists
-    ? await canWrite(aoDir)
-    : await canCreateDirectory(aoDir);
+  const cwDir = context.cwStorageDir;
+  const cwDirExists = await checkExists(cwDir);
+  const cwDirWritable = cwDirExists
+    ? await canWrite(cwDir)
+    : await canCreateDirectory(cwDir);
 
   addCheck(checks, {
-    name: "ao-dir",
-    status: aoDirWritable ? "pass" : "fail",
-    message: aoDirExists
-      ? aoDirWritable
-        ? "User-scoped ao workspace directory is writable."
-        : "User-scoped ao workspace directory exists but is not writable."
-      : aoDirWritable
-        ? "User-scoped ao workspace directory does not exist yet, but it can be created."
-        : "User-scoped ao workspace directory does not exist and its parent is not writable.",
+    name: "cw-dir",
+    status: cwDirWritable ? "pass" : "fail",
+    message: cwDirExists
+      ? cwDirWritable
+        ? "User-scoped cw workspace directory is writable."
+        : "User-scoped cw workspace directory exists but is not writable."
+      : cwDirWritable
+        ? "User-scoped cw workspace directory does not exist yet, but it can be created."
+        : "User-scoped cw workspace directory does not exist and its parent is not writable.",
     metadata: {
-      aoDir,
-      exists: aoDirExists
+      cwDir,
+      exists: cwDirExists
     }
   });
 
@@ -408,15 +408,15 @@ export const runDoctor = async (
     }
   });
 
-  const config = await loadAoConfig(context.rootDir);
+  const config = await loadCwConfig(context.rootDir);
   addCheck(checks, {
-    name: "ao-config",
+    name: "cw-config",
     status: config.error ? "fail" : config.exists ? "pass" : "warning",
     message: config.error
-      ? `ao workspace config is invalid: ${config.error}`
+      ? `cw workspace config is invalid: ${config.error}`
       : config.exists
-        ? "ao workspace config is present and readable."
-        : "ao workspace config is missing. Defaults and environment variables will still work.",
+        ? "cw workspace config is present and readable."
+        : "cw workspace config is missing. Defaults and environment variables will still work.",
     metadata: {
       path: config.path
     }
@@ -473,11 +473,11 @@ export const runDoctor = async (
     }
   });
 
-  const runsDir = getAoWorkspaceRunsDirFromStorageDir(context.aoStorageDir);
+  const runsDir = getCwWorkspaceRunsDirFromStorageDir(context.cwStorageDir);
   const runsDirExists = await checkExists(runsDir);
   const sessionScan = await scanTaskSessions(
     context.rootDir,
-    context.aoStorageDir
+    context.cwStorageDir
   );
   const failedSessions = sessionScan.sessions.filter(
     (session) => session.status === "failed" || session.status === "blocked"
@@ -487,8 +487,8 @@ export const runDoctor = async (
     name: "runs-dir",
     status: runsDirExists ? "pass" : "warning",
     message: runsDirExists
-      ? `ao session storage is present with ${sessionScan.sessions.length} valid session(s).`
-      : "ao session storage is not present yet. It can be created when task sessions are persisted.",
+      ? `cw session storage is present with ${sessionScan.sessions.length} valid session(s).`
+      : "cw session storage is not present yet. It can be created when task sessions are persisted.",
     metadata: {
       runsDir,
       exists: runsDirExists
@@ -514,12 +514,12 @@ export const runDoctor = async (
     }
   });
 
-  const auditDir = getAoWorkspaceAuditDirFromStorageDir(context.aoStorageDir);
+  const auditDir = getCwWorkspaceAuditDirFromStorageDir(context.cwStorageDir);
   const auditDirExists = await checkExists(auditDir);
   const recentAuditEvents = await listAuditEvents(
     context.rootDir,
     5,
-    context.aoStorageDir
+    context.cwStorageDir
   );
   addCheck(checks, {
     name: "audit-log",
@@ -575,7 +575,7 @@ export const runDoctor = async (
     message: cliMainExists
       ? "CLI entrypoint source is available."
       : !workspaceBinding.matchesCallerWorkingDirectory
-        ? "CLI entrypoint source is not in the active workspace, which is expected when ao is launched from a separate tools checkout."
+        ? "CLI entrypoint source is not in the active workspace, which is expected when cw is launched from a separate tools checkout."
         : "CLI entrypoint source was not found in the workspace.",
     metadata: {
       path: cliMainPath
@@ -585,9 +585,9 @@ export const runDoctor = async (
   addCheck(checks, {
     name: "mcp-config-hint",
     status: "pass",
-    message: "Use `ao mcp config` to print a generic local MCP server snippet.",
+    message: "Use `cw mcp config` to print a generic local MCP server snippet.",
     metadata: {
-      command: "ao",
+      command: "cw",
       args: ["mcp", "serve"]
     }
   });
@@ -619,10 +619,10 @@ export const runDoctor = async (
         "root-dir",
         "worker-model",
         "local-client-command",
-        "ao-config",
+        "cw-config",
         "worker-api-key"
       ],
-      readySummary: "You can start model-backed ao tasks from this workspace.",
+      readySummary: "You can start model-backed cw tasks from this workspace.",
       degradedSummary:
         "You can start tasks, but some model or workspace prerequisites are only partially configured.",
       failSummary:
@@ -631,13 +631,13 @@ export const runDoctor = async (
     buildCapability({
       checks,
       name: "session-persistence",
-      relatedChecks: ["root-dir", "ao-dir", "runs-dir", "audit-log"],
+      relatedChecks: ["root-dir", "cw-dir", "runs-dir", "audit-log"],
       readySummary:
         "Persisted task sessions, reports, and audit artifacts are available.",
       degradedSummary:
-        "ao can run, but session persistence or audit storage is only partially ready.",
+        "cw can run, but session persistence or audit storage is only partially ready.",
       failSummary:
-        "ao cannot reliably persist resumable sessions or artifacts in this workspace."
+        "cw cannot reliably persist resumable sessions or artifacts in this workspace."
     }),
     buildCapability({
       checks,
@@ -662,7 +662,7 @@ export const runDoctor = async (
       readySummary:
         "Explicit worker routing and persisted capability profiles are ready.",
       degradedSummary:
-        "ao can still run with fallback routing, but worker registry or profile coverage is incomplete.",
+        "cw can still run with fallback routing, but worker registry or profile coverage is incomplete.",
       failSummary:
         "Worker routing metadata is misconfigured and should be repaired before relying on explicit worker selection."
     })
@@ -679,10 +679,10 @@ export const runDoctor = async (
   );
   const summary =
     status === "ready"
-      ? `ready: ao is bound to ${context.rootDir} and core task workflows are available.`
+      ? `ready: cw is bound to ${context.rootDir} and core task workflows are available.`
       : status === "degraded"
-        ? `degraded: ao is bound to ${context.rootDir}; ${degradedCapabilities.map((capability) => capability.name).join(", ") || "some subsystems"} need attention before the experience is smooth.`
-        : `misconfigured: ao is bound to ${context.rootDir}, but ${misconfiguredCapabilities.map((capability) => capability.name).join(", ") || "core prerequisites"} are blocking reliable use.`;
+        ? `degraded: cw is bound to ${context.rootDir}; ${degradedCapabilities.map((capability) => capability.name).join(", ") || "some subsystems"} need attention before the experience is smooth.`
+        : `misconfigured: cw is bound to ${context.rootDir}, but ${misconfiguredCapabilities.map((capability) => capability.name).join(", ") || "core prerequisites"} are blocking reliable use.`;
 
   return {
     activeRootDir: context.rootDir,
@@ -692,27 +692,27 @@ export const runDoctor = async (
     minimalSuccessPath: [
       `1. Confirm the active root directory is ${context.rootDir}.`,
       "2. Verify the worker model credential or local client.",
-      "3. Start a dry-run task with `ao task start --goal \"Review this repository\"`.",
-      "4. Read the returned report summary or `ao task report <task-id>` if the session is persisted.",
+      "3. Start a dry-run task with `cw task start --goal \"Review this repository\"`.",
+      "4. Read the returned report summary or `cw task report <task-id>` if the session is persisted.",
       "5. Decide whether to continue into patch proposal and patch inspection."
     ],
     recommendedActions,
     recommendedEntrypoints: [
       {
-        command: "ao task start --goal \"Review this repository\"",
+        command: "cw task start --goal \"Review this repository\"",
         description:
           "Recommended CLI entrypoint for a dry-run task with reviewable output.",
-        toolName: "ao_start_task"
+        toolName: "cw_start_task"
       },
       {
-        command: "ao task resume <task-id>",
+        command: "cw task resume <task-id>",
         description: "Resume a persisted task session when you want the next step.",
-        toolName: "ao_resume_task"
+        toolName: "cw_resume_task"
       },
       {
-        command: "ao task report <task-id>",
+        command: "cw task report <task-id>",
         description: "Read the persisted markdown report for a task session.",
-        toolName: "ao_get_task_report"
+        toolName: "cw_get_task_report"
       }
     ],
     status,

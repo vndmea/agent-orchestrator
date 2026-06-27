@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   formatTaskSessionListOutput,
   listStoredTaskSessions
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import {
   resolveWorkflowOutputOptions,
   workflowOutputOptionShape
@@ -17,11 +17,11 @@ const inputSchema = z.object({
   ...workflowOutputOptionShape
 });
 
-export const aoListTasksTool: AoToolDefinition<
+export const cwListTasksTool: CwToolDefinition<
   typeof inputSchema.shape,
   ReturnType<typeof formatTaskSessionListOutput>
 > = {
-  name: "ao_list_tasks",
+  name: "cw_list_tasks",
   description: "List stored local task sessions in reverse chronological order.",
   inputSchema,
   execute: async (args) => {
@@ -29,7 +29,7 @@ export const aoListTasksTool: AoToolDefinition<
     const sessions = await listStoredTaskSessions(
       context.rootDir,
       args.limit ?? 50,
-      context.aoStorageDir
+      context.cwStorageDir
     );
     return formatTaskSessionListOutput(sessions, resolveWorkflowOutputOptions(args));
   }

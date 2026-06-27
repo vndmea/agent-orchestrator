@@ -1,7 +1,7 @@
 node_modules
 dist
 coverage
-.ao
+.cw
 .env
 *.log
 tmp

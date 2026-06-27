@@ -5,7 +5,7 @@ import {
   type DirtyWorktree,
   DirtyWorktreeSchema,
   type ExecutionContext
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { runSafeCommand } from "../shell/safe-command.js";
 

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-import { listAuditEvents, resolveExecutionContext } from "@agent-orchestrator/core";
+import { listAuditEvents, resolveExecutionContext } from "@mcp-code-worker/core";
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
@@ -18,7 +18,7 @@ export const registerAuditCommand = (program: Command, io: CliIo): void => {
       const events = await listAuditEvents(
         context.rootDir,
         Number.isNaN(limit) ? 50 : limit,
-        context.aoStorageDir
+        context.cwStorageDir
       );
 
       writeOutput(

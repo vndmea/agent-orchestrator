@@ -1,19 +1,19 @@
 import { z } from "zod";
 
-import { resolveExecutionContext } from "@agent-orchestrator/core";
+import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
   applyBenchmarkCapabilityUpdate,
   runWorkerBenchmarkWorkflow,
   saveWorkerBenchmarkArtifact
-} from "@agent-orchestrator/graph";
+} from "@mcp-code-worker/graph";
 import {
   getWorkerProfile,
   getWorkerRegistration,
   resolveWorkerModel,
   saveWorkerProfile
-} from "@agent-orchestrator/models";
+} from "@mcp-code-worker/models";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   suite: z.literal("coding-v1").optional(),
@@ -25,7 +25,7 @@ const inputSchema = z.object({
   updateProfileCapabilities: z.boolean().optional()
 });
 
-export const aoBenchmarkWorkerTool: AoToolDefinition<
+export const cwBenchmarkWorkerTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof runWorkerBenchmarkWorkflow>> & {
     capabilityUpdateApplied: boolean;
@@ -34,7 +34,7 @@ export const aoBenchmarkWorkerTool: AoToolDefinition<
     profilePersistence?: { mode: "execute" | "dry-run"; path: string };
   }
 > = {
-  name: "ao_benchmark_worker",
+  name: "cw_benchmark_worker",
   description:
     "Run the coding benchmark suite for a worker model, optionally persist the artifact, and optionally update persisted worker capabilities.",
   inputSchema,
@@ -52,7 +52,7 @@ export const aoBenchmarkWorkerTool: AoToolDefinition<
       ? await getWorkerRegistration(
           context.rootDir,
           args.workerId,
-          context.aoStorageDir
+          context.cwStorageDir
         )
       : null;
     const resolved = registeredWorker
@@ -84,12 +84,12 @@ export const aoBenchmarkWorkerTool: AoToolDefinition<
     const existingProfile = await getWorkerProfile(
       context.rootDir,
       result.workerId,
-      context.aoStorageDir
+      context.cwStorageDir
     );
 
     if (args.updateProfileCapabilities && !existingProfile) {
       throw new Error(
-        `No persisted worker profile found for ${result.workerId}; run ao_interview_worker with persistProfile first.`
+        `No persisted worker profile found for ${result.workerId}; run cw_interview_worker with persistProfile first.`
       );
     }
 

@@ -1,5 +1,5 @@
 {
-  "name": "@agent-orchestrator/playground",
+  "name": "@mcp-code-worker/playground",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -8,6 +8,6 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@agent-orchestrator/graph": "workspace:*"
+    "@mcp-code-worker/graph": "workspace:*"
   }
 }

@@ -3,10 +3,10 @@ import { z } from "zod";
 import {
   resolveExecutionContext,
   summarizeValidationReport
-} from "@agent-orchestrator/core";
-import { runRepositoryValidation } from "@agent-orchestrator/tools";
+} from "@mcp-code-worker/core";
+import { runRepositoryValidation } from "@mcp-code-worker/tools";
 
-import type { AoToolDefinition } from "./tool-types.js";
+import type { CwToolDefinition } from "./tool-types.js";
 import { workflowOutputOptionShape } from "./output-options.js";
 
 const inputSchema = z.object({
@@ -18,11 +18,11 @@ const inputSchema = z.object({
   maxBytes: workflowOutputOptionShape.maxBytes
 });
 
-export const aoValidateRepositoryTool: AoToolDefinition<
+export const cwValidateRepositoryTool: CwToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof runRepositoryValidation>> | ReturnType<typeof summarizeValidationReport>
 > = {
-  name: "ao_validate_repository",
+  name: "cw_validate_repository",
   description: "Run deterministic repository validation checks with dry-run by default.",
   inputSchema,
   execute: async (args) => {

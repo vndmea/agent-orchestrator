@@ -1,4 +1,4 @@
-import type { RepositoryFileContent } from "@agent-orchestrator/core";
+import type { RepositoryFileContent } from "@mcp-code-worker/core";
 
 const IMPORT_PATTERN =
   /(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']|require\(\s*["']([^"']+)["']\s*\)/gu;

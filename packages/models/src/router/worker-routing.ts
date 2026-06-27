@@ -1,7 +1,7 @@
 import type {
   WorkerCapabilityProfile,
   WorkerTaskType
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 export interface WorkerTaskEligibility {
   allowed: boolean;

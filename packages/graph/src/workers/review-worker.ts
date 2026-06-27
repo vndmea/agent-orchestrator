@@ -3,7 +3,7 @@ import { z } from "zod";
 import type {
   ExecutionContext,
   WorkerCapability
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import {
   buildRepositoryContextPromptLines,

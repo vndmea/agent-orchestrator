@@ -2,7 +2,7 @@ import {
   AgentError,
   type ExecutionContext,
   type GitDiffSummary
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 import { runSafeCommand } from "../shell/safe-command.js";
 

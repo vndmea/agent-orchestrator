@@ -6,14 +6,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   createExecutionContextFromEnv,
-  getAoWorkspaceAuditDir,
+  getCwWorkspaceAuditDir,
   listAuditEvents,
   sanitizeAuditMetadata,
   writeAuditEvent
-} from "@agent-orchestrator/core";
+} from "@mcp-code-worker/core";
 
 const createRootDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), "ao-audit-"));
+  mkdtemp(join(tmpdir(), "cw-audit-"));
 
 describe("audit log", () => {
   it("redacts secret-like metadata recursively", () => {
@@ -95,7 +95,7 @@ describe("audit log", () => {
 
   it("lists latest audit events first and skips invalid JSONL lines", async () => {
     const rootDir = await createRootDir();
-    const auditDir = getAoWorkspaceAuditDir(rootDir);
+    const auditDir = getCwWorkspaceAuditDir(rootDir);
     await mkdir(auditDir, { recursive: true });
     await writeFile(
       join(auditDir, "2026-06-24.jsonl"),
