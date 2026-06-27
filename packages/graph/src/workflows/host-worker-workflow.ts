@@ -31,6 +31,7 @@ export interface HostWorkerWorkflowInput {
   additionalTaskInput?: Record<string, unknown>;
   context?: ExecutionContext;
   files?: string[];
+  forceExecution?: boolean;
   goal: string;
   maxFileBytes?: number;
   maxTotalBytes?: number;
@@ -44,6 +45,7 @@ export interface HostWorkerWorkflowInput {
 }
 
 export type HostWorkerFailureStage =
+  | "worker-blocked-by-policy"
   | "worker-not-run"
   | "missing-requested-files"
   | "coverage-gap"
@@ -52,21 +54,53 @@ export type HostWorkerFailureStage =
   | "generic-fallback"
   | "review-answer-missing"
   | "review-findings-insufficient"
+  | "review-findings-missing-file-citations"
   | "review-file-reference-missing"
-  | "worker-schema"
+  | "review-file-reference-out-of-scope"
+  | "worker-provider-failure"
+  | "worker-json-parse-failure"
+  | "worker-schema-validation-failure"
   | "unknown";
+
+export type HostWorkerExecutionState =
+  | "blocked_by_policy"
+  | "not_executed"
+  | "executed";
+
+export type StructuredOutputStatus =
+  | "not-attempted"
+  | "valid"
+  | "invalid";
+
+export interface HostWorkerExecutionInfo {
+  allowedByPolicy: boolean;
+  forceExecution: boolean;
+  overrideApplied: boolean;
+  policyReason: string;
+  requiresHostReview: boolean;
+  state: HostWorkerExecutionState;
+}
 
 export interface HostWorkerWorkflowQualityGate {
   answered: boolean;
   answerStatus: "complete" | "incomplete";
   coverageGapDetected: boolean;
+  execution: HostWorkerExecutionInfo;
   failureStages: HostWorkerFailureStage[];
   genericFallbackDetected: boolean;
   mentionedFiles: string[];
   missingRequestedFiles: string[];
+  requiresHostReview: boolean;
   skippedFiles: string[];
   reasons: string[];
+  structuredFailureKind:
+    | "provider-invocation"
+    | "json-parse"
+    | "schema-validation"
+    | null;
+  structuredOutputAttempts: number;
   structuredOutputOk: boolean;
+  structuredOutputStatus: StructuredOutputStatus;
   templateFallbackDetected: boolean;
   workflowStatus: "completed" | "needs_review";
 }
@@ -76,9 +110,17 @@ export interface HostWorkerWorkflowOutput {
     qualityGate: {
       answerStatus: "complete" | "incomplete";
       coverageGapDetected: boolean;
+      execution: HostWorkerExecutionInfo;
       failureStages: HostWorkerFailureStage[];
       reasons: string[];
+      structuredFailureKind:
+        | "provider-invocation"
+        | "json-parse"
+        | "schema-validation"
+        | null;
+      structuredOutputAttempts: number;
       structuredOutputOk: boolean;
+      structuredOutputStatus: StructuredOutputStatus;
       workflowStatus: "completed" | "needs_review";
     };
     promptTransparency: {
@@ -95,6 +137,7 @@ export interface HostWorkerWorkflowOutput {
       strictFiles: boolean;
       warnings: string[];
     };
+    workerExecution: HostWorkerExecutionInfo;
     worker: {
       artifacts: AgentResult["artifacts"];
       metadata: Record<string, unknown>;
@@ -102,6 +145,7 @@ export interface HostWorkerWorkflowOutput {
       status: AgentResult["status"];
     } | null;
   };
+  execution: HostWorkerExecutionInfo;
   errors: string[];
   finalResult: AgentResult;
   qualityGate: HostWorkerWorkflowQualityGate;
@@ -174,9 +218,26 @@ const asStringArray = (value: unknown): string[] =>
     ? value.filter((item): item is string => typeof item === "string")
     : [];
 
+const asFailureKind = (
+  value: unknown
+):
+  | "provider-invocation"
+  | "json-parse"
+  | "schema-validation"
+  | null =>
+  value === "provider-invocation" ||
+  value === "json-parse" ||
+  value === "schema-validation"
+    ? value
+    : null;
+
+const asNumber = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
 const buildQualityGate = (
   input: HostWorkerWorkflowInput,
   repositoryContext: RepositoryContextPack,
+  execution: HostWorkerExecutionInfo,
   workerResult: AgentResult | null
 ): HostWorkerWorkflowQualityGate => {
   const selectedPaths = repositoryContext.selectedFiles.map((file) => file.path);
@@ -190,6 +251,17 @@ const buildQualityGate = (
   );
   const structuredOutputOk =
     workerResult?.metadata.structuredOutputOk === true;
+  const structuredFailureKind = asFailureKind(workerResult?.metadata.failureKind);
+  const structuredOutputAttempts =
+    execution.state === "executed"
+      ? asNumber(workerResult?.metadata.structuredOutputAttempts) ?? 0
+      : 0;
+  const structuredOutputStatus: StructuredOutputStatus =
+    execution.state !== "executed"
+      ? "not-attempted"
+      : structuredOutputOk
+        ? "valid"
+        : "invalid";
   const templateFallbackDetected = detectTemplateFallback(outputText);
   const genericFallbackDetected =
     input.taskType === "review-lite" && detectGenericFallback(outputText);
@@ -198,14 +270,25 @@ const buildQualityGate = (
   const reasons: string[] = [];
   const failureStages = new Set<HostWorkerFailureStage>();
 
-  if (!workerResult) {
-    reasons.push("No worker result was produced.");
+  if (execution.state === "blocked_by_policy") {
+    reasons.push(`Worker execution was blocked by policy: ${execution.policyReason}`);
+    failureStages.add("worker-blocked-by-policy");
+  } else if (execution.state !== "executed") {
+    reasons.push("Worker was not executed.");
     failureStages.add("worker-not-run");
   }
 
-  if (!structuredOutputOk) {
-    reasons.push("Worker did not return validated structured output.");
-    failureStages.add("worker-schema");
+  if (execution.state === "executed" && !structuredOutputOk) {
+    if (structuredFailureKind === "provider-invocation") {
+      reasons.push("Worker execution failed during provider invocation.");
+      failureStages.add("worker-provider-failure");
+    } else if (structuredFailureKind === "json-parse") {
+      reasons.push("Worker executed but did not return parseable JSON.");
+      failureStages.add("worker-json-parse-failure");
+    } else {
+      reasons.push("Worker executed but did not return schema-valid structured output.");
+      failureStages.add("worker-schema-validation-failure");
+    }
   }
 
   if (missingRequestedFiles.length > 0) {
@@ -222,28 +305,40 @@ const buildQualityGate = (
     failureStages.add("coverage-gap");
   }
 
-  if (selectedPaths.length > 0 && mentionedFiles.length === 0) {
+  if (
+    execution.state === "executed" &&
+    selectedPaths.length > 0 &&
+    mentionedFiles.length === 0
+  ) {
     reasons.push("Worker answer did not reference any selected repository file.");
     failureStages.add("missing-file-citations");
   }
 
-  if (templateFallbackDetected) {
+  if (execution.state === "executed" && templateFallbackDetected) {
     reasons.push("Worker answer matched a known template fallback pattern.");
     failureStages.add("template-fallback");
   }
 
-  if (genericFallbackDetected) {
+  if (execution.state === "executed" && genericFallbackDetected) {
     reasons.push("Worker answer fell back to generic wording instead of a concrete repository answer.");
     failureStages.add("generic-fallback");
   }
 
-  if (input.taskType === "review-lite") {
+  if (execution.state === "executed" && input.taskType === "review-lite") {
     const answer =
       outputRecord && typeof outputRecord.answer === "string"
         ? outputRecord.answer
         : "";
     const findings = asStringArray(outputRecord?.findings);
     const referencedFiles = asStringArray(outputRecord?.referencedFiles);
+    const findingsMissingFileCitations =
+      selectedPaths.length > 0 &&
+      findings.some(
+        (finding) => !selectedPaths.some((path) => finding.includes(path))
+      );
+    const outOfScopeReferences = referencedFiles.filter(
+      (file) => !selectedPaths.includes(file)
+    );
 
     if (!answer) {
       reasons.push("Review worker did not provide a direct answer field.");
@@ -262,27 +357,53 @@ const buildQualityGate = (
       reasons.push("Review worker did not reference the selected files explicitly.");
       failureStages.add("review-file-reference-missing");
     }
+
+    if (findingsMissingFileCitations) {
+      reasons.push("Review worker findings did not cite selected repository files in every finding.");
+      failureStages.add("review-findings-missing-file-citations");
+    }
+
+    if (selectedPaths.length > 0 && outOfScopeReferences.length > 0) {
+      reasons.push(
+        `Review worker referenced files outside the selected repository context: ${outOfScopeReferences.join(", ")}.`
+      );
+      failureStages.add("review-file-reference-out-of-scope");
+    }
   }
 
-  if (failureStages.size === 0 && !structuredOutputOk) {
+  if (
+    failureStages.size === 0 &&
+    execution.state === "executed" &&
+    !structuredOutputOk
+  ) {
     failureStages.add("unknown");
   }
 
   const answered = reasons.length === 0;
+  const requiresHostReview =
+    execution.requiresHostReview ||
+    execution.state !== "executed" ||
+    workerResult?.status !== "success" ||
+    !answered;
 
   return {
     answered,
     answerStatus: answered ? "complete" : "incomplete",
     coverageGapDetected,
+    execution,
     failureStages: Array.from(failureStages),
     genericFallbackDetected,
     mentionedFiles,
     missingRequestedFiles,
+    requiresHostReview,
     skippedFiles,
     reasons,
+    structuredFailureKind,
+    structuredOutputAttempts,
     structuredOutputOk,
+    structuredOutputStatus,
     templateFallbackDetected,
-    workflowStatus: workerResult ? "completed" : "needs_review"
+    workflowStatus: execution.state === "executed" ? "completed" : "needs_review"
   };
 };
 
@@ -412,6 +533,19 @@ export const runHostWorkerWorkflow = async (
   );
   const eligibility = assessWorkerTaskEligibility(profile, input.taskType);
   const plannedTask = createPlannedTask(input, repositoryContext);
+  const forceExecution = input.forceExecution === true;
+  const overrideApplied = forceExecution && !eligibility.allowed;
+  const execution: HostWorkerExecutionInfo = {
+    allowedByPolicy: eligibility.allowed,
+    forceExecution,
+    overrideApplied,
+    policyReason: eligibility.reason,
+    requiresHostReview:
+      eligibility.requiresHostReview || overrideApplied,
+    state: eligibility.allowed || overrideApplied
+      ? "executed"
+      : "blocked_by_policy"
+  };
 
   let workerResult: AgentResult | null = null;
   const warnings = [
@@ -421,11 +555,17 @@ export const runHostWorkerWorkflow = async (
   ];
   const errors: string[] = [];
 
-  if (!eligibility.allowed) {
+  if (!eligibility.allowed && !overrideApplied) {
     warnings.push(eligibility.reason);
   } else {
+    if (overrideApplied) {
+      warnings.push(
+        `Policy override enabled for ${profile.workerId}; executing ${input.taskType} despite routing warning: ${eligibility.reason}`
+      );
+    }
     const worker = resolveWorkerAgent(input.taskType, workerContext);
     workerResult = await worker.execute({
+      allowUnqualifiedExecution: overrideApplied,
       task,
       plannedTask,
       scope: repositoryContext.scope,
@@ -438,20 +578,28 @@ export const runHostWorkerWorkflow = async (
     });
   }
 
-  const qualityGate = buildQualityGate(input, repositoryContext, workerResult);
+  const qualityGate = buildQualityGate(
+    input,
+    repositoryContext,
+    execution,
+    workerResult
+  );
   if (!qualityGate.answered) {
     warnings.push(...qualityGate.reasons);
   }
 
+  const runSucceeded =
+    execution.state === "executed" &&
+    qualityGate.answered &&
+    !qualityGate.requiresHostReview &&
+    workerResult?.status === "success";
   const finalResult: AgentResult = {
     taskId: task.id,
     agentId: "host-worker.finalizer",
     role: "reviewer",
-    status:
-      eligibility.allowed && qualityGate.answered && workerResult?.status === "success"
-        ? "success"
-        : "needs_review",
+    status: runSucceeded ? "success" : "needs_review",
     output: {
+      execution,
       qualityGate,
       repositoryContext: {
         scope: repositoryContext.scope,
@@ -464,7 +612,7 @@ export const runHostWorkerWorkflow = async (
       worker: workerResult?.output ?? null
     },
     confidence:
-      workerResult && qualityGate.answered
+      runSucceeded && workerResult
         ? workerResult.confidence
         : 0.42,
     risks: [
@@ -473,6 +621,9 @@ export const runHostWorkerWorkflow = async (
     ],
     artifacts: workerResult?.artifacts ?? [],
     metadata: {
+      executionState: execution.state,
+      forceExecution: execution.forceExecution,
+      overrideApplied: execution.overrideApplied,
       taskType: input.taskType,
       workerId: profile.workerId
     }
@@ -500,9 +651,13 @@ export const runHostWorkerWorkflow = async (
       qualityGate: {
         answerStatus: qualityGate.answerStatus,
         coverageGapDetected: qualityGate.coverageGapDetected,
+        execution: qualityGate.execution,
         failureStages: qualityGate.failureStages,
         reasons: qualityGate.reasons,
+        structuredFailureKind: qualityGate.structuredFailureKind,
+        structuredOutputAttempts: qualityGate.structuredOutputAttempts,
         structuredOutputOk: qualityGate.structuredOutputOk,
+        structuredOutputStatus: qualityGate.structuredOutputStatus,
         workflowStatus: qualityGate.workflowStatus
       },
       promptTransparency: {
@@ -522,6 +677,7 @@ export const runHostWorkerWorkflow = async (
         strictFiles: repositoryContext.strictFiles,
         warnings: repositoryContext.warnings
       },
+      workerExecution: execution,
       worker: workerResult
         ? {
             artifacts: workerResult.artifacts,
@@ -531,6 +687,7 @@ export const runHostWorkerWorkflow = async (
           }
         : null
     },
+    execution,
     errors,
     finalResult,
     qualityGate,

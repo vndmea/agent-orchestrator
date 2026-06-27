@@ -70,6 +70,7 @@ export class SummarizeWorker extends WorkerAgent {
       risks: [],
       confidence: 0.86,
       artifacts: [],
+      allowUnqualifiedExecution: input.allowUnqualifiedExecution,
       workerProfile: input.workerProfile
     });
   }

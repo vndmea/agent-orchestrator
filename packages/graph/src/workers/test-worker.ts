@@ -64,6 +64,7 @@ export class TestWorker extends WorkerAgent {
       risks: [],
       confidence: 0.81,
       artifacts: [],
+      allowUnqualifiedExecution: input.allowUnqualifiedExecution,
       workerProfile: input.workerProfile
     });
   }

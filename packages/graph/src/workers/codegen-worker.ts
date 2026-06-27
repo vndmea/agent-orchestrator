@@ -80,6 +80,7 @@ export class CodegenWorker extends WorkerAgent {
           content: "- Add contracts\n- Wire workflows\n- Validate before acceptance\n"
         }
       ],
+      allowUnqualifiedExecution: input.allowUnqualifiedExecution,
       workerProfile: input.workerProfile
     });
   }

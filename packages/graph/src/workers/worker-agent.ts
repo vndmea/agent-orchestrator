@@ -11,6 +11,7 @@ import { ModelRouter, invokeStructured } from "@agent-orchestrator/models";
 import type { ZodType } from "zod";
 
 export interface WorkerExecutionInput {
+  allowUnqualifiedExecution?: boolean;
   notes?: string[];
   plannedTask?: PlannedWorkerTask;
   scope?: string;
@@ -28,6 +29,8 @@ export interface WorkerResultOptions<T> {
   risks: string[];
   confidence: number;
   artifacts?: AgentResult["artifacts"];
+  allowUnqualifiedExecution?: boolean;
+  maxStructuredAttempts?: number;
   workerProfile?: WorkerCapabilityProfile | null;
 }
 
@@ -100,13 +103,15 @@ export abstract class WorkerAgent {
     risks,
     confidence,
     artifacts = [],
+    allowUnqualifiedExecution,
+    maxStructuredAttempts,
     workerProfile
   }: WorkerResultOptions<T>
   ): Promise<AgentResult> {
     const primaryTaskType = this.capability.supportedTaskTypes[0] ?? "summarization";
     const routed = this.router.routeWorkerTask(
       primaryTaskType,
-      workerProfile
+      allowUnqualifiedExecution ? null : workerProfile
     );
     const invocation = await invokeStructured({
       provider: routed.provider,
@@ -118,7 +123,7 @@ export abstract class WorkerAgent {
         taskId: task.id,
         capability: this.capability.name
       },
-      maxAttempts: 1
+      maxAttempts: maxStructuredAttempts ?? 1
     });
 
     const finalRisks = invocation.ok

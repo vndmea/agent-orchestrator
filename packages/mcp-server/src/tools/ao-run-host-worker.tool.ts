@@ -7,6 +7,7 @@ import type { AoToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
   files: z.array(z.string()).optional(),
+  forceExecution: z.boolean().optional(),
   goal: z.string().min(1),
   maxFileBytes: z.number().int().positive().optional(),
   maxTotalBytes: z.number().int().positive().optional(),
@@ -37,6 +38,7 @@ export const aoRunHostWorkerTool: AoToolDefinition<
     const result = await runHostWorkerWorkflow({
       context,
       files: args.files,
+      forceExecution: args.forceExecution,
       goal: args.goal,
       maxFileBytes: args.maxFileBytes,
       maxTotalBytes: args.maxTotalBytes,
@@ -57,6 +59,7 @@ export const aoRunHostWorkerTool: AoToolDefinition<
       errors: result.errors,
       metadata: {
         files: args.files,
+        forceExecution: args.forceExecution,
         maxFileBytes: args.maxFileBytes,
         maxTotalBytes: args.maxTotalBytes,
         requireProfile: args.requireProfile,
