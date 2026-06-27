@@ -1,12 +1,14 @@
-# @mcp-code-worker/cli
+# mcp-code-worker npm package
 
-Experimental npm packaging target for the MCP Code Worker CLI.
+This workspace package is the source for the published `mcp-code-worker` npm CLI.
 
-## Status
+## Publish shape
 
-This package is prepared for single-package distribution validation, but the repository checkout flow is still the primary supported install path for the current RC line.
+- Source workspace package name: `@mcp-code-worker/cli`
+- Published npm package name: `mcp-code-worker`
+- Installed command: `cw`
 
-## Local Verification
+## Local verification
 
 From the repository root:
 
@@ -15,7 +17,14 @@ pnpm --filter @mcp-code-worker/cli... build
 pnpm smoke:pack
 ```
 
-## Workspace Binding
+## Global install
+
+```bash
+npm i -g mcp-code-worker
+cw doctor
+```
+
+## Workspace binding
 
 When `cw` is launched outside the repository checkout, pass an explicit workspace root:
 

@@ -70,7 +70,17 @@ docs/
 
 当前 CI 只验证 Node 22。其他 Node.js `>=22` 版本暂时属于 best-effort，只有进入 CI matrix 后才视为正式验证。
 
-## 初始化与检查
+## 安装
+
+全局 npm 安装：
+
+```bash
+npm i -g mcp-code-worker
+cw doctor
+cw mcp list-tools
+```
+
+仓库开发安装：
 
 ```bash
 pnpm install

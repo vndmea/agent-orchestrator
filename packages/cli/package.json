@@ -21,7 +21,10 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepack": "pnpm --dir ../.. --filter @mcp-code-worker/cli... build"
+    "prepare:publish": "node ./scripts/prepare-publish.mjs",
+    "prepack": "pnpm --dir ../.. --filter @mcp-code-worker/cli... build && pnpm run prepare:publish",
+    "pack:publish": "pnpm run prepack && npm pack .publish --json",
+    "publish:npm": "pnpm run prepack && npm publish .publish --access public"
   },
   "dependencies": {
     "@mcp-code-worker/core": "workspace:*",

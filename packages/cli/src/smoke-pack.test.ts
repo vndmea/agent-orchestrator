@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const execFile = promisify(execFileCallback);
 const repoRoot = process.cwd();
 const cliPackageDir = join(repoRoot, "packages", "cli");
+const publishDir = join(cliPackageDir, ".publish");
 const installedCwPath = (prefixDir: string): string =>
   join(prefixDir, "node_modules", ".bin", process.platform === "win32" ? "cw.cmd" : "cw");
 
@@ -73,14 +74,16 @@ describe("cli packed tarball smoke", () => {
     const installPrefix = await trackTempDir("cw-pack-prefix-");
     const workspaceRoot = await trackTempDir("cw-pack-workspace-");
 
-    const pack = await runCommand("npm", ["pack", "--json"], cliPackageDir);
+    await runCommand("pnpm", ["run", "prepare:publish"], cliPackageDir);
+
+    const pack = await runCommand("npm", ["pack", "--json"], publishDir);
     const packEntries = parsePackEntries(pack.stdout);
     const filename = packEntries[0]?.filename;
     expect(filename).toBeTruthy();
     if (!filename) {
       throw new Error("npm pack did not return a tarball filename");
     }
-    const tarballPath = join(cliPackageDir, filename);
+    const tarballPath = join(publishDir, filename);
 
     try {
       await runCommand(

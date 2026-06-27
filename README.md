@@ -70,7 +70,17 @@ docs/
 
 This repository targets actively maintained Node.js LTS releases only. CI currently validates Node 22. Other Node.js `>=22` versions are best-effort until they are added to the CI matrix.
 
-## Setup
+## Install
+
+Global npm install:
+
+```bash
+npm i -g mcp-code-worker
+cw doctor
+cw mcp list-tools
+```
+
+Development checkout:
 
 ```bash
 node --version

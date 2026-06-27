@@ -1,54 +1,52 @@
 # Distribution Strategy
 
-`mcp-code-worker` does not currently ship through npm, Docker, or GitHub release artifacts as its primary distribution path.
+`mcp-code-worker` now supports a public npm distribution path for the CLI.
 
-## Official Internal Distribution Shape
+## Supported npm install path
 
-The supported internal distribution path is:
+Users can install the CLI globally with:
 
-1. a pinned git checkout of this repository
+```bash
+npm i -g mcp-code-worker
+cw doctor
+```
+
+The published package exposes the `cw` command and bundles internal workspace packages into the CLI build output.
+
+When `cw` runs outside a repository checkout, prefer:
+
+```bash
+cw mcp serve --root /path/to/project
+```
+
+or set `CW_ROOT_DIR`.
+
+## Development distribution shape
+
+The repository checkout remains the recommended development path:
+
+1. clone this repository
 2. `pnpm install`
 3. `pnpm build`
 4. `pnpm exec cw ...` from the repository root
 
-This is the only documented distribution shape for the current internal RC line.
+This route keeps workspace path resolution, tests, and local development behavior aligned with the monorepo.
 
-## Experimental Single-Package CLI Path
+## Publish implementation notes
 
-An experimental npm package path now exists for local packaging validation of `@mcp-code-worker/cli`.
+- The source workspace package remains `@mcp-code-worker/cli`.
+- The published npm package is generated into `packages/cli/.publish/`.
+- The published manifest is rewritten to:
+  - rename the package to `mcp-code-worker`
+  - drop internal `workspace:*` dependencies
+  - keep third-party runtime dependencies as normal npm dependencies
 
-Current intent:
+## Validation
 
-- validate that the CLI can be packed as a single installable npm package
-- bundle CW workspace packages into the CLI build output
-- keep third-party runtime dependencies as normal npm dependencies
+Before publishing:
 
-Current constraints:
-
-- this path is not yet the default install method
-- treat it as a release-candidate packaging target until install, upgrade, and rollback guidance are finalized
-- when launching outside the repository checkout, prefer `cw mcp serve --root <workspace-path>` or set `CW_ROOT_DIR`
-
-## Why This Is The Current Standard
-
-- The repository root controls workspace binding and path resolution consistently.
-- The CLI, MCP server, docs, and tests are already validated against this path.
-- It avoids implying that a global install or registry package is production-ready when it is not.
-
-## Not Yet Supported As Primary Distribution
-
-- public npm package
-- private npm registry package
-- Docker image
-- GitHub release tarball
-- global `npm install -g` path as the documented default
-
-## Revisit Criteria
-
-Promote a new distribution shape only after:
-
-- CI evidence is stable for the intended release branch
-- install and upgrade instructions are documented end-to-end
-- CW storage and workspace binding behavior are verified in that packaging mode
-- smoke coverage exists for the new install path
-- `npm pack` output is validated without `workspace:*` dependencies in the published manifest
+```bash
+pnpm build
+pnpm smoke:pack
+pnpm smoke:dist
+```
