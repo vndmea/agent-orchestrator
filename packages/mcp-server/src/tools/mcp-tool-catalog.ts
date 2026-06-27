@@ -22,16 +22,6 @@ export interface McpToolCatalogView {
 
 export const mcpToolCatalog: McpToolCatalogEntry[] = [
   {
-    name: "ao_plan",
-    category: "workflow-building-blocks",
-    description: "Create a structured plan, worker assignment proposal, and validation strategy."
-  },
-  {
-    name: "ao_run_workflow",
-    category: "workflow-building-blocks",
-    description: "Run a low-level built-in workflow directly. Prefer host-facing task/session tools for normal use."
-  },
-  {
     name: "ao_run_leader_worker",
     category: "workflow-building-blocks",
     description: "Run one explicit worker task under host control without starting an internal ao leader."
@@ -117,7 +107,7 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
   {
     name: "ao_list_workflows",
     category: "diagnostics",
-    description: "List built-in orchestration workflows."
+    description: "List host-managed orchestration workflows that remain available through public tools."
   },
   {
     name: "ao_list_tools",

@@ -9,24 +9,28 @@ export const aoListWorkflowsTool: AoToolDefinition<
   Array<{ description: string; name: string }>
 > = {
   name: "ao_list_workflows",
-  description: "List available built-in workflows.",
+  description: "List host-managed workflows that remain available through public ao tools.",
   inputSchema,
   execute: () => [
     {
-      name: "planning-workflow",
-      description: "Create a low-level task plan with worker assignments, risks, and validation strategy."
-    },
-    {
-      name: "leader-worker-workflow",
-      description: "Internal standalone workflow that coordinates its own leader, workers, validation, and final review."
+      name: "host-worker-workflow",
+      description: "Run one explicit worker task under host control with repository-scoped quality gates."
     },
     {
       name: "review-workflow",
-      description: "Review a diff or file list and return structured findings."
+      description: "Review a diff, scope, or file list through host-managed worker execution."
     },
     {
       name: "fix-error-workflow",
-      description: "Analyze an error log and return a safe candidate fix plan."
+      description: "Analyze an error log with host-managed workers and return a safe candidate fix plan."
+    },
+    {
+      name: "patch-proposal-workflow",
+      description: "Generate and inspect a patch proposal without applying repository writes."
+    },
+    {
+      name: "task-session-workflow",
+      description: "Run the end-to-end task session pipeline with persisted artifacts and patch gates."
     },
     {
       name: "worker-interview-workflow",

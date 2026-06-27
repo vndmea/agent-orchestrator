@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
 import {
   createDefaultWorkerEvaluationSuite,
-  runLeaderWorkerWorkflow,
   runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
+import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
 
 const createContext = () =>
   createExecutionContextFromEnv(undefined, {

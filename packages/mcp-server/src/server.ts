@@ -22,7 +22,6 @@ import { aoListToolsTool } from "./tools/ao-list-tools.tool.js";
 import { aoListWorkerRegistryTool } from "./tools/ao-list-worker-registry.tool.js";
 import { aoListWorkersTool } from "./tools/ao-list-workers.tool.js";
 import { aoListWorkflowsTool } from "./tools/ao-list-workflows.tool.js";
-import { aoPlanTool } from "./tools/ao-plan.tool.js";
 import { aoProposePatchTool } from "./tools/ao-propose-patch.tool.js";
 import { aoRegisterWorkerTool } from "./tools/ao-register-worker.tool.js";
 import { aoReviewDiffTool } from "./tools/ao-review-diff.tool.js";
@@ -30,14 +29,11 @@ import { aoReviewFilesTool } from "./tools/ao-review-files.tool.js";
 import { aoReviewRepositoryTool } from "./tools/ao-review-repository.tool.js";
 import { aoResumeTaskTool } from "./tools/ao-resume-task.tool.js";
 import { aoRunLeaderWorkerTool } from "./tools/ao-run-leader-worker.tool.js";
-import { aoRunWorkflowTool } from "./tools/ao-run-workflow.tool.js";
 import { aoStartTaskTool } from "./tools/ao-start-task.tool.js";
 import { aoUnregisterWorkerTool } from "./tools/ao-unregister-worker.tool.js";
 import { aoValidateRepositoryTool } from "./tools/ao-validate-repository.tool.js";
 
 export const aoToolDefinitions = [
-  aoPlanTool,
-  aoRunWorkflowTool,
   aoRunLeaderWorkerTool,
   aoProposePatchTool,
   aoInspectPatchTool,

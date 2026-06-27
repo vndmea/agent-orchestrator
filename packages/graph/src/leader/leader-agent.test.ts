@@ -5,12 +5,12 @@ import {
   createExecutionContextFromEnv,
   type AgentTask
 } from "@agent-orchestrator/core";
-import { LeaderAgent } from "@agent-orchestrator/graph";
 import type {
   ModelInvocationRequest,
   ModelInvocationResult,
   ModelProvider
 } from "@agent-orchestrator/models";
+import { LeaderAgent } from "./leader-agent.js";
 
 class SequenceProvider implements ModelProvider {
   public readonly name = "sequence";

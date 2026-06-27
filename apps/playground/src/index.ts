@@ -1,7 +1,8 @@
-import { runLeaderWorkerWorkflow } from "@agent-orchestrator/graph";
+import { runHostWorkerWorkflow } from "@agent-orchestrator/graph";
 
-const result = await runLeaderWorkerWorkflow({
-  goal: "Demonstrate the leader-worker orchestration flow in dry-run mode."
+const result = await runHostWorkerWorkflow({
+  goal: "Demonstrate host-managed worker execution in dry-run mode.",
+  taskType: "review-lite"
 });
 
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

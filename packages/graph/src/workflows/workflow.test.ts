@@ -7,10 +7,10 @@ import { describe, expect, it } from "vitest";
 import { createExecutionContextFromEnv } from "@agent-orchestrator/core";
 import {
   runHostWorkerWorkflow,
-  runLeaderWorkerWorkflow,
-  runPlanningWorkflow,
   runWorkerInterviewWorkflow
 } from "@agent-orchestrator/graph";
+import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
+import { runPlanningWorkflow } from "./planning-workflow.js";
 
 const createWorkspace = async (): Promise<string> => {
   const rootDir = await mkdtemp(join(tmpdir(), "ao-host-worker-"));

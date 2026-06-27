@@ -7,9 +7,7 @@ import { registerFixCommand } from "./commands/fix.js";
 import { registerMcpCommand } from "./commands/mcp.js";
 import { registerModelsCommand } from "./commands/models.js";
 import { registerPatchCommand } from "./commands/patch.js";
-import { registerPlanCommand } from "./commands/plan.js";
 import { registerReviewCommand } from "./commands/review.js";
-import { registerRunCommand } from "./commands/run.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerTaskCommand } from "./commands/task.js";
 import { registerValidateCommand } from "./commands/validate.js";
@@ -43,8 +41,6 @@ export const buildCli = (io: CliIo = defaultIo): Command => {
       writeOut: io.write
     });
 
-  registerPlanCommand(program, io);
-  registerRunCommand(program, io);
   registerSetupCommand(program, io);
   registerPatchCommand(program, io);
   registerReviewCommand(program, io);

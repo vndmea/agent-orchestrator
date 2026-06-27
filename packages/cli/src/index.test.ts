@@ -255,7 +255,7 @@ describe("cli parsing", () => {
 
     await cli.parseAsync(["node", "ao", "mcp", "list-tools"]);
 
-    expect(output.join("\n")).toContain("ao_plan");
+    expect(output.join("\n")).toContain("ao_run_leader_worker");
     expect(output.join("\n")).toContain("ao_list_tools");
   });
 
@@ -318,87 +318,6 @@ describe("cli parsing", () => {
     await cli.parseAsync(["node", "ao", "worker", "list"]);
 
     expect(output.join("\n")).toContain("[");
-  });
-
-  it("fails unknown explicit workers in the leader-worker workflow", async () => {
-    await withTempCwd(async () => {
-      const { io } = createIo();
-      const cli = buildCli(io);
-
-      await expect(
-        cli.parseAsync([
-          "node",
-          "ao",
-          "run",
-          "leader-worker-workflow",
-          "--goal",
-          "Review this repository",
-          "--worker",
-          "mock:custom-worker"
-        ])
-      ).rejects.toThrow("not registered");
-    });
-  });
-
-  it("uses registered workers in the leader-worker workflow", async () => {
-    await withTempCwd(async (rootDir) => {
-      await writeRegistry(rootDir, [createRegistration()]);
-      const { io, output } = createIo();
-      const cli = buildCli(io);
-
-      await cli.parseAsync([
-        "node",
-        "ao",
-        "run",
-        "leader-worker-workflow",
-        "--goal",
-        "Review this repository",
-        "--worker",
-        "mock:registered-worker"
-      ]);
-
-      expect(output.join("\n")).toContain("\"workerId\": \"mock:registered-worker\"");
-      expect(output.join("\n")).toContain("\"model\": \"registered-worker\"");
-    });
-  });
-
-  it("fails when require-profile is used without a persisted profile", async () => {
-    await withTempCwd(async () => {
-      const { io } = createIo();
-      const cli = buildCli(io);
-
-      await expect(
-        cli.parseAsync([
-          "node",
-          "ao",
-          "run",
-          "leader-worker-workflow",
-          "--goal",
-          "Review this repository",
-          "--require-profile"
-        ])
-      ).rejects.toThrow("No persisted worker profile found");
-    });
-  });
-
-  it("rejects worker profile options on unsupported workflows", async () => {
-    await withTempCwd(async () => {
-      const { io } = createIo();
-      const cli = buildCli(io);
-
-      await expect(
-        cli.parseAsync([
-          "node",
-          "ao",
-          "run",
-          "planning-workflow",
-          "--goal",
-          "Plan this task",
-          "--worker",
-          "mock:custom-worker"
-        ])
-      ).rejects.toThrow("--worker is only supported for leader-worker-workflow.");
-    });
   });
 
   it("runs doctor and returns structured JSON", async () => {

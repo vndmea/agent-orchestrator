@@ -70,31 +70,4 @@ describe("cli audit side effects", () => {
       ).toBe(true);
     });
   });
-
-  it("writes an audit event for leader-worker runs", async () => {
-    await withWritableAuditEnv(async (rootDir) => {
-      const { io } = createIo();
-      const cli = buildCli(io);
-
-      await cli.parseAsync([
-        "node",
-        "ao",
-        "run",
-        "leader-worker-workflow",
-        "--goal",
-        "Review the repository for workflow regressions",
-        "--allow-write"
-      ]);
-      const events = await listAuditEvents(rootDir, 50);
-
-      expect(
-        events.some(
-          (event) =>
-            event.actor === "cli" &&
-            event.action === "run-workflow" &&
-            event.workflow === "leader-worker-workflow"
-        )
-      ).toBe(true);
-    });
-  });
 });

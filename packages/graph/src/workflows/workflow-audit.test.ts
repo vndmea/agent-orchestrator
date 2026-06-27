@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createExecutionContextFromEnv, listAuditEvents } from "@agent-orchestrator/core";
-import { runLeaderWorkerWorkflow } from "@agent-orchestrator/graph";
+import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
 import { describe, expect, it } from "vitest";
 
 const createRootDir = async () =>

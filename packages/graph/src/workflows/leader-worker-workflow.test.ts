@@ -9,7 +9,8 @@ import {
   createExecutionContextFromEnv,
   getAoWorkspaceFilePath
 } from "@agent-orchestrator/core";
-import { LeaderAgent, runLeaderWorkerWorkflow } from "@agent-orchestrator/graph";
+import { LeaderAgent } from "../leader/leader-agent.js";
+import { runLeaderWorkerWorkflow } from "./leader-worker-workflow.js";
 
 const createRootDir = async (): Promise<string> =>
   mkdtemp(join(tmpdir(), "ao-leader-worker-"));
