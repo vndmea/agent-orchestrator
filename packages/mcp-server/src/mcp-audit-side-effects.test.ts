@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
   aoDoctorTool,
   aoListAuditEventsTool,
-  aoRunLeaderWorkerTool
+  aoRunHostWorkerTool
 } from "@agent-orchestrator/mcp-server";
 import { describe, expect, it } from "vitest";
 
@@ -40,9 +40,9 @@ const withWritableAuditEnv = async (
 };
 
 describe("mcp audit side effects", () => {
-  it("writes an audit event for ao_run_leader_worker", async () => {
+  it("writes an audit event for ao_run_host_worker", async () => {
     await withWritableAuditEnv(async () => {
-      await aoRunLeaderWorkerTool.execute({
+      await aoRunHostWorkerTool.execute({
         goal: "Review the repository for workflow regressions",
         taskType: "review-lite"
       });
@@ -51,7 +51,7 @@ describe("mcp audit side effects", () => {
       expect(
         events.some(
           (event) =>
-            event.actor === "mcp" && event.tool === "ao_run_leader_worker"
+            event.actor === "mcp" && event.tool === "ao_run_host_worker"
         )
       ).toBe(true);
     });

@@ -255,7 +255,7 @@ describe("cli parsing", () => {
 
     await cli.parseAsync(["node", "ao", "mcp", "list-tools"]);
 
-    expect(output.join("\n")).toContain("ao_run_leader_worker");
+    expect(output.join("\n")).toContain("ao_run_host_worker");
     expect(output.join("\n")).toContain("ao_list_tools");
   });
 

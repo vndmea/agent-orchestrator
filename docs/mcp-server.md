@@ -70,7 +70,7 @@ By default, the MCP server stores AO-managed state under:
 
 ## Exposed Tools
 
-- `ao_run_leader_worker`
+- `ao_run_host_worker`
 - `ao_propose_patch`
 - `ao_inspect_patch`
 - `ao_apply_patch`
@@ -110,7 +110,7 @@ By default, the MCP server stores AO-managed state under:
 For host-driven coding flows:
 
 1. Use `ao_start_task` when you want AO to manage repository context, validation, task artifacts, and patch lifecycle.
-2. Use `ao_run_leader_worker` only when the host wants one narrow worker task under explicit control.
+2. Use `ao_run_host_worker` only when the host wants one narrow worker task under explicit control.
 3. Use `ao_list_workflows` only to inspect the remaining host-managed workflow surfaces; public tools no longer expose the old standalone leader workflow.
 
 For worker qualification over MCP, use:

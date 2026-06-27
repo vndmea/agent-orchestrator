@@ -39,7 +39,7 @@ import {
   aoListWorkerRegistryTool,
   aoProposePatchTool,
   aoRegisterWorkerTool,
-  aoRunLeaderWorkerTool,
+  aoRunHostWorkerTool,
   aoStartTaskTool,
   aoToolDefinitions,
   formatUserFacingToolErrorMessage,
@@ -283,7 +283,7 @@ describe("mcp tool registration", () => {
     expect(names).toContain("ao_list_audit_events");
     expect(names).toContain("ao_register_worker");
     expect(names).toContain("ao_benchmark_worker");
-    expect(names).toContain("ao_run_leader_worker");
+    expect(names).toContain("ao_run_host_worker");
     expect(names).toContain("ao_propose_patch");
     expect(names).toContain("ao_review_repository");
     expect(names).toContain("ao_validate_repository");
@@ -393,8 +393,8 @@ describe("mcp tool registration", () => {
     });
   });
 
-  it("executes the dedicated leader-worker MCP tool", async () => {
-    const result = await aoRunLeaderWorkerTool.execute({
+  it("executes the dedicated host-worker MCP tool", async () => {
+    const result = await aoRunHostWorkerTool.execute({
       goal: "Review this repository",
       taskType: "review-lite"
     });

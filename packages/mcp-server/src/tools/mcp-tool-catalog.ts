@@ -22,9 +22,9 @@ export interface McpToolCatalogView {
 
 export const mcpToolCatalog: McpToolCatalogEntry[] = [
   {
-    name: "ao_run_leader_worker",
+    name: "ao_run_host_worker",
     category: "workflow-building-blocks",
-    description: "Run one explicit worker task under host control without starting an internal ao leader."
+    description: "Run one explicit worker task under host control without introducing a second leader surface."
   },
   {
     name: "ao_propose_patch",

@@ -23,13 +23,13 @@ const inputSchema = z.object({
   requireProfile: z.boolean().optional()
 });
 
-export const aoRunLeaderWorkerTool: AoToolDefinition<
+export const aoRunHostWorkerTool: AoToolDefinition<
   typeof inputSchema.shape,
   Awaited<ReturnType<typeof runHostWorkerWorkflow>>
 > = {
-  name: "ao_run_leader_worker",
+  name: "ao_run_host_worker",
   description:
-    "Run one explicit worker task under host control. This tool does not start an internal ao leader.",
+    "Run one explicit worker task under host control without introducing a second leader surface.",
   inputSchema,
   execute: async (args) => {
     const context = await resolveExecutionContext();
@@ -48,7 +48,7 @@ export const aoRunLeaderWorkerTool: AoToolDefinition<
       actor: "mcp",
       action: "tool-call",
       mode: context.dryRun ? "dry-run" : "execute",
-      tool: "ao_run_leader_worker",
+      tool: "ao_run_host_worker",
       inputSummary: args.goal,
       outputSummary: "Host-managed worker MCP workflow completed.",
       warnings: result.warnings,

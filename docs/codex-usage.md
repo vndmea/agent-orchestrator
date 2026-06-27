@@ -12,7 +12,7 @@ Recommended call order:
 4. Prefer `proposePatch=true` and `inspectPatch=true` first.
 5. Use patch apply only after manual review. Keep the first apply in dry-run mode unless a human explicitly wants writes.
 
-When to use `ao_run_leader_worker`:
+When to use `ao_run_host_worker`:
 
 - Use it only when Codex wants one explicit worker task such as `review-lite` or `summarization`.
 - Treat it as a narrow worker invocation surface, not as a second planning or acceptance layer.
