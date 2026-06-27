@@ -196,14 +196,23 @@ describe("worker interview workflow", () => {
       suite.tasks.find((task) => task.id === "summarization")?.prompt
     ).toContain("packages/runtime/src/readProfile.ts");
     expect(
+      suite.tasks.find((task) => task.id === "summarization")?.prompt
+    ).toContain("at least one nextSteps item must name packages/runtime/src/readProfile.ts");
+    expect(
       suite.tasks.find((task) => task.id === "review-grounding")?.prompt
     ).toContain("packages/core/src/normalizeNode.ts");
     expect(
       suite.tasks.find((task) => task.id === "evidence-sufficiency")?.prompt
     ).toContain("insufficient");
     expect(
+      suite.tasks.find((task) => task.id === "evidence-sufficiency")?.prompt
+    ).toContain("confidence in answering the original repository question reliably");
+    expect(
       suite.tasks.find((task) => task.id === "code-understanding")?.prompt
     ).toContain("packages/math/src/sumValidated.ts");
+    expect(
+      suite.tasks.find((task) => task.id === "code-understanding")?.prompt
+    ).toContain("explicitly naming packages/math/src/sumValidated.ts");
     expect(
       suite.tasks.find((task) => task.id === "codegen")?.prompt
     ).toContain("Target file: packages/validation/src/validateScore.ts");
