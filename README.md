@@ -1,6 +1,6 @@
 # mcp-code-worker
 
-English | [简体中文](https://github.com/vndmea/mcp-code-worker/blob/master/README.zh-CN.md)
+[English](https://github.com/vndmea/mcp-code-worker/blob/master/README.md) | [简体中文](https://github.com/vndmea/mcp-code-worker/blob/master/README.zh-CN.md)
 
 `mcp-code-worker` is a TypeScript orchestration runtime for multi-model engineering workflows. It is designed to keep worker execution, repository context selection, deterministic validation, and local task artifacts under explicit control through a CLI and MCP server.
 
@@ -101,8 +101,8 @@ pnpm exec cw doctor
 pnpm exec cw mcp config
 ```
 
-Internal-trial installation and MCP launch guidance lives in `docs/install.md`.
-The current official internal distribution shape is documented in `docs/distribution.md`.
+Internal-trial installation and MCP launch guidance lives in [docs/install.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/install.md).
+The current official internal distribution shape is documented in [docs/distribution.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/distribution.md).
 
 Unless noted otherwise, read every `cw ...` example below as `pnpm exec cw ...` from the repository root for the current internal-trial install path.
 
@@ -139,6 +139,10 @@ cw mcp list-tools
 ## Worker onboarding
 
 Workers are not treated as automatically qualified just because a model endpoint exists.
+
+> Warning:
+> A weaker worker model does not automatically save tokens. If the host still has to verify, rewrite, or redo most of the output, the total token cost can increase rather than decrease.
+> Token savings are more likely when the delegated task is narrow, mechanical, low-risk, and easy to verify, such as running checks, extracting fields, collecting logs, or summarizing a very small scoped input.
 
 Use onboarding evaluation before assigning real work:
 
@@ -309,7 +313,7 @@ cw task resume <taskId> \
 
 Session persistence is separate from repository writes. `--allow-write-session` only permits CW session artifacts under `runs/`. It does not enable patch apply.
 
-See `docs/permissions.md` for the full write-gate model.
+See [docs/permissions.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/permissions.md) for the full write-gate model.
 
 ## MCP server usage
 
@@ -404,7 +408,7 @@ Run `pnpm exec tsx examples/host-worker-basic/src/index.ts` to inspect the host-
 Set `WORKER_MODEL_PROVIDER=litellm`, then provide:
 
 - `LITELLM_BASE_URL`
-Use `WORKER_MODEL_BASE_URL` when worker traffic should target a non-default endpoint.
+  Use `WORKER_MODEL_BASE_URL` when worker traffic should target a non-default endpoint.
 
 ## Safety model
 
@@ -425,7 +429,7 @@ Use `WORKER_MODEL_BASE_URL` when worker traffic should target a non-default endp
 - Workers that fail structured output or reliability checks are limited or blocked.
 - Secrets are expected from environment variables and should never be logged.
 
-See `docs/permissions.md` for the concrete permission layers and write-gate examples.
+See [docs/permissions.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/permissions.md) for the concrete permission layers and write-gate examples.
 
 ## Dist smoke
 

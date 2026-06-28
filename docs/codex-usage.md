@@ -18,6 +18,10 @@ When to use `cw_run_host_worker`:
 - Treat it as a narrow worker invocation surface, not as a second planning or acceptance layer.
 - If the task needs multi-step orchestration or patch lifecycle management, go back to `cw_start_task`.
 
+> Warning:
+> Delegating to a weaker worker does not automatically reduce total token usage. If Codex still has to re-read the same evidence, rewrite the answer, or re-run the reasoning, the combined cost can be higher than doing the work directly.
+> Worker delegation is more likely to save tokens when the output is easy to check mechanically, such as small-scope extraction, classification, command execution, or artifact collection.
+
 When to require a profile:
 
 - Set `requireProfile=true` when routing higher-risk coding tasks to a specific worker.

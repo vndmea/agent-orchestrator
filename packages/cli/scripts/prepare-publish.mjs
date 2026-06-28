@@ -10,12 +10,15 @@ const packageDir = join(scriptDir, "..");
 const publishDir = join(packageDir, ".publish");
 
 const sourcePackageJsonPath = join(packageDir, "package.json");
-const sourceReadmePath = join(packageDir, "README.md");
+const sourceReadmePath = join(packageDir, "..", "..", "README.md");
+const sourceReadmeZhPath = join(packageDir, "..", "..", "README.zh-CN.md");
 const sourceDistDir = join(packageDir, "dist");
 
 const filterPublishedDependencies = (dependencies = {}) =>
   Object.fromEntries(
-    Object.entries(dependencies).filter(([name]) => !name.startsWith(INTERNAL_DEPENDENCY_PREFIX))
+    Object.entries(dependencies).filter(
+      ([name]) => !name.startsWith(INTERNAL_DEPENDENCY_PREFIX)
+    )
   );
 
 const buildPublishedManifest = (sourceManifest) => ({
@@ -30,7 +33,7 @@ const buildPublishedManifest = (sourceManifest) => ({
     "mcp-code-worker": "./dist/main.js"
   },
   exports: sourceManifest.exports,
-  files: ["dist", "README.md", "package.json"],
+  files: ["dist", "README.md", "README.zh-CN.md", "package.json"],
   engines: sourceManifest.engines,
   dependencies: filterPublishedDependencies(sourceManifest.dependencies),
   publishConfig: {
@@ -39,7 +42,9 @@ const buildPublishedManifest = (sourceManifest) => ({
 });
 
 const main = async () => {
-  const sourceManifest = JSON.parse(await readFile(sourcePackageJsonPath, "utf8"));
+  const sourceManifest = JSON.parse(
+    await readFile(sourcePackageJsonPath, "utf8")
+  );
   const publishedManifest = buildPublishedManifest(sourceManifest);
 
   await rm(publishDir, { force: true, recursive: true });
@@ -47,6 +52,7 @@ const main = async () => {
 
   await cp(sourceDistDir, join(publishDir, "dist"), { recursive: true });
   await cp(sourceReadmePath, join(publishDir, "README.md"));
+  await cp(sourceReadmeZhPath, join(publishDir, "README.zh-CN.md"));
   await writeFile(
     join(publishDir, "package.json"),
     `${JSON.stringify(publishedManifest, null, 2)}\n`,
