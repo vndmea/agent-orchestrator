@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 import type { Command } from "commander";
 
 import {
+  createExecutionContextWithWorkerModel,
   getCwConfigPath,
   getCwHomeDir,
   getCwWorkspaceDir,
@@ -14,10 +15,12 @@ import {
   resolveExecutionContext,
   type DoctorStatus,
   type ExecutionContext,
-  type ModelConfig
+  type ModelConfig,
+  type WorkerAvailabilityReasonCode
 } from "@mcp-code-worker/core";
 import { runWorkerInterviewWorkflow } from "@mcp-code-worker/graph";
 import {
+  buildWorkerAvailabilitySnapshot,
   createWorkerDoctorChecks,
   getWorkerRegistration,
   saveWorkerRegistration
@@ -43,7 +46,6 @@ import {
   type SetupOptions,
   type SetupResult
 } from "./setup.js";
-import type { WorkerReadinessUnavailableReasonType } from "./worker-readiness.js";
 
 export interface InitPrompter {
   close?: () => Promise<void> | void;
@@ -101,7 +103,7 @@ interface InitWorkerSummary {
   isDefault: boolean;
   probeStatus?: InitWorkerStepStatus;
   probeWorker: boolean;
-  readinessUnavailableReasonType?: WorkerReadinessUnavailableReasonType;
+  readinessUnavailableReasonType?: WorkerAvailabilityReasonCode;
   readinessStatus?: DoctorStatus | "dry-run" | "skipped";
   registerWorker: boolean;
   registerStatus?: InitWorkerStepStatus;
@@ -452,7 +454,8 @@ const mergePrimaryWorkerSummary = (
   configured: worker.configured || Boolean(worker.workerId),
   interviewStatus: readSetupStepStatus(setup, "interview-worker"),
   probeStatus: readSetupStepStatus(setup, "probe-worker"),
-  readinessStatus: setup.status === "unavailable" ? "unavailable" : "ready",
+  readinessStatus: setup.readiness.status,
+  readinessUnavailableReasonType: setup.readiness.unavailableReasonType,
   registerStatus: readSetupStepStatus(setup, "register-worker")
 });
 
@@ -892,10 +895,6 @@ const registerAdditionalWorkers = async (
     let benchmarkStatus: InitWorkerStepStatus = worker.benchmarkWorker
       ? "unavailable"
       : "skipped";
-    let readinessStatus: DoctorStatus =
-      probeStatus === "unavailable" ? "unavailable" : "ready";
-    let readinessUnavailableReasonType: WorkerReadinessUnavailableReasonType =
-      probeStatus === "unavailable" ? "probe-failed" : "not-applicable";
 
     if (worker.interviewWorker) {
       const interviewResult = await runWorkerInterviewWorkflow({
@@ -914,13 +913,11 @@ const registerAdditionalWorkers = async (
       if (interviewSave?.mode === "skipped") {
         interviewStatus = "unavailable";
         benchmarkStatus = worker.benchmarkWorker ? "unavailable" : "skipped";
-        readinessStatus = "unavailable";
-        readinessUnavailableReasonType = "profile-provider-error";
       } else {
         interviewStatus = "completed";
 
         if (worker.benchmarkWorker) {
-          const benchmarkUpdate = await runBenchmarkCapabilityUpdate({
+          await runBenchmarkCapabilityUpdate({
             context,
             modelConfig,
             save: true,
@@ -928,15 +925,19 @@ const registerAdditionalWorkers = async (
             workerId: worker.workerId
           });
           benchmarkStatus = "completed";
-          readinessStatus = benchmarkUpdate.profileUpdate?.patchGenerationQualified
-            ? "ready"
-            : "unavailable";
-          readinessUnavailableReasonType = benchmarkUpdate.profileUpdate?.patchGenerationQualified
-            ? "not-applicable"
-            : "worker-not-qualified";
         }
       }
     }
+
+    const workerContext = createExecutionContextWithWorkerModel(context, modelConfig);
+    const readiness = await buildWorkerAvailabilitySnapshot({
+      context: {
+        ...workerContext,
+        defaultWorkerId: worker.workerId
+      },
+      probe: worker.probeWorker,
+      workerId: worker.workerId
+    });
 
     summaries.push({
       benchmarkStatus,
@@ -947,8 +948,8 @@ const registerAdditionalWorkers = async (
       isDefault: false,
       probeStatus,
       probeWorker: worker.probeWorker,
-      readinessUnavailableReasonType,
-      readinessStatus,
+      readinessUnavailableReasonType: readiness.unavailableReasonType,
+      readinessStatus: readiness.status,
       registerStatus: "completed",
       registerWorker: true,
       workerId: worker.workerId,

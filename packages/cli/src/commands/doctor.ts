@@ -19,6 +19,8 @@ import {
 } from "@mcp-code-worker/core";
 import { buildMcpToolCatalogView } from "@mcp-code-worker/mcp-server";
 import {
+  applyWorkerAvailabilityToDoctorReport,
+  buildWorkerAvailabilitySnapshot,
   createWorkerDoctorChecks
 } from "@mcp-code-worker/models";
 
@@ -915,6 +917,11 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
       const report = await runDoctor(context, {
         additionalChecks
       });
+      const workerAvailability = await buildWorkerAvailabilitySnapshot({
+        context,
+        probe: options.probe
+      });
+      applyWorkerAvailabilityToDoctorReport(report, workerAvailability);
 
       if (options.mcp) {
         applyHostMcpCapability(report, requestedHost);

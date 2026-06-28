@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 
 import {
   AgentError,
+  type AvailabilityStatus,
   CwConfigSchema,
   getCwConfigPath,
   getCwWorkspaceAuditDirFromStorageDir,
@@ -21,6 +22,7 @@ import {
   runWorkerInterviewWorkflow,
 } from "@mcp-code-worker/graph";
 import {
+  buildWorkerAvailabilitySnapshot,
   createWorkerDoctorChecks,
   deriveWorkerRegistrationId,
   getWorkerProfileStorePath,
@@ -63,8 +65,9 @@ export interface SetupResult {
     toolName?: string;
   }>;
   recommendedEnv: string[];
+  readiness: Awaited<ReturnType<typeof buildWorkerAvailabilitySnapshot>>;
   rootDir: string;
-  status: string;
+  status: AvailabilityStatus;
   steps: SetupStepResult[];
   summary: string;
 }
@@ -840,11 +843,17 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
       ...probeChecks
     ]
   });
-  const readinessSummary: string = finalDoctor.summary;
+  const readiness = await buildWorkerAvailabilitySnapshot({
+    context: finalContext,
+    probe: normalizedOptions.probeWorker,
+    workerId
+  });
+  const readinessSummary: string = readiness.summary;
   const readinessCapabilities: SetupStepResult["details"] = {
-    capabilities: finalDoctor.capabilities
+    capabilities: finalDoctor.capabilities,
+    workerAvailability: readiness
   };
-  const resultStatus: SetupResult["status"] = finalDoctor.status;
+  const resultStatus: SetupResult["status"] = readiness.status;
   const minimalSuccessPath: SetupResult["minimalSuccessPath"] = [
     ...finalDoctor.minimalSuccessPath
   ];
@@ -854,7 +863,7 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
 
   steps.push({
     id: "readiness-summary",
-    status: finalDoctor.status === "ready" ? "completed" : "unavailable",
+    status: readiness.status === "ready" ? "completed" : "unavailable",
     command: "cw doctor",
     summary: readinessSummary,
     details: readinessCapabilities
@@ -877,6 +886,10 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
     ]).map((name) => `export ${name}=...`),
     minimalSuccessPath,
     recommendedEntrypoints,
-    recommendedActions: finalDoctor.recommendedActions.slice(0, 6)
+    recommendedActions: unique([
+      ...readiness.nextSteps,
+      ...finalDoctor.recommendedActions
+    ]).slice(0, 6),
+    readiness
   };
 };

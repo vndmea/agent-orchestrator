@@ -5,7 +5,11 @@ import {
   runDoctor,
   writeAuditEvent
 } from "@mcp-code-worker/core";
-import { createWorkerDoctorChecks } from "@mcp-code-worker/models";
+import {
+  applyWorkerAvailabilityToDoctorReport,
+  buildWorkerAvailabilitySnapshot,
+  createWorkerDoctorChecks
+} from "@mcp-code-worker/models";
 
 import type { CwToolDefinition } from "./tool-types.js";
 
@@ -23,6 +27,10 @@ export const cwDoctorTool: CwToolDefinition<
     const report = await runDoctor(context, {
       additionalChecks: await createWorkerDoctorChecks(context)
     });
+    const workerAvailability = await buildWorkerAvailabilitySnapshot({
+      context
+    });
+    applyWorkerAvailabilityToDoctorReport(report, workerAvailability);
     await writeAuditEvent(context, {
       actor: "mcp",
       action: "tool-call",
