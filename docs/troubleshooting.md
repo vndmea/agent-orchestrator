@@ -9,6 +9,7 @@ Start every investigation with:
 ```bash
 cw doctor
 cw doctor --probe
+cw doctor --mcp --host codex
 cw mcp list-tools
 ```
 
@@ -37,7 +38,7 @@ If you are using a repository checkout, run the commands as `pnpm exec cw ...` f
 ### Checks
 
 - Start `cw mcp serve` from the intended workspace root
-- Or set `CW_ROOT_DIR`
+- Or set `CW_WORKSPACE_DIR`
 - Re-run `cw mcp config` after changing root assumptions
 - Read the `root-dir` and `runtime-bootstrap` checks from `cw doctor` to confirm which root, config path, and CW home path are actually active
 
@@ -52,8 +53,8 @@ Different absolute repository roots produce different workspace ids, so a root m
 
 ### Checks
 
-- Confirm whether `CW_HOME_DIR` is set
-- Confirm whether `CW_ROOT_DIR` changed
+- Confirm whether `CW_STORAGE_DIR` is set
+- Confirm whether `CW_WORKSPACE_DIR` changed
 - Remember that default state lives under `~/.cw/workspaces/<workspace-id>/`
 - Read the `runtime-bootstrap` check from `cw doctor` for the resolved `config.json`, `cwStorageDir`, `cwHomeDir`, and `workspaceId`
 
@@ -62,7 +63,7 @@ Different absolute repository roots produce different workspace ids, so a root m
 ### Symptoms
 
 - `cw worker interview --save` returns provider invocation failures
-- the resulting profile is blocked for provider/configuration reasons
+- the worker remains blocked at readiness time for provider/configuration reasons
 
 ### Checks
 
@@ -71,7 +72,7 @@ Different absolute repository roots produce different workspace ids, so a root m
 - For DeepSeek-compatible workers, test both documented base URLs if needed
 - Re-run the health checks in [docs/provider-contracts/deepseek.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/deepseek.md)
 
-Do not treat a provider-failure-style blocked interview as a completed onboarding result.
+Do not treat a provider-failure interview as a completed onboarding result.
 
 ## Local Client Provider Cannot Launch
 
@@ -98,8 +99,9 @@ Do not treat a provider-failure-style blocked interview as a completed onboardin
 ### Checks
 
 - Run `cw mcp list-tools` locally first
-- Start the client against the correct workspace root, or set `CW_ROOT_DIR`
+- Start the client against the correct workspace root, or set `CW_WORKSPACE_DIR`
 - Compare the client snippet with the output of `cw mcp config`
+- Use `cw doctor --mcp --host codex` when Codex is the host and you want an end-to-end check of config presence, snippet validity, launchability, connectivity, and tool-list parity
 - Confirm the client process sees the same environment variables as your shell
 - Read `root-dir`, `runtime-bootstrap`, and `worker-connectivity` from `cw doctor --probe` to verify the active root, config path, and worker wiring
 
@@ -147,7 +149,7 @@ When escalating an issue, collect:
 - whether you used npm install or a repository checkout
 - Node.js version
 - pnpm version
-- whether `CW_ROOT_DIR` or `CW_HOME_DIR` is set
+- whether `CW_WORKSPACE_DIR` or `CW_STORAGE_DIR` is set
 - the relevant worker id, provider, and model if the issue is worker-specific
 - sanitized error output
 

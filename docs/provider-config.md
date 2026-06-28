@@ -18,8 +18,8 @@ Additional related settings include:
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
-- `CW_ROOT_DIR`
-- `CW_HOME_DIR`
+- `CW_WORKSPACE_DIR`
+- `CW_STORAGE_DIR`
 - `CW_DRY_RUN`
 - `CW_ALLOW_WRITE`
 - `CW_ALLOWED_COMMANDS`
@@ -114,7 +114,6 @@ export WORKER_MODEL_API_KEY="sk-..."
 ```bash
 cw doctor
 cw doctor --probe
-cw worker interview --save
 ```
 
 If `cw doctor --probe` fails, check the reported `root-dir`, `runtime-bootstrap`, `worker-model`, and `worker-connectivity` diagnostics before changing anything else.
@@ -163,7 +162,6 @@ export WORKER_MODEL_API_KEY="sk-ant-..."
 ```bash
 cw doctor
 cw doctor --probe
-cw worker interview --save
 ```
 
 If `cw doctor --probe` fails, check the reported `root-dir`, `runtime-bootstrap`, `worker-model`, and `worker-connectivity` diagnostics before changing anything else.
@@ -302,10 +300,10 @@ cw doctor --probe
 cw worker list
 ```
 
-If you are qualifying a real worker, continue with:
+If you are qualifying a real worker through the explicit advanced flow, continue with:
 
 ```bash
-cw worker register --provider <provider> --model <model> --allow-write
+cw worker register --worker <workerId> --provider <provider> --model <model> --allow-write
 cw worker interview --worker <workerId> --save
 ```
 

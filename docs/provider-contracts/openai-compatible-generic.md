@@ -82,8 +82,8 @@ If probe fails, read:
 Use the generic flow:
 
 ```bash
-cw worker register --provider openai-compatible --model <model-name> --allow-write
-cw worker interview --worker openai-compatible:<model-name> --save
+cw worker register --worker <workerId> --provider openai-compatible --model <model-name> --allow-write
+cw worker interview --worker <workerId> --save
 ```
 
 If coding qualification matters:

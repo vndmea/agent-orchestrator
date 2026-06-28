@@ -35,8 +35,8 @@ This means a CLI override wins over persisted user-scoped CW config, and persist
 
 ### Root and storage
 
-- `CW_ROOT_DIR`
-- `CW_HOME_DIR`
+- `CW_WORKSPACE_DIR`
+- `CW_STORAGE_DIR`
 
 ### Safety defaults
 
@@ -63,9 +63,9 @@ The persisted config is intended for workspace-local runtime defaults such as:
 - session retention settings
 - worker and MCP-adjacent runtime defaults that should stay consistent across CLI and MCP entrypoints
 
-If you choose to persist an API key in the user-scoped config, keep it local to the machine, never commit it into repository files, and avoid pasting it into logs or shared transcripts. Launch-location bootstrap values such as `CW_ROOT_DIR` and `CW_HOME_DIR` remain environment-driven.
+If you choose to persist an API key in the user-scoped config, keep it local to the machine, never commit it into repository files, and avoid pasting it into logs or shared transcripts. Launch-location bootstrap values such as `CW_WORKSPACE_DIR` and `CW_STORAGE_DIR` remain environment-driven.
 
-Path-like inputs such as `CW_ROOT_DIR`, `CW_HOME_DIR`, and `workerClientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
+Path-like inputs such as `CW_WORKSPACE_DIR`, `CW_STORAGE_DIR`, and `workerClientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
 
 ## Repository Context Defaults
 
@@ -103,10 +103,11 @@ cw doctor --probe
 cw mcp list-tools
 ```
 
-If the configuration affects worker routing, continue with:
+If the configuration affects worker routing, continue with the explicit advanced flow:
 
 ```bash
-cw worker interview --provider <provider> --model <model>
+cw worker register --worker <workerId> --provider <provider> --model <model> --allow-write
+cw worker interview --worker <workerId> --save
 ```
 
 ## Related Documents

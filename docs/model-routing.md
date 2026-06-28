@@ -9,4 +9,4 @@ CW resolves one default worker model from environment variables or user-scoped c
 - The default worker config surface is `WORKER_MODEL_PROVIDER`, `WORKER_MODEL_NAME`, `WORKER_MODEL_BASE_URL`, and `WORKER_MODEL_API_KEY`.
 - Worker routing is gated by `WorkerCapabilityProfile`, not only by provider/model availability.
 - Newly connected workers should pass onboarding evaluation before they receive production tasks.
-- Limited workers are restricted to qualified low-risk task types, and blocked workers are excluded entirely.
+- Limited workers are restricted to qualified low-risk task types, and not-qualified workers are excluded from task types they did not qualify for.

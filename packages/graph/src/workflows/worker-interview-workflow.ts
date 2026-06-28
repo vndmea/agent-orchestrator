@@ -198,7 +198,7 @@ const routingFixtureFiles: FixtureFile[] = [
     path: "packages/runtime/src/selectWorker.ts",
     content: [
       "export function selectWorker(profile: WorkerProfile): string {",
-      '  return profile.status === "blocked" ? "fallback-worker" : profile.workerId;',
+      '  return profile.status === "not-qualified" ? "fallback-worker" : profile.workerId;',
       "}"
     ].join("\n")
   },
@@ -1692,9 +1692,8 @@ const buildCapabilityProfile = (
     blockingReasons
   };
 
-  const status = !admission.passed
-    ? "blocked"
-    : taskScores.codegen < 0.78 ||
+  const status = !admission.passed ||
+      taskScores.codegen < 0.78 ||
         taskScores.reviewLite < 0.76 ||
         taskScores.riskAnalysis < 0.76 ||
         taskScores.codeUnderstanding < 0.74 ||
@@ -1723,9 +1722,7 @@ const buildCapabilityProfile = (
           ? score.reliability >= 0.9
             ? "high"
             : "medium"
-          : status === "not-qualified"
-            ? "low"
-            : "low",
+          : "low",
       requiresHostReview: status !== "qualified" || score.reliability < 0.85,
       allowCodegen: supported.has("codegen"),
       allowPatchGeneration:
@@ -1790,7 +1787,7 @@ export const runWorkerInterviewWorkflow = async (
     goal: `Evaluate worker onboarding capability for ${workerId}`,
     constraints: [
       "Assess instruction following, structured output, scope discipline, summarization, evidence-linked review grounding, insufficient-evidence refusal, code understanding, code generation, and confidence calibration.",
-      "Warn when the worker should be not-qualified or blocked."
+      "Warn when the worker should be not-qualified."
     ],
     assignedRole: "reviewer",
     priority: "high",

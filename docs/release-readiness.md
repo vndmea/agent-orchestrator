@@ -156,7 +156,7 @@ For each required document, confirm:
 - the described workflow can be reproduced with the documented install path
 - storage paths are described consistently with `~/.cw/workspaces/<workspace-id>/`
 - no unsupported platform, packaging, or client claims are made
-- examples that mention MCP root resolution align with `cw mcp serve` from the target workspace root and `CW_ROOT_DIR`
+- examples that mention MCP root resolution align with `cw mcp serve` from the target workspace root and `CW_WORKSPACE_DIR`
 
 ## MCP Readiness Checks
 
@@ -177,7 +177,7 @@ The MCP surface is part of the shipped product and must be validated directly.
 ### `cw mcp serve`
 
 - starts successfully from the public install path
-- resolves the current working directory as the workspace root when `CW_ROOT_DIR` is unset
+- resolves the current working directory as the workspace root when `CW_WORKSPACE_DIR` is unset
 - can be connected to by an MCP client or test harness
 - returns the same tool list surfaced by `cw mcp list-tools`
 - shuts down cleanly after the validation run

@@ -11,7 +11,7 @@ Do not mark a gate complete without committed or attached evidence. For storage-
 | Quality gate | `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm smoke`, `pnpm smoke:dist` all pass | [x] | `docs/evidence/deepseek-internal-trial-2026-06-26.md` |
 | Worker onboarding | At least one real worker interview completed and persisted successfully | [x] | `docs/evidence/deepseek-internal-trial-2026-06-26.md` |
 | Worker benchmark | At least one `coding-v1` benchmark artifact saved for the same worker | [x] | `docs/evidence/deepseek-internal-trial-2026-06-26.md` |
-| Provider robustness | Provider invocation failures return re-interview guidance and do not persist misleading blocked profiles | [x] | `packages/graph/src/workflows/worker-interview-workflow.test.ts`; `docs/evidence/deepseek-internal-trial-2026-06-26.md` |
+| Provider robustness | Provider invocation failures return re-interview guidance and do not persist misleading non-qualification results | [x] | `packages/graph/src/workflows/worker-interview-workflow.test.ts`; `docs/evidence/deepseek-internal-trial-2026-06-26.md` |
 | Task session | At least one end-to-end task session completed with persisted report and validation artifacts | [x] | `docs/evidence/deepseek-internal-trial-2026-06-26.md` |
 | Artifact reader | `cw_read_task_artifact` can read at least one persisted task artifact from refs | [x] | `docs/evidence/deepseek-internal-trial-2026-06-26.md` |
 | Output shaping | Summary/full output modes verified for MCP and CLI entrypoints used in trial | [x] | `docs/evidence/deepseek-internal-trial-2026-06-26.md` |

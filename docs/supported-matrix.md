@@ -45,7 +45,7 @@ If a platform, runtime, or MCP host is not listed here as supported, do not impl
 The MCP runtime contract is stdio-based. A host must be able to:
 
 - launch `cw mcp serve`
-- pass environment variables such as `CW_ROOT_DIR` and `CW_HOME_DIR` when needed
+- pass environment variables such as `CW_WORKSPACE_DIR` and `CW_STORAGE_DIR` when needed
 - communicate with a stdio MCP server correctly
 
 | Host / surface | Level | Notes |
@@ -62,7 +62,7 @@ The MCP runtime contract is stdio-based. A host must be able to:
 | Surface | Level | Notes |
 | ------- | ----- | ----- |
 | `config.json` for persisted runtime defaults | supported | Primary config surface for worker, validation, safety, local client defaults, and optional user-scoped provider API keys |
-| Environment variables for launch bootstrap and optional secret overrides | supported | Use for `WORKER_MODEL_API_KEY`, `CW_ROOT_DIR`, `CW_HOME_DIR`, and similar values |
+| Environment variables for launch bootstrap and optional secret overrides | supported | Use for `WORKER_MODEL_API_KEY`, `CW_WORKSPACE_DIR`, `CW_STORAGE_DIR`, and similar values |
 | Host MCP config as the place for worker/provider defaults | unsupported | Host snippets should stay launch-focused, not become the main runtime config surface |
 
 ## Release Rule

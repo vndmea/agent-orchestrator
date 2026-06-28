@@ -16,7 +16,7 @@ Onboarding establishes:
 - whether it returns structured JSON reliably
 - whether it respects narrow repository scope
 - whether it is safe to route production tasks through it
-- whether it should remain blocked, limited, or qualified
+- whether it should remain blocked, not-qualified, or qualified
 
 ## When A Worker Can Actually Save Tokens
 
@@ -37,10 +37,11 @@ It is less likely to save tokens when the worker is used for:
 
 ## Basic Flow
 
-Use this sequence for a new worker:
+Use this explicit advanced sequence for a new worker after `cw init`:
 
 ```bash
 cw worker register \
+  --worker <workerId> \
   --provider <provider> \
   --model <model> \
   --base-url <base-url-if-needed> \
@@ -48,6 +49,7 @@ cw worker register \
 
 cw doctor --probe
 cw worker interview --worker <workerId> --save
+cw worker readiness --worker <workerId>
 cw worker profile <workerId>
 ```
 
@@ -55,12 +57,14 @@ If the worker will be used for coding qualification or patch generation review, 
 
 ```bash
 cw worker benchmark --suite coding-v1 --worker <workerId> --save
+cw worker readiness --worker <workerId> --probe
 ```
 
 Only after reviewing the benchmark result should you consider:
 
 ```bash
 cw worker benchmark --suite coding-v1 --worker <workerId> --save --update-profile-capabilities
+cw worker readiness --worker <workerId>
 ```
 
 ## What The Interview Evaluates
@@ -82,10 +86,10 @@ The interview workflow checks:
 Interview output produces a `WorkerCapabilityProfile` that affects routing.
 
 - `qualified`: the worker can receive the task types it qualified for
-- `limited`: the worker is restricted to lower-risk tasks and requires host review
-- `blocked`: the worker should not receive production tasks
+- `not-qualified`: the worker completed evaluation but should stay out of qualified task types
 
 The profile status is not just descriptive. It changes how routing and policy checks behave.
+Run `cw worker readiness` for the separate runtime answer about whether the worker is currently ready or blocked for formal tasks.
 
 ## Persisted Artifacts
 
@@ -118,14 +122,14 @@ This is the safer option for:
 
 ```bash
 cw worker register \
-  --worker openai-compatible:deepseek-v4-flash \
+  --worker deepseek-flash \
   --provider openai-compatible \
   --model deepseek-v4-flash \
   --base-url https://api.deepseek.com \
   --allow-write
 
-cw worker interview --worker openai-compatible:deepseek-v4-flash --save
-cw worker benchmark --suite coding-v1 --worker openai-compatible:deepseek-v4-flash --save
+cw worker interview --worker deepseek-flash --save
+cw worker benchmark --suite coding-v1 --worker deepseek-flash --save
 ```
 
 See [docs/provider-contracts/deepseek.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/deepseek.md) for provider-specific health checks and retry guidance.
@@ -134,12 +138,13 @@ See [docs/provider-contracts/deepseek.md](https://github.com/vndmea/mcp-code-wor
 
 ```bash
 cw worker register \
+  --worker qwen-local \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
-cw worker interview --worker litellm:qwen3-coder --save
+cw worker interview --worker qwen-local --save
 ```
 
 ## Failure And Retry Guidance
@@ -153,4 +158,4 @@ Stop and fix the environment before retrying when:
 
 Use `cw doctor --probe` before a retry when you want a live connectivity probe for the currently resolved default worker.
 
-Do not treat a provider-failure-style blocked profile as a completed qualification result.
+Do not treat a provider-failure interview result as a completed qualification result.

@@ -13,14 +13,6 @@ export const assessWorkerTaskEligibility = (
   profile: WorkerCapabilityProfile,
   taskType: WorkerTaskType
 ): WorkerTaskEligibility => {
-  if (profile.status === "blocked") {
-    return {
-      allowed: false,
-      reason: `Worker ${profile.workerId} is blocked by onboarding evaluation.`,
-      requiresHostReview: true
-    };
-  }
-
   if (!profile.supportedTaskTypes.includes(taskType)) {
     return {
       allowed: false,

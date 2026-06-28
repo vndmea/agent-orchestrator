@@ -41,7 +41,7 @@ pnpm exec cw doctor
 
 Recommended next checks:
 
-- Confirm `~/.cw/workspaces/<workspace-id>/config.json` exists, or the equivalent path under `CW_HOME_DIR`.
+- Confirm `~/.cw/workspaces/<workspace-id>/config.json` exists, or the equivalent path under `CW_STORAGE_DIR`.
 - Confirm `worker-profiles.json` and `workers.json` were created in user-scoped CW storage, not in the repository checkout.
 - If an API key was written into the user-scoped `config.json`, confirm it remains local-only and is not copied into commits, logs, or shared notes.
 - Confirm no workflow depends on a repository-local legacy `.cw/` directory. Current builds do not read it.
@@ -89,19 +89,19 @@ Compatibility path worth testing in some SDKs:
 $env:WORKER_MODEL_API_KEY="..."
 
 cw worker register `
-  --worker openai-compatible:deepseek-v4-flash `
+  --worker deepseek-flash `
   --provider openai-compatible `
   --model deepseek-v4-flash `
   --base-url https://api.deepseek.com `
   --allow-write
 
 cw worker interview `
-  --worker openai-compatible:deepseek-v4-flash `
+  --worker deepseek-flash `
   --save
 
 cw worker benchmark `
   --suite coding-v1 `
-  --worker openai-compatible:deepseek-v4-flash `
+  --worker deepseek-flash `
   --save `
   --update-profile-capabilities
 ```
@@ -133,13 +133,14 @@ If interview output reports provider invocation failures, do not treat the resul
 
 ```bash
 cw worker register \
+  --worker qwen-local \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
-cw worker interview --worker litellm:qwen3-coder --save
-cw worker benchmark --suite coding-v1 --worker litellm:qwen3-coder --save --update-profile-capabilities
+cw worker interview --worker qwen-local --save
+cw worker benchmark --suite coding-v1 --worker qwen-local --save --update-profile-capabilities
 ```
 
 ## End-To-End Task Session
@@ -148,7 +149,7 @@ cw worker benchmark --suite coding-v1 --worker litellm:qwen3-coder --save --upda
 cw task start \
   --goal "Review packages/core and propose safe improvements" \
   --scope packages/core \
-  --worker openai-compatible:deepseek-v4-flash \
+  --worker deepseek-flash \
   --require-profile \
   --typecheck \
   --propose-patch \

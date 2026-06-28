@@ -150,13 +150,19 @@ Workers are not treated as automatically qualified just because a model endpoint
 > A weaker worker model does not automatically save tokens. If the host still has to verify, rewrite, or redo most of the output, the total token cost can increase rather than decrease.
 > Token savings are more likely when the delegated task is narrow, mechanical, low-risk, and easy to verify, such as running checks, extracting fields, collecting logs, or summarizing a very small scoped input.
 
-Use onboarding evaluation before assigning real work:
+Use `cw init` as the default onboarding path. For explicit advanced flows, register a named worker and then evaluate it before assigning real work:
 
 ```bash
-cw worker interview --provider litellm --model qwen3-coder
-cw worker interview --provider litellm --model qwen3-coder --save
+cw worker register \
+  --worker qwen-local \
+  --provider litellm \
+  --model qwen3-coder \
+  --base-url http://localhost:4000/v1 \
+  --allow-write
+
+cw worker interview --worker qwen-local --save
 cw worker list
-cw worker profile litellm:qwen3-coder
+cw worker profile qwen-local
 ```
 
 The interview workflow evaluates:
@@ -174,15 +180,15 @@ The interview workflow evaluates:
 Interview results produce a `WorkerCapabilityProfile` that affects routing:
 
 - `qualified`: worker can receive the task types it qualified for
-- `limited`: worker is restricted to low-risk tasks and requires host review
-- `blocked`: worker is excluded from production workflows and emits warnings
+- `not-qualified`: worker completed evaluation but stays restricted from qualified task types
+- `blocked`: worker could not complete evaluation or is excluded from production workflows
 
 Example warning output:
 
 ```text
-Worker litellm:qwen3-coder failed onboarding evaluation.
+Worker qwen-local failed onboarding evaluation.
 
-Status: limited
+Status: not-qualified
 
 Reasons:
 - structured-output: Output failed schema validation.
@@ -195,14 +201,14 @@ Recommended action:
 - Require host review for every accepted output.
 ```
 
-If the worker is significantly worse, the profile becomes `blocked` and production routing should treat it as unavailable.
+If the worker cannot complete evaluation because of configuration or connectivity problems, the profile remains `blocked` and production routing should treat it as unavailable until the runtime issue is fixed.
 
 ### Persisting worker profiles
 
 Use `--save` if you want to persist the interview result:
 
 ```bash
-cw worker interview --provider litellm --model qwen3-coder --save
+cw worker interview --worker qwen-local --save
 ```
 
 Saved profiles are written to:
@@ -215,7 +221,7 @@ You can inspect persisted profiles with:
 
 ```bash
 cw worker list
-cw worker profile litellm:qwen3-coder
+cw worker profile qwen-local
 ```
 
 Current behavior is conservative: if a workflow is started without an explicit profile object, the system can re-run the interview instead of blindly trusting an old capability record.
@@ -226,16 +232,17 @@ Register a reusable worker, evaluate it, and keep the assignment explicit:
 
 ```bash
 cw worker register \
+  --worker qwen-local \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
-cw worker interview --worker litellm:qwen3-coder --save
+cw worker interview --worker qwen-local --save
 
 cw task start \
   --goal "Review this repository" \
-  --worker litellm:qwen3-coder \
+  --worker qwen-local \
   --require-profile
 
 cw audit list
@@ -297,7 +304,7 @@ Task sessions keep local review artifacts and resumable state under `~/.cw/works
 cw task start \
   --goal "Fix failing typecheck in packages/core" \
   --scope packages/core \
-  --worker litellm:qwen3-coder \
+  --worker qwen-local \
   --require-profile \
   --typecheck \
   --lint \
@@ -354,8 +361,8 @@ See [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.ex
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
-- `CW_ROOT_DIR`
-- `CW_HOME_DIR`
+- `CW_WORKSPACE_DIR`
+- `CW_STORAGE_DIR`
 - `CW_WORKER_CLIENT_COMMAND`
 - `CW_DRY_RUN`
 - `CW_ALLOW_WRITE`
@@ -370,7 +377,7 @@ Runtime configuration resolves in this order:
 3. Environment variables
 4. built-in defaults
 
-Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults, including provider API keys when you intentionally want one local config surface. Keep launch-location bootstrap values such as `CW_ROOT_DIR` and `CW_HOME_DIR` in environment variables, and never commit real keys or include them in logs.
+Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults, including provider API keys when you intentionally want one local config surface. Keep launch-location bootstrap values such as `CW_WORKSPACE_DIR` and `CW_STORAGE_DIR` in environment variables, and never commit real keys or include them in logs.
 
 Repository context settings in the user-scoped CW `config.json` control default `ignoredPaths` and `strictFiles` behavior for review, fix, patch, and task workflows.
 
@@ -433,7 +440,7 @@ Set `WORKER_MODEL_PROVIDER=litellm`, then provide:
 - `cw cleanup runs` and `cw cleanup audit` only delete local CW artifacts and never touch project source files.
 - In host-driven flows, worker outputs are not final until the host accepts them.
 - Workers must pass onboarding evaluation before they should receive production tasks.
-- Workers that fail structured output or reliability checks are limited or blocked.
+- Workers that fail structured output or reliability checks become `not-qualified` or `blocked` depending on whether the failure was capability-related or environment-related.
 - Secrets may come from environment variables or the user-scoped CW `config.json` and should never be logged.
 
 See [docs/permissions.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/permissions.md) for the concrete permission layers and write-gate examples.

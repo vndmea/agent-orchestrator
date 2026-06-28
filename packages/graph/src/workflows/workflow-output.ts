@@ -32,8 +32,31 @@ export const formatTaskSessionWorkflowOutput = (
     return output;
   }
 
+  const validation = output.validationReport
+    ? summarizeValidationReport(output.validationReport, options?.maxBytes)
+    : null;
+  const artifactRefsIncluded = includeArtifactRefs(options);
+
   return {
-    ...createTaskSessionSummary(output.session, includeArtifactRefs(options)),
+    taskId: output.session.taskId,
+    goal: output.session.goal,
+    scope: output.session.scope,
+    workerId: output.workerId,
+    finalStatus: output.session.status,
+    workerReviewStatus: output.reviewResult?.workerReviewResult?.status ?? "not-produced",
+    accepted: output.reviewResult?.accepted ?? "not-produced",
+    validationSummary: validation?.summary ?? "not-produced",
+    validationStatus: output.validationReport
+      ? output.validationReport.ok
+        ? "passed"
+        : "failed"
+      : "not-produced",
+    artifactRefs: artifactRefsIncluded
+      ? createTaskSessionSummary(output.session, true)["artifactRefs"] ?? []
+      : [],
+    artifactRefsStatus: artifactRefsIncluded
+      ? "included"
+      : "suppressed-in-summary",
     mode: output.mode,
     rootDir: output.rootDir,
     readinessSummary: output.readinessSummary,
@@ -41,24 +64,20 @@ export const formatTaskSessionWorkflowOutput = (
     sessionWriteMode: output.sessionWriteMode,
     persistence: output.persistence,
     workspaceBinding: output.workspaceBinding,
-    transientNotice: output.transientNotice,
-    workerId: output.workerId,
+    transientNotice: output.transientNotice ?? "not-applicable",
     sessionPath: output.sessionPath,
     nextRecommendedActions: output.nextRecommendedActions,
-    reviewSummary: output.reviewResult?.reviewSummary.summary,
-    fixSummary: output.fixResult?.rootCauseAnalysis,
-    patch:
-      output.patchProposal || output.patchInspection || output.patchApplyResult
-        ? {
-            proposalId: output.patchProposal?.id,
-            title: output.patchProposal?.title,
-            inspectionOk: output.patchInspection?.ok,
-            applied: output.patchApplyResult?.applied ?? false
-          }
-        : undefined,
-    validation: output.validationReport
-      ? summarizeValidationReport(output.validationReport, options?.maxBytes)
-      : undefined,
+    reviewSummary: output.reviewResult?.reviewSummary.summary ?? "not-produced",
+    fixSummary: output.fixResult?.rootCauseAnalysis ?? "not-produced",
+    patch: output.patchProposal || output.patchInspection || output.patchApplyResult
+      ? {
+          proposalId: output.patchProposal?.id ?? "not-produced",
+          title: output.patchProposal?.title ?? "not-produced",
+          inspectionOk: output.patchInspection?.ok ?? "not-produced",
+          applied: output.patchApplyResult?.applied ?? "not-produced"
+        }
+      : "not-produced",
+    validation: validation ?? "not-produced",
     reportPreview: truncateText(output.report, options?.maxBytes ?? 4_000)
   };
 };

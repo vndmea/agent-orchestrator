@@ -29,7 +29,7 @@ export interface ResolveWorkerProfileResult {
   workerId: string;
 }
 
-const knownStatuses = new Set<WorkerStatus>(["qualified", "not-qualified", "blocked"]);
+const knownStatuses = new Set<WorkerStatus>(["qualified", "not-qualified"]);
 const providerFailureWarningPattern = /provider invocation failed/iu;
 const supportedSuiteVersion = "6";
 
@@ -85,7 +85,10 @@ export const resolveWorkerProfile = async ({
   requireProfile
 }: ResolveWorkerProfileInput): Promise<ResolveWorkerProfileResult> => {
   const effectiveModelConfig = modelConfig ?? context.workerModel;
-  const resolvedWorkerId = workerId ?? deriveWorkerProfileId(effectiveModelConfig);
+  const resolvedWorkerId =
+    workerId ??
+    context.defaultWorkerId ??
+    deriveWorkerProfileId(effectiveModelConfig);
   const profile = await getWorkerProfile(
     context.rootDir,
     resolvedWorkerId,

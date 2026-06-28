@@ -9,7 +9,7 @@ import { normalizeFileSystemPath } from "@mcp-code-worker/core";
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
 
-const MCP_HOSTS = [
+export const MCP_HOSTS = [
   "generic",
   "codex",
   "cursor",
@@ -18,12 +18,14 @@ const MCP_HOSTS = [
   "opencode"
 ] as const;
 
-type McpHost = (typeof MCP_HOSTS)[number];
+export type McpHost = (typeof MCP_HOSTS)[number];
 
-const isMcpHost = (value: string): value is McpHost =>
+export const isMcpHost = (value: string): value is McpHost =>
   MCP_HOSTS.includes(value as McpHost);
 
-const getHostPresetRootDir = (host: McpHost): string | undefined => {
+export const getHostPresetRootDir = (
+  host: McpHost
+): string | undefined => {
   switch (host) {
     case "codex":
     case "cursor":

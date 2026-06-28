@@ -32,7 +32,7 @@ export const WorkerInterviewFailureKindSchema = z.enum([
   "schema-validation"
 ]);
 
-export const WorkerStatusSchema = z.enum(["qualified", "not-qualified", "blocked"]);
+export const WorkerStatusSchema = z.enum(["qualified", "not-qualified"]);
 
 export const WorkerEvaluationScoreSchema = z.object({
   instructionFollowing: z.number().min(0).max(1),

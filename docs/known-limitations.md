@@ -36,7 +36,7 @@ This document lists current product boundaries and non-goals that users should u
 
 ## MCP And Client Limits
 
-- MCP integrations depend on correct root resolution via the server working directory or `CW_ROOT_DIR`.
+- MCP integrations depend on correct root resolution via the server working directory or `CW_WORKSPACE_DIR`.
 - Client-specific configuration surfaces vary by host; use the documented JSON snippets as the stable CW-side contract rather than assuming a client-specific file path.
 
 ## Worker Qualification Limits
@@ -45,4 +45,4 @@ This document lists current product boundaries and non-goals that users should u
 - Provider invocation failures during interview should be treated as configuration or connectivity problems, not as completed qualification results.
 - `patch-generation` should only be promoted after explicit benchmark review and capability update.
 - A weaker worker model is not automatically cheaper in total token cost if a stronger host model still has to verify or redo most of its output.
-- Token savings are more realistic when workers are limited to narrow, low-risk, mechanically verifiable subtasks.
+- Token savings are more realistic when workers are constrained to narrow, low-risk, mechanically verifiable subtasks.

@@ -149,13 +149,19 @@ cw mcp list-tools
 > 较弱的 worker 模型并不会天然省 token。如果宿主仍然需要大量复核、改写，甚至重做它的输出，总 token 成本往往会上升而不是下降。
 > 真正更省的场景通常是窄范围、机械化、低风险、易验证的任务，例如跑检查、提取字段、收集日志、或对很小范围输入做摘要。
 
-在分配真实任务前，先执行接入评估：
+默认首次接入走 `cw init`。如果你需要显式高级流程，再先注册一个用户命名的 worker，然后再做评估：
 
 ```bash
-cw worker interview --provider litellm --model qwen3-coder
-cw worker interview --provider litellm --model qwen3-coder --save
+cw worker register \
+  --worker qwen-local \
+  --provider litellm \
+  --model qwen3-coder \
+  --base-url http://localhost:4000/v1 \
+  --allow-write
+
+cw worker interview --worker qwen-local --save
 cw worker list
-cw worker profile litellm:qwen3-coder
+cw worker profile qwen-local
 ```
 
 这套 interview 会评估：
@@ -173,15 +179,15 @@ cw worker profile litellm:qwen3-coder
 评估结果会生成 `WorkerCapabilityProfile`，并直接影响路由：
 
 - `qualified`：可以接收其通过评估的任务类型
-- `limited`：只允许低风险任务，并且需要宿主复核
-- `blocked`：禁止进入生产工作流，并输出告警
+- `not-qualified`：评估已完成，但仍不具备进入合格任务类型的能力
+- `blocked`：评估未能完成，或因环境/配置问题被阻断
 
 示例告警输出：
 
 ```text
-Worker litellm:qwen3-coder failed onboarding evaluation.
+Worker qwen-local failed onboarding evaluation.
 
-Status: limited
+Status: not-qualified
 
 Reasons:
 - structured-output: Output failed schema validation.
@@ -194,14 +200,14 @@ Recommended action:
 - Require host review for every accepted output.
 ```
 
-如果 worker 表现更差，profile 会被标记为 `blocked`，生产路由应将其视为不可用。
+如果因为配置或连通性问题导致评估无法完成，profile 会保持为 `blocked`，生产路由应在问题修复前将其视为不可用。
 
 ### 持久化 worker profile
 
 如果你希望把这次评估结果保存下来，可以使用 `--save`：
 
 ```bash
-cw worker interview --provider litellm --model qwen3-coder --save
+cw worker interview --worker qwen-local --save
 ```
 
 保存后的 profile 会写到：
@@ -214,7 +220,7 @@ cw worker interview --provider litellm --model qwen3-coder --save
 
 ```bash
 cw worker list
-cw worker profile litellm:qwen3-coder
+cw worker profile qwen-local
 ```
 
 当前行为仍然偏保守：如果 workflow 启动时没有显式传入 profile object，系统可以重新执行 interview，而不是盲目信任旧的能力记录。
@@ -225,16 +231,17 @@ cw worker profile litellm:qwen3-coder
 
 ```bash
 cw worker register \
+  --worker qwen-local \
   --provider litellm \
   --model qwen3-coder \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
-cw worker interview --worker litellm:qwen3-coder --save
+cw worker interview --worker qwen-local --save
 
 cw task start \
   --goal "Review this repository" \
-  --worker litellm:qwen3-coder \
+  --worker qwen-local \
   --require-profile
 
 cw audit list
@@ -296,7 +303,7 @@ task session 默认会把本地可审查产物和可恢复状态写入 `~/.cw/wo
 cw task start \
   --goal "Fix failing typecheck in packages/core" \
   --scope packages/core \
-  --worker litellm:qwen3-coder \
+  --worker qwen-local \
   --require-profile \
   --typecheck \
   --lint \
@@ -351,8 +358,8 @@ cw mcp list-tools
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
-- `CW_ROOT_DIR`
-- `CW_HOME_DIR`
+- `CW_WORKSPACE_DIR`
+- `CW_STORAGE_DIR`
 - `CW_WORKER_CLIENT_COMMAND`
 - `CW_DRY_RUN`
 - `CW_ALLOW_WRITE`
@@ -367,7 +374,7 @@ cw mcp list-tools
 3. 环境变量
 4. 内置默认值
 
-`config.json` 应作为 worker、validation、安全策略和 MCP 相关运行时默认值的主配置面；如果你希望把 provider API key 也统一收口到本地配置，也可以持久化在用户级 `config.json`。`CW_ROOT_DIR`、`CW_HOME_DIR` 这类启动定位变量仍通过环境变量提供，且真实密钥不应提交或写入日志。
+`config.json` 应作为 worker、validation、安全策略和 MCP 相关运行时默认值的主配置面；如果你希望把 provider API key 也统一收口到本地配置，也可以持久化在用户级 `config.json`。`CW_WORKSPACE_DIR`、`CW_STORAGE_DIR` 这类启动定位变量仍通过环境变量提供，且真实密钥不应提交或写入日志。
 
 用户级 CW `config.json` 里的 repository context 配置用于控制 review、fix、patch 和 task workflow 的默认 `ignoredPaths` 与 `strictFiles` 行为。
 
@@ -431,7 +438,7 @@ cw mcp list-tools
 - `cw cleanup runs` 和 `cw cleanup audit` 只删除本地 CW 产物，不会碰项目源代码。
 - 宿主驱动场景里，worker 输出在宿主接受前都不能视为最终结果。
 - Worker 在进入生产任务前应先通过 onboarding evaluation。
-- structured output 或可靠性不达标的 worker 会被限制或阻断。
+- structured output 或可靠性不达标的 worker 会进入 `not-qualified` 或 `blocked` 状态，具体取决于问题属于能力不足还是环境阻断。
 - 密钥应通过环境变量提供，且绝不能写入日志。
 
 ## Dist smoke

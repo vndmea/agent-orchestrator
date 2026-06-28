@@ -27,7 +27,7 @@ export type WorkerInterviewFailureKind =
   | "provider-invocation"
   | "json-parse"
   | "schema-validation";
-export type WorkerStatus = "qualified" | "not-qualified" | "blocked";
+export type WorkerStatus = "qualified" | "not-qualified";
 
 export type RuntimeDecisionType =
   | "approve"

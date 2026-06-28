@@ -16,7 +16,7 @@ The published package exposes the `cw` command and bundles internal workspace pa
 When `cw` runs outside a repository checkout, prefer setting:
 
 ```bash
-CW_ROOT_DIR=/path/to/project
+CW_WORKSPACE_DIR=/path/to/project
 ```
 
 so `cw mcp serve` still resolves the intended workspace.

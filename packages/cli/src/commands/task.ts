@@ -23,10 +23,45 @@ import {
 
 const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[] => {
   const taskId = typeof summary["taskId"] === "string" ? summary["taskId"] : "unknown-task";
-  const status = typeof summary["status"] === "string" ? summary["status"] : "unknown";
+  const status =
+    typeof summary["finalStatus"] === "string"
+      ? summary["finalStatus"]
+      : typeof summary["status"] === "string"
+        ? summary["status"]
+        : "unknown";
   const goal = typeof summary["goal"] === "string" ? summary["goal"] : "";
   const nextRecommendedActions = Array.isArray(summary["nextRecommendedActions"])
-    ? (summary["nextRecommendedActions"] as string[])
+    ? summary["nextRecommendedActions"]
+        .map((value) => {
+          if (typeof value === "string") {
+            return value;
+          }
+
+          if (!value || typeof value !== "object") {
+            return null;
+          }
+
+          const action = value as {
+            action?: unknown;
+            command?: unknown;
+            reason?: unknown;
+          };
+
+          if (typeof action.command === "string" && action.command.length > 0) {
+            return action.command;
+          }
+
+          if (typeof action.reason === "string" && action.reason.length > 0) {
+            return action.reason;
+          }
+
+          if (typeof action.action === "string" && action.action.length > 0) {
+            return action.action;
+          }
+
+          return null;
+        })
+        .filter((value): value is string => Boolean(value))
     : [];
   const readinessSummary =
     typeof summary["readinessSummary"] === "string"
@@ -42,6 +77,18 @@ const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[
     typeof summary["reviewSummary"] === "string" ? summary["reviewSummary"] : null;
   const fixSummary =
     typeof summary["fixSummary"] === "string" ? summary["fixSummary"] : null;
+  const workerReviewStatus =
+    typeof summary["workerReviewStatus"] === "string"
+      ? summary["workerReviewStatus"]
+      : null;
+  const accepted =
+    typeof summary["accepted"] === "boolean" || typeof summary["accepted"] === "string"
+      ? summary["accepted"]
+      : null;
+  const validationSummary =
+    typeof summary["validationSummary"] === "string"
+      ? summary["validationSummary"]
+      : null;
   const validation =
     typeof summary["validation"] === "object" && summary["validation"] !== null
       ? (summary["validation"] as { summary?: string })
@@ -61,11 +108,21 @@ const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[
     lines.push(`review: ${reviewSummary}`);
   }
 
+  if (workerReviewStatus) {
+    lines.push(`worker review: ${workerReviewStatus}`);
+  }
+
+  if (accepted !== null) {
+    lines.push(`accepted: ${String(accepted)}`);
+  }
+
   if (fixSummary) {
     lines.push(`fix: ${fixSummary}`);
   }
 
-  if (validation?.summary) {
+  if (validationSummary) {
+    lines.push(`validation: ${validationSummary}`);
+  } else if (validation?.summary) {
     lines.push(`validation: ${validation.summary}`);
   }
 

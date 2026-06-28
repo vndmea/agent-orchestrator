@@ -61,7 +61,7 @@ describe("worker interview workflow", () => {
     expect(result.taskResults).toHaveLength(9);
   });
 
-  it("blocks workers that fail structured output handling", async () => {
+  it("marks workers not-qualified when structured output handling fails admission", async () => {
     const result = await runWorkerInterviewWorkflow({
       context: createContext(),
       simulatedResponses: {
@@ -69,7 +69,7 @@ describe("worker interview workflow", () => {
       }
     });
 
-    expect(result.status).toBe("blocked");
+    expect(result.status).toBe("not-qualified");
     expect(result.profile.score.structuredOutput).toBeLessThan(0.45);
     expect(result.profile.admission?.passed).toBe(false);
     expect(result.profile.admission?.blockingReasons.join("\n")).toMatch(
@@ -226,7 +226,7 @@ describe("worker interview workflow", () => {
     expect(workflow.warnings.join("\n")).toContain("not qualified for codegen");
   });
 
-  it("prevents blocked workers from receiving production tasks", async () => {
+  it("prevents not-qualified workers from receiving production tasks", async () => {
     const rootDir = await createWorkspace();
     const interview = await runWorkerInterviewWorkflow({
       context: createContext(),
@@ -247,9 +247,9 @@ describe("worker interview workflow", () => {
       workerCapabilityProfile: interview.profile
     });
 
-    expect(interview.status).toBe("blocked");
+    expect(interview.status).toBe("not-qualified");
     expect(workflow.workerResult).toBeNull();
-    expect(workflow.warnings.join("\n")).toContain("blocked");
+    expect(workflow.warnings.join("\n")).toContain("not-qualified");
     expect(workflow.finalResult.status).toBe("needs_review");
   });
 

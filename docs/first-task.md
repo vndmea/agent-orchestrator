@@ -83,7 +83,8 @@ Even if a patch proposal is generated, repository writes remain gated. Patch app
 If the first task looks good and you want a real worker in the loop next, qualify one first:
 
 ```bash
-cw worker interview --provider litellm --model qwen3-coder --save
+cw worker register --worker qwen-local --provider litellm --model qwen3-coder --base-url http://localhost:4000/v1 --allow-write
+cw worker interview --worker qwen-local --save
 ```
 
 Then rerun a task with:
@@ -92,7 +93,7 @@ Then rerun a task with:
 cw task start \
   --goal "Review packages/core and propose safe improvements" \
   --scope packages/core \
-  --worker litellm:qwen3-coder \
+  --worker qwen-local \
   --require-profile \
   --typecheck \
   --propose-patch \

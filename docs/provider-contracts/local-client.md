@@ -74,8 +74,8 @@ If probe fails, read:
 ## Recommended Qualification Flow
 
 ```bash
-cw worker register --provider client --model qwen3-coder --allow-write
-cw worker interview --worker client:qwen3-coder --save
+cw worker register --worker sparkcode-local --provider client --model qwen3-coder --allow-write
+cw worker interview --worker sparkcode-local --save
 ```
 
 Benchmark only after compatibility and interview both succeed.

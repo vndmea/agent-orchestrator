@@ -88,7 +88,7 @@ Expected static checks:
 
 - `worker-model`: `provider=openai-compatible`, `model=deepseek-v4-flash`, `baseURL=https://api.deepseek.com`
 - `worker-api-key`: `pass`
-- `runtime-bootstrap`: confirms the active `config.json`, CW storage path, and whether `CW_HOME_DIR` / `CW_ROOT_DIR` are in play
+- `runtime-bootstrap`: confirms the active `config.json`, CW storage path, and whether `CW_STORAGE_DIR` / `CW_WORKSPACE_DIR` are in play
 
 Expected probe behavior:
 
@@ -107,7 +107,7 @@ Recommended registration:
 
 ```bash
 cw worker register \
-  --worker openai-compatible:deepseek-v4-flash \
+  --worker deepseek-flash \
   --provider openai-compatible \
   --model deepseek-v4-flash \
   --base-url https://api.deepseek.com \
@@ -116,8 +116,8 @@ cw worker register \
 
 Qualification sequence:
 
-1. Run `cw worker interview --worker openai-compatible:deepseek-v4-flash --save`.
-2. Run `cw worker benchmark --suite coding-v1 --worker openai-compatible:deepseek-v4-flash --save` when coding qualification matters.
+1. Run `cw worker interview --worker deepseek-flash --save`.
+2. Run `cw worker benchmark --suite coding-v1 --worker deepseek-flash --save` when coding qualification matters.
 3. Only use `--update-profile-capabilities` after the benchmark result is explicitly reviewed.
 
 ## Common Failure Signatures
@@ -147,5 +147,5 @@ Expected files:
 
 Example:
 
-- worker id: `openai-compatible:deepseek-v4-flash`
+- worker id: `deepseek-flash`
 - persisted path segment: `openai-compatible_deepseek-v4-flash`

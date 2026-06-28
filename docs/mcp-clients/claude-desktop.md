@@ -29,4 +29,4 @@ Before saving the client configuration:
 - run `cw mcp list-tools`
 - confirm `cw mcp serve` starts cleanly from the target workspace root
 
-If Claude Desktop launches the server from a location other than the repository root, set `CW_ROOT_DIR` in the MCP server environment.
+If Claude Desktop launches the server from a location other than the repository root, set `CW_WORKSPACE_DIR` in the MCP server environment.

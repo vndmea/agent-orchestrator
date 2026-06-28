@@ -92,6 +92,7 @@ describe("resolveWorkerProfile", () => {
     const rootDir = await createRootDir();
     await writeProfiles(rootDir, [createProfile()]);
     const context = createExecutionContextFromEnv(undefined, {
+      defaultWorkerId: "mock:worker-model",
       rootDir,
       workerModel: {
         provider: "mock",
@@ -111,6 +112,7 @@ describe("resolveWorkerProfile", () => {
   it("returns missing when no persisted profile exists", async () => {
     const rootDir = await createRootDir();
     const context = createExecutionContextFromEnv(undefined, {
+      defaultWorkerId: "mock:worker-model",
       rootDir,
       workerModel: {
         provider: "mock",
@@ -136,6 +138,7 @@ describe("resolveWorkerProfile", () => {
       })
     ]);
     const context = createExecutionContextFromEnv(undefined, {
+      defaultWorkerId: "mock:worker-model",
       rootDir,
       workerModel: {
         provider: "mock",
@@ -197,6 +200,7 @@ describe("resolveWorkerProfile", () => {
       })
     ]);
     const context = createExecutionContextFromEnv(undefined, {
+      defaultWorkerId: "mock:worker-model",
       rootDir,
       workerModel: {
         provider: "mock",
@@ -224,6 +228,7 @@ describe("resolveWorkerProfile", () => {
       })
     ]);
     const context = createExecutionContextFromEnv(undefined, {
+      defaultWorkerId: "mock:worker-model",
       rootDir,
       workerModel: {
         provider: "mock",
@@ -239,11 +244,11 @@ describe("resolveWorkerProfile", () => {
     expect(result.freshness.reason).toContain("current repo-grounded interview signals");
   });
 
-  it("treats provider-failure blocked profiles as needing re-interview", async () => {
+  it("treats provider-failure profiles as needing re-interview", async () => {
     const rootDir = await createRootDir();
     await writeProfiles(rootDir, [
       createProfile({
-        status: "blocked",
+        status: "not-qualified",
         supportedTaskTypes: [],
         unsupportedTaskTypes: ["summarization", "codegen"],
         warnings: [
@@ -252,6 +257,7 @@ describe("resolveWorkerProfile", () => {
       })
     ]);
     const context = createExecutionContextFromEnv(undefined, {
+      defaultWorkerId: "mock:worker-model",
       rootDir,
       workerModel: {
         provider: "mock",
@@ -271,6 +277,7 @@ describe("resolveWorkerProfile", () => {
   it("throws when requireProfile is true and no usable profile exists", async () => {
     const rootDir = await createRootDir();
     const context = createExecutionContextFromEnv(undefined, {
+      defaultWorkerId: "mock:worker-model",
       rootDir,
       workerModel: {
         provider: "mock",

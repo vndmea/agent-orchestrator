@@ -21,6 +21,10 @@ import {
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
+import {
+  buildWorkerReadinessReport,
+  formatWorkerReadinessResult
+} from "./worker-readiness.js";
 
 const formatWorkerList = (
   title: string,
@@ -127,6 +131,10 @@ const formatWorkerInterviewResult = (result: {
     }
   }
 
+  if (result.persistence?.mode === "execute") {
+    lines.push(`next: cw worker readiness --worker ${result.profile.workerId}`);
+  }
+
   if (result.warnings.length > 0) {
     lines.push(`warnings: ${result.warnings.join(" | ")}`);
   }
@@ -164,6 +172,8 @@ const formatWorkerBenchmarkResult = (result: {
       `profile persistence: ${result.profilePersistence.mode}${result.profilePersistence.path ? ` (${result.profilePersistence.path})` : ""}`
     );
   }
+
+  lines.push(`next: cw worker readiness --worker ${result.workerId}`);
 
   if (result.warnings && result.warnings.length > 0) {
     lines.push(`warnings: ${result.warnings.join(" | ")}`);
@@ -486,6 +496,22 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         );
       }
     );
+
+  worker
+    .command("readiness")
+    .description("Explain whether a worker is ready for formal tasks right now.")
+    .option("--worker <workerId>", "Optional worker id")
+    .option("--probe", "Run a live connectivity probe before finalizing readiness", false)
+    .action(async (options: { probe: boolean; worker?: string }) => {
+      const context = await resolveExecutionContext();
+      const result = await buildWorkerReadinessReport({
+        context,
+        workerId: options.worker,
+        probe: options.probe
+      });
+
+      writeOutput(io, result, formatWorkerReadinessResult(result));
+    });
 
   worker
     .command("list")

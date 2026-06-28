@@ -2,6 +2,7 @@ import { execFile as execFileCallback } from "node:child_process";
 import { mkdir, mkdtemp, readFile, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
@@ -97,6 +98,49 @@ const withTempCwd = async (
   }
 };
 
+const withTempHome = async (
+  callback: (homeDir: string) => Promise<void>
+): Promise<void> => {
+  const originalHome = process.env.HOME;
+  const originalUserProfile = process.env.USERPROFILE;
+  const originalHomeDrive = process.env.HOMEDRIVE;
+  const originalHomePath = process.env.HOMEPATH;
+  const homeDir = await mkdtemp(join(tmpdir(), "cw-home-"));
+
+  process.env.HOME = homeDir;
+  process.env.USERPROFILE = homeDir;
+  delete process.env.HOMEDRIVE;
+  delete process.env.HOMEPATH;
+
+  try {
+    await callback(homeDir);
+  } finally {
+    if (originalHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = originalHome;
+    }
+
+    if (originalUserProfile === undefined) {
+      delete process.env.USERPROFILE;
+    } else {
+      process.env.USERPROFILE = originalUserProfile;
+    }
+
+    if (originalHomeDrive === undefined) {
+      delete process.env.HOMEDRIVE;
+    } else {
+      process.env.HOMEDRIVE = originalHomeDrive;
+    }
+
+    if (originalHomePath === undefined) {
+      delete process.env.HOMEPATH;
+    } else {
+      process.env.HOMEPATH = originalHomePath;
+    }
+  }
+};
+
 const parseLastJson = <T>(output: string[]): T =>
   JSON.parse(output.at(-1) ?? "{}") as T;
 
@@ -179,6 +223,38 @@ const writeCwConfig = async (rootDir: string, config: Record<string, unknown>): 
     ),
     "utf8"
   );
+};
+
+const writeCodexConfig = async (
+  homeDir: string,
+  config: {
+    args: string[];
+    command: string;
+    env?: Record<string, string>;
+  }
+): Promise<void> => {
+  const codexDir = join(homeDir, ".codex");
+  const codexConfigPath = join(codexDir, "config.toml");
+  const envEntries = Object.entries(config.env ?? {});
+  const envBlock =
+    envEntries.length > 0
+      ? [
+          "",
+          `[mcp_servers."mcp-code-worker".env]`,
+          ...envEntries.map(([key, value]) => `${key} = ${JSON.stringify(value)}`)
+        ].join("\n")
+      : "";
+  const contents = [
+    `[mcp_servers."mcp-code-worker"]`,
+    `command = ${JSON.stringify(config.command)}`,
+    `args = ${JSON.stringify(config.args)}`,
+    envBlock
+  ]
+    .filter((line) => line.length > 0)
+    .join("\n");
+
+  await mkdir(codexDir, { recursive: true });
+  await writeFile(codexConfigPath, contents, "utf8");
 };
 
 const initGitRepo = async (rootDir: string): Promise<void> => {
@@ -439,6 +515,7 @@ describe("cli parsing", () => {
 
       expect(output.join("\n")).toContain("\"checks\"");
       expect(output.join("\n")).toContain("\"worker-profile-store\"");
+      expect(output.join("\n")).not.toContain("\"host-config-present\"");
     });
   });
 
@@ -859,6 +936,115 @@ describe("cli parsing", () => {
     });
   });
 
+  it("reports missing codex MCP wiring through doctor --mcp", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeProfiles(rootDir, [createProfile()]);
+
+      await withTempHome(async () => {
+        const { io, output } = createIo();
+        const cli = buildCli(io);
+
+        await cli.parseAsync(["node", "cw", "doctor", "--mcp"]);
+
+        const result = parseLastJson<{
+          capabilities?: Array<{ name: string; status: string }>;
+          checks?: Array<{ name: string; status: string }>;
+          status?: string;
+        }>(output);
+
+        expect(result.status).toBe("blocked");
+        expect(
+          result.checks?.some(
+            (check) => check.name === "host-config-present" && check.status === "fail"
+          )
+        ).toBe(true);
+        expect(
+          result.capabilities?.some(
+            (capability) =>
+              capability.name === "host-mcp-integration" &&
+              capability.status === "blocked"
+          )
+        ).toBe(true);
+      });
+    });
+  });
+
+  it("validates a codex-style MCP snippet through doctor --mcp", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeProfiles(rootDir, [createProfile()]);
+
+      await withTempHome(async (homeDir) => {
+        await writeCodexConfig(homeDir, {
+          command: "cw",
+          args: ["mcp", "serve"],
+          env: {
+            CW_WORKSPACE_DIR: "${workspaceFolder}"
+          }
+        });
+        const { io, output } = createIo();
+        const cli = buildCli(io);
+
+        await cli.parseAsync(["node", "cw", "doctor", "--mcp", "--host", "codex"]);
+
+        const result = parseLastJson<{
+          checks?: Array<{ name: string; status: string }>;
+        }>(output);
+
+        expect(
+          result.checks?.some(
+            (check) => check.name === "host-config-valid" && check.status === "pass"
+          )
+        ).toBe(true);
+      });
+    });
+  });
+
+  it("tests live MCP launch and tool discovery through doctor --mcp", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeProfiles(rootDir, [createProfile()]);
+
+      await withTempHome(async (homeDir) => {
+        const distMainPath = fileURLToPath(
+          new URL("../dist/main.js", import.meta.url)
+        );
+
+        await writeCodexConfig(homeDir, {
+          command: process.execPath,
+          args: [distMainPath, "mcp", "serve"],
+          env: {
+            CW_WORKSPACE_DIR: normalizeFileSystemPath(rootDir)
+          }
+        });
+        const { io, output } = createIo();
+        const cli = buildCli(io);
+
+        await cli.parseAsync(["node", "cw", "doctor", "--mcp", "--host", "codex"]);
+
+        const result = parseLastJson<{
+          checks?: Array<{ name: string; status: string }>;
+        }>(output);
+
+        expect(
+          result.checks?.some(
+            (check) =>
+              check.name === "mcp-server-launchable" && check.status === "pass"
+          )
+        ).toBe(true);
+        expect(
+          result.checks?.some(
+            (check) => check.name === "mcp-connection" && check.status === "pass"
+          )
+        ).toBe(true);
+        expect(
+          result.checks?.some(
+            (check) =>
+              check.name === "mcp-tool-catalog-match" && check.status === "pass"
+          )
+        ).toBe(true);
+      });
+    });
+  }, 20_000);
+
   it("renders doctor probe details in compact human mode", async () => {
     await withTempCwd(async (rootDir) => {
       await writeCwConfig(rootDir, {
@@ -1065,6 +1251,131 @@ describe("cli parsing", () => {
       expect(output.at(-1)).toContain("\"capabilityUpdateApplied\": true");
       expect(savedProfiles[0]?.supportedTaskTypes).toContain("patch-generation");
       expect(savedProfiles[0]?.routingPolicy?.allowPatchGeneration).toBe(true);
+    });
+  });
+
+  it("reports unified worker readiness and can run an optional live probe", async () => {
+    await withTempCwd(async (rootDir) => {
+      const workerId = "readiness-worker";
+      await writeCwConfig(rootDir, {
+        defaultWorkerId: workerId,
+        workerModel: {
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        }
+      });
+      await writeRegistry(rootDir, [
+        createRegistration({
+          workerId,
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        })
+      ]);
+      await writeProfiles(rootDir, [
+        createProfile({
+          workerId
+        })
+      ]);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "cw", "worker", "readiness"]);
+
+      let readiness = parseLastJson<{
+        blockedReasonType: string;
+        canRunFormalTasks: boolean;
+        canRunPatchGeneration: boolean;
+        checks: {
+          benchmark: { status: string };
+          patchGeneration: { status: string };
+          probe: { status: string };
+          profile: { status: string };
+          registry: { status: string };
+        };
+        status: string;
+      }>(output);
+      expect(readiness.status).toBe("ready");
+      expect(readiness.blockedReasonType).toBe("not-applicable");
+      expect(readiness.canRunFormalTasks).toBe(true);
+      expect(readiness.canRunPatchGeneration).toBe(true);
+      expect(readiness.checks.profile.status).toBe("qualified");
+      expect(readiness.checks.registry.status).toBe("registered");
+      expect(readiness.checks.probe.status).toBe("not-run");
+      expect(readiness.checks.benchmark.status).toBe("missing");
+      expect(readiness.checks.patchGeneration.status).toBe("allowed");
+
+      await cli.parseAsync(["node", "cw", "worker", "readiness", "--probe"]);
+
+      const probedReadiness = parseLastJson<{
+        blockedReasonType: string;
+        checks: {
+          probe: { status: string };
+        };
+        status: string;
+      }>(output);
+      expect(probedReadiness.status).toBe("ready");
+      expect(probedReadiness.blockedReasonType).toBe("not-applicable");
+      expect(probedReadiness.checks.probe.status).toBe("passed");
+    });
+  });
+
+  it("distinguishes blocked reason types for not-qualified and missing prerequisites", async () => {
+    await withTempCwd(async (rootDir) => {
+      const workerId = "readiness-not-qualified-worker";
+      await writeCwConfig(rootDir, {
+        defaultWorkerId: workerId,
+        workerModel: {
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        }
+      });
+      await writeRegistry(rootDir, [
+        createRegistration({
+          workerId,
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        })
+      ]);
+      await writeProfiles(rootDir, [
+        createProfile({
+          workerId,
+          status: "not-qualified",
+          routingPolicy: {
+            maxTaskComplexity: "medium",
+            requiresHostReview: true,
+            allowCodegen: false,
+            allowPatchGeneration: false,
+            allowDomainTasks: false
+          }
+        })
+      ]);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "cw", "worker", "readiness"]);
+
+      const notQualified = parseLastJson<{
+        blockedReasonType: string;
+        canRunFormalTasks: boolean;
+        status: string;
+      }>(output);
+      expect(notQualified.status).toBe("blocked");
+      expect(notQualified.blockedReasonType).toBe("worker-not-qualified");
+      expect(notQualified.canRunFormalTasks).toBe(false);
+
+      await writeProfiles(rootDir, []);
+      await cli.parseAsync(["node", "cw", "worker", "readiness"]);
+
+      const blocked = parseLastJson<{
+        blockedReasonType: string;
+        checks: {
+          profile: { status: string };
+        };
+        status: string;
+      }>(output);
+      expect(blocked.status).toBe("blocked");
+      expect(blocked.blockedReasonType).toBe("profile-missing");
+      expect(blocked.checks.profile.status).toBe("missing");
     });
   });
 
@@ -1367,6 +1678,46 @@ describe("cli parsing", () => {
       expect(output.at(-1)).toContain("next:");
       expect(output.at(-1)).toContain("\u001b[");
       expect(output.at(-1)).not.toContain("\"taskId\"");
+    });
+  });
+
+  it("stabilizes task start --summary output without null placeholders", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "cw",
+        "task",
+        "start",
+        "--goal",
+        "Review packages/core",
+        "--scope",
+        "packages/core",
+        "--typecheck",
+        "--allow-write-session",
+        "--summary",
+        "--no-artifact-refs"
+      ]);
+
+      const summary = parseLastJson<{
+        accepted: boolean | string;
+        artifactRefs: unknown[];
+        artifactRefsStatus: string;
+        finalStatus: string;
+        validationSummary: string;
+        workerReviewStatus: string;
+      }>(output);
+
+      expect(summary.finalStatus).toBeTruthy();
+      expect(summary.workerReviewStatus).toBeTruthy();
+      expect(summary.accepted).not.toBeNull();
+      expect(summary.validationSummary).toBeTruthy();
+      expect(summary.artifactRefs).toEqual([]);
+      expect(summary.artifactRefsStatus).toBe("suppressed-in-summary");
+      expect(output.at(-1)).not.toContain(": null");
     });
   });
 

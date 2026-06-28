@@ -104,7 +104,7 @@ describe("worker profile doctor checks", () => {
     ).toBe(true);
   });
 
-  it("flags provider-error style blocked profiles for re-interview", async () => {
+  it("flags provider-error style profiles for re-interview", async () => {
     const rootDir = await createRootDir();
     await writeRegistry(rootDir, {
       version: 1,
@@ -115,7 +115,7 @@ describe("worker profile doctor checks", () => {
         workerId: "mock:registered-worker",
         provider: "mock",
         model: "registered-worker",
-        status: "blocked",
+        status: "not-qualified",
         supportedTaskTypes: [],
         unsupportedTaskTypes: ["summarization"],
         score: {

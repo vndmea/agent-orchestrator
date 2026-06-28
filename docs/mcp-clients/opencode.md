@@ -23,7 +23,7 @@ cw mcp config --host opencode
 
 ## Root Resolution
 
-Launch the server from the intended workspace root. If OpenCode starts it from elsewhere, set `CW_ROOT_DIR` in the MCP server environment.
+Launch the server from the intended workspace root. If OpenCode starts it from elsewhere, set `CW_WORKSPACE_DIR` in the MCP server environment.
 
 ## Local Client Provider Note
 

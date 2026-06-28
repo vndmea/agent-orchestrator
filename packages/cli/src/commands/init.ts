@@ -12,6 +12,7 @@ import {
   getCwWorkspaceDir,
   normalizeFileSystemPath,
   resolveExecutionContext,
+  type DoctorStatus,
   type ExecutionContext,
   type ModelConfig
 } from "@mcp-code-worker/core";
@@ -44,6 +45,7 @@ import {
   type SetupOptions,
   type SetupResult
 } from "./setup.js";
+import type { WorkerReadinessBlockedReasonType } from "./worker-readiness.js";
 
 export interface InitPrompter {
   close?: () => Promise<void> | void;
@@ -101,7 +103,8 @@ interface InitWorkerSummary {
   isDefault: boolean;
   probeStatus?: InitWorkerStepStatus;
   probeWorker: boolean;
-  readinessStatus?: string;
+  readinessBlockedReasonType?: WorkerReadinessBlockedReasonType;
+  readinessStatus?: DoctorStatus | "dry-run" | "skipped";
   registerWorker: boolean;
   registerStatus?: InitWorkerStepStatus;
   workerId?: string;
@@ -375,7 +378,17 @@ const formatWorkerSummary = (result: InitResult["worker"]): string => {
         `probed=${worker.probeStatus ?? (worker.probeWorker ? "planned" : "skipped")}`,
         `interviewed=${worker.interviewStatus ?? (worker.interviewWorker ? "planned" : "skipped")}`,
         `benchmarked=${worker.benchmarkStatus ?? (worker.benchmarkWorker ? "planned" : "skipped")}`,
-        worker.readinessStatus ? `readiness=${worker.readinessStatus}` : null
+        worker.readinessStatus
+          ? [
+              `readiness=${worker.readinessStatus}`,
+              worker.readinessBlockedReasonType &&
+              worker.readinessBlockedReasonType !== "not-applicable"
+                ? `(${worker.readinessBlockedReasonType})`
+                : null
+            ]
+              .filter((value): value is string => Boolean(value))
+              .join("")
+          : null
       ]
         .filter((value): value is string => Boolean(value))
         .join(" ")
@@ -445,7 +458,7 @@ const mergePrimaryWorkerSummary = (
   configured: worker.configured || Boolean(worker.workerId),
   interviewStatus: readSetupStepStatus(setup, "interview-worker"),
   probeStatus: readSetupStepStatus(setup, "probe-worker"),
-  readinessStatus: setup.status,
+  readinessStatus: setup.status === "blocked" ? "blocked" : "ready",
   registerStatus: readSetupStepStatus(setup, "register-worker")
 });
 
@@ -892,7 +905,10 @@ const registerAdditionalWorkers = async (
     let benchmarkStatus: InitWorkerStepStatus = worker.benchmarkWorker
       ? "blocked"
       : "skipped";
-    let readinessStatus = probeStatus === "blocked" ? "blocked" : "ready";
+    let readinessStatus: DoctorStatus =
+      probeStatus === "blocked" ? "blocked" : "ready";
+    let readinessBlockedReasonType: WorkerReadinessBlockedReasonType =
+      probeStatus === "blocked" ? "probe-failed" : "not-applicable";
 
     if (worker.interviewWorker) {
       const interviewResult = await runWorkerInterviewWorkflow({
@@ -905,6 +921,7 @@ const registerAdditionalWorkers = async (
         interviewStatus = "blocked";
         benchmarkStatus = worker.benchmarkWorker ? "blocked" : "skipped";
         readinessStatus = "blocked";
+        readinessBlockedReasonType = "profile-provider-error";
       } else {
         await saveWorkerProfile(context, interviewResult.profile, true);
         interviewStatus = "completed";
@@ -928,7 +945,10 @@ const registerAdditionalWorkers = async (
           benchmarkStatus = "completed";
           readinessStatus = profileUpdate.patchGenerationQualified
             ? "ready"
-            : "not-qualified";
+            : "blocked";
+          readinessBlockedReasonType = profileUpdate.patchGenerationQualified
+            ? "not-applicable"
+            : "worker-not-qualified";
         }
       }
     }
@@ -942,6 +962,7 @@ const registerAdditionalWorkers = async (
       isDefault: false,
       probeStatus,
       probeWorker: worker.probeWorker,
+      readinessBlockedReasonType,
       readinessStatus,
       registerStatus: "completed",
       registerWorker: true,

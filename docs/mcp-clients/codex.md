@@ -17,7 +17,7 @@ cw mcp config --host codex
       "command": "cw",
       "args": ["mcp", "serve"],
       "env": {
-        "CW_ROOT_DIR": "${workspaceFolder}"
+        "CW_WORKSPACE_DIR": "${workspaceFolder}"
       }
     }
   }
@@ -29,7 +29,8 @@ cw mcp config --host codex
 Before relying on the client integration:
 
 - run `cw doctor`
+- run `cw doctor --mcp --host codex`
 - run `cw mcp list-tools`
 - run `cw mcp config`
 
-Keep runtime worker and safety settings in `config.json`; use the MCP snippet only for launch wiring such as `CW_ROOT_DIR` when needed.
+Keep runtime worker and safety settings in `config.json`; use the MCP snippet only for launch wiring such as `CW_WORKSPACE_DIR` when needed.

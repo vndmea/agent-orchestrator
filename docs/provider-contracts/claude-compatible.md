@@ -75,8 +75,8 @@ If probe fails, read:
 ## Recommended Qualification Flow
 
 ```bash
-cw worker register --provider claude-compatible --model claude-3-5-sonnet-latest --allow-write
-cw worker interview --worker claude-compatible:claude-3-5-sonnet-latest --save
+cw worker register --worker claude-sonnet --provider claude-compatible --model claude-3-5-sonnet-latest --allow-write
+cw worker interview --worker claude-sonnet --save
 ```
 
 If coding qualification matters:
