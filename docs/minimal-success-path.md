@@ -9,6 +9,14 @@ cw init
 cw doctor
 ```
 
+If you already know the worker shape you want, the shortest scripted paths are:
+
+```bash
+cw init --preset mock --allow-write
+cw init --preset deepseek --allow-write
+cw init --preset opencode --allow-write
+```
+
 2. Verify model access and credentials.
 
 - Confirm the active `rootDir` matches your repository.

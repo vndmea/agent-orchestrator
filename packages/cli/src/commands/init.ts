@@ -24,6 +24,12 @@ import {
 import type { CliIo } from "../index.js";
 import { formatDisplayPath, writeOutput } from "../output.js";
 import { openPathInSystemApp, type PathOpener } from "../system/open-path.js";
+import {
+  detectInitPreset,
+  getInitPreset,
+  INIT_PRESETS,
+  type InitPresetId
+} from "./init-presets.js";
 import { buildMcpConfigSnippet } from "./mcp.js";
 import {
   formatSetupResult,
@@ -54,6 +60,7 @@ export interface InitPrompter {
 
 interface InitOptions extends Omit<SetupOptions, "repositoryWriteMode"> {
   advanced: boolean;
+  preset?: string;
   repositoryWriteMode?: string;
 }
 
@@ -389,6 +396,7 @@ const hasScriptedSetupInputs = (options: InitOptions): boolean =>
   options.lintScript.length > 0 ||
   options.testScript.length > 0 ||
   options.repositoryWriteMode !== undefined ||
+  Boolean(options.preset) ||
   Boolean(options.workerApiKey) ||
   Boolean(options.workerBaseUrl) ||
   Boolean(options.workerClientCommand) ||
@@ -450,52 +458,86 @@ const collectInitSetupOptions = async (
   const promptWorkerPlan = async (
     isDefault: boolean
   ): Promise<InitWorkerPlan> => {
-    const workerMode = await prompter.select(
-      isDefault ? "Default worker mode?" : "Additional worker mode?",
+    const presetChoice = await prompter.select<InitPresetId | "custom">(
+      isDefault ? "Default worker preset?" : "Additional worker preset?",
       [
+        ...INIT_PRESETS.map((preset) => ({
+          label: preset.label,
+          value: preset.id
+        })),
         {
-          label: "Local client",
-          value: "client"
-        },
-        {
-          label: "API model",
-          value: "api"
+          label: "Custom",
+          value: "custom" as const
         }
       ],
-      "client"
+      detectInitPreset(workerContext.workerModel) ?? "mock"
     );
 
+    const selectedPreset =
+      presetChoice === "custom" ? undefined : getInitPreset(presetChoice);
+
+    let workerMode: "api" | "client" =
+      selectedPreset?.workerProvider === "client" ? "client" : "api";
     let workerProvider =
-      workerMode === "client"
-        ? "client"
-        : resolveApiProviderDefault(workerContext.workerModel.provider);
-    const workerModel = await prompter.text(
-      workerMode === "client" ? "Worker model label?" : "Worker model?",
-      {
-        defaultValue: workerContext.workerModel.model
-      }
-    );
-
-    if (workerMode === "api") {
-      workerProvider = await prompter.text("Worker provider?", {
-        defaultValue: workerProvider
-      });
-    }
+      selectedPreset?.workerProvider ??
+      resolveApiProviderDefault(workerContext.workerModel.provider);
+    let workerModel =
+      selectedPreset?.workerModel ?? workerContext.workerModel.model;
 
     let baseUrl: string | undefined;
     let apiKey: string | undefined;
 
+    if (!selectedPreset) {
+      workerMode = await prompter.select(
+        isDefault ? "Default worker mode?" : "Additional worker mode?",
+        [
+          {
+            label: "Local client",
+            value: "client"
+          },
+          {
+            label: "API model",
+            value: "api"
+          }
+        ],
+        "client"
+      );
+
+      workerProvider =
+        workerMode === "client"
+          ? "client"
+          : resolveApiProviderDefault(workerContext.workerModel.provider);
+      workerModel = await prompter.text(
+        workerMode === "client" ? "Worker model label?" : "Worker model?",
+        {
+          defaultValue: workerContext.workerModel.model
+        }
+      );
+
+      if (workerMode === "api") {
+        workerProvider = await prompter.text("Worker provider?", {
+          defaultValue: workerProvider
+        });
+      }
+    } else {
+      baseUrl = selectedPreset.workerBaseUrl;
+      if (isDefault && selectedPreset.workerClientCommand) {
+        setup.workerClientCommand = selectedPreset.workerClientCommand;
+      }
+    }
+
     if (
       workerMode === "api" &&
       (options.advanced ||
-        Boolean(workerContext.workerModel.baseURL) ||
-        !["mock", "client"].includes(workerProvider))
+        (!selectedPreset &&
+          (Boolean(workerContext.workerModel.baseURL) ||
+            !["mock", "client"].includes(workerProvider))))
     ) {
       const promptedBaseUrl = await prompter.text(
         "Worker base URL? Leave blank to skip.",
         {
           allowEmpty: true,
-          defaultValue: workerContext.workerModel.baseURL ?? ""
+          defaultValue: baseUrl ?? workerContext.workerModel.baseURL ?? ""
         }
       );
       baseUrl = promptedBaseUrl.length > 0 ? promptedBaseUrl : undefined;
@@ -517,13 +559,18 @@ const collectInitSetupOptions = async (
     if (
       isDefault &&
       workerMode === "client" &&
-      (options.advanced || Boolean(workerContext.workerModel.clientCommand))
+      (options.advanced ||
+        Boolean(workerContext.workerModel.clientCommand) ||
+        Boolean(selectedPreset?.workerClientCommand))
     ) {
       const promptedClientCommand = await prompter.text(
         "Local client command? Leave blank to use opencode.",
         {
           allowEmpty: true,
-          defaultValue: workerContext.workerModel.clientCommand ?? ""
+          defaultValue:
+            setup.workerClientCommand ??
+            workerContext.workerModel.clientCommand ??
+            ""
         }
       );
       setup.workerClientCommand =
@@ -708,6 +755,10 @@ export const registerInitCommand = (
     .command("init")
     .description("Run the cw onboarding flow, either interactively or through scripted flags, and persist the chosen local setup.")
     .option("--advanced", "Ask for additional worker and validation setup details.", false)
+    .option(
+      "--preset <name>",
+      `Apply a worker preset: ${INIT_PRESETS.map((preset) => preset.id).join(", ")}.`
+    )
     .option("--root <path>", "Pre-fill the workspace root shown in the onboarding flow.")
     .option("--worker-provider <provider>", "Worker provider")
     .option("--worker-model <model>", "Worker model")
@@ -745,6 +796,13 @@ export const registerInitCommand = (
       const canPrompt =
         Boolean(injectedPrompter) || (process.stdin.isTTY && process.stdout.isTTY);
       const shouldRunScripted = !canPrompt || hasScriptedSetupInputs(options);
+      const preset = getInitPreset(options.preset);
+
+      if (options.preset && !preset) {
+        throw new Error(
+          `Unsupported preset '${options.preset}'. Expected one of: ${INIT_PRESETS.map((entry) => entry.id).join(", ")}.`
+        );
+      }
 
       if (shouldRunScripted) {
         const result = await runSetup({
@@ -758,11 +816,11 @@ export const registerInitCommand = (
           testScript: options.testScript,
           typecheckScript: options.typecheckScript,
           workerApiKey: options.workerApiKey,
-          workerBaseUrl: options.workerBaseUrl,
+          workerBaseUrl: options.workerBaseUrl ?? preset?.workerBaseUrl,
           workerClientCommand: options.workerClientCommand,
           workerId: options.workerId,
-          workerModel: options.workerModel,
-          workerProvider: options.workerProvider
+          workerModel: options.workerModel ?? preset?.workerModel,
+          workerProvider: options.workerProvider ?? preset?.workerProvider
         });
 
         writeOutput(io, result, formatSetupResult(result));

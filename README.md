@@ -104,7 +104,7 @@ cw doctor --probe
 cw mcp config
 ```
 
-Use `cw init` as the onboarding path. Run it interactively by default, or pass flags such as `--allow-write`, `--worker-provider`, and validation script options when you want the lower-level scripted setup flow instead of the guided interview.
+Use `cw init` as the onboarding path. Run it interactively by default, or use presets such as `cw init --preset mock --allow-write`, `cw init --preset deepseek --allow-write`, or `cw init --preset opencode --allow-write` when you want a faster scripted path before tweaking lower-level details.
 
 Public installation and MCP launch guidance lives in [docs/install.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/install.md).
 The current official internal distribution shape is documented in [docs/distribution.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/distribution.md).

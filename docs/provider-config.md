@@ -45,7 +45,7 @@ Use this when you want to verify local CLI and MCP wiring first.
 
 ```bash
 npm i -g mcp-code-worker
-cw init
+cw init --preset mock --allow-write
 ```
 
 2. Confirm the stored config points at `mock`:
@@ -78,7 +78,7 @@ Use this when you want a real hosted model quickly.
 
 ```bash
 npm i -g mcp-code-worker
-cw init
+cw init --preset deepseek --allow-write
 ```
 
 2. Persist the runtime defaults in `config.json`:
@@ -127,7 +127,7 @@ Use this when you want a Claude-native hosted model.
 
 ```bash
 npm i -g mcp-code-worker
-cw init
+cw init --preset opencode --allow-write
 ```
 
 2. Persist the runtime defaults in `config.json`:

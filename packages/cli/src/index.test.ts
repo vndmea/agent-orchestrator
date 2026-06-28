@@ -669,6 +669,7 @@ describe("cli parsing", () => {
           false,
           false,
           true,
+          "custom",
           "api",
           "guided-worker",
           "mock",
@@ -701,6 +702,46 @@ describe("cli parsing", () => {
     });
   });
 
+  it("supports scripted init presets for common worker defaults", async () => {
+    await withTempCwd(async (rootDir) => {
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "cw",
+        "init",
+        "--preset",
+        "deepseek",
+        "--allow-write"
+      ]);
+
+      const result = parseLastJson<{
+        mode: string;
+        steps: Array<{ id: string; status: string }>;
+      }>(output);
+      const savedConfig = JSON.parse(
+        await readFile(getCwConfigPath(rootDir), "utf8")
+      ) as {
+        workerModel?: {
+          baseURL?: string;
+          model?: string;
+          provider?: string;
+        };
+      };
+
+      expect(result.mode).toBe("execute");
+      expect(
+        result.steps.some(
+          (step) => step.id === "configure-models" && step.status === "completed"
+        )
+      ).toBe(true);
+      expect(savedConfig.workerModel?.provider).toBe("openai-compatible");
+      expect(savedConfig.workerModel?.model).toBe("deepseek-v4-flash");
+      expect(savedConfig.workerModel?.baseURL).toBe("https://api.deepseek.com");
+    });
+  });
+
   it("can apply init and register additional workers", async () => {
     await withTempCwd(async (rootDir) => {
       const { io, output } = createIo();
@@ -710,11 +751,13 @@ describe("cli parsing", () => {
           true,
           false,
           true,
+          "custom",
           "api",
           "default-worker",
           "mock",
           false,
           true,
+          "custom",
           "api",
           "extra-worker",
           "mock",

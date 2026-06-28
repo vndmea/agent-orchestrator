@@ -25,7 +25,7 @@ cw mcp serve
 Notes:
 
 - The published npm package installs the `cw` command.
-- Use `cw init` as the default onboarding path. Run it interactively by default, or add flags such as `--allow-write` when you need the lower-level scripted setup flow.
+- Use `cw init` as the default onboarding path. Run it interactively by default, or use presets such as `--preset mock`, `--preset deepseek`, or `--preset opencode` with `--allow-write` when you need the lower-level scripted setup flow.
 - Persist worker, validation, safety, local client defaults, and optional provider API keys in `config.json`; keep `CW_ROOT_DIR` and `CW_HOME_DIR` in environment variables when needed.
 - `cw mcp serve` resolves the workspace from the current directory by default.
 - When launching outside the target repository checkout, set `CW_ROOT_DIR` for the MCP client process.

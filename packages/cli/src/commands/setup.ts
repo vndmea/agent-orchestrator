@@ -90,11 +90,6 @@ const exists = async (path: string): Promise<boolean> => {
   }
 };
 
-const collect = (value: string, previous: string[]): string[] => [
-  ...previous,
-  value
-];
-
 const unique = (values: Array<string | undefined>): string[] =>
   Array.from(new Set(values.filter((value): value is string => Boolean(value))));
 

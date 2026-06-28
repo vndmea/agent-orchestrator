@@ -9,6 +9,9 @@ For write gates and local artifact boundaries, see `docs/permissions.md`.
 
 ```bash
 cw init
+cw init --preset mock --allow-write
+cw init --preset deepseek --allow-write
+cw init --preset opencode --allow-write
 cw review repo --scope packages/graph
 cw review diff --base main --head HEAD
 cw review files --file packages/graph/src/index.ts
@@ -46,7 +49,7 @@ For MCP clients, `cw mcp serve` does not take `--root`. Launch it from the inten
 
 Treat `config.json` as the primary runtime config surface for worker, validation, safety, and local client defaults. Treat the MCP host snippet as launch-only: command, args, and optionally `CW_ROOT_DIR` / `CW_HOME_DIR`.
 
-For local client providers, `opencode` is the default command. Persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command <command> --allow-write` or a manual edit when needed.
+For local client providers, `opencode` is the default command. Start with `cw init --preset opencode --allow-write`, then persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command <command> --allow-write` or a manual edit when needed.
 
 `cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.cw/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
 

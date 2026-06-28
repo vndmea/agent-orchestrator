@@ -108,7 +108,7 @@ cw mcp config
 
 除非特别说明，下面所有 `cw ...` 示例都按公开 npm 安装后的 CLI 理解；如果你在仓库 checkout 中开发，则等价于在仓库根目录执行 `pnpm exec cw ...`。
 
-默认建议使用 `cw init` 完成初始化；你可以直接交互式运行，也可以通过 `--allow-write`、`--worker-provider`、校验脚本等 flags 走更底层、脚本化的配置流程。
+默认建议使用 `cw init` 完成初始化；你可以直接交互式运行，也可以通过 `cw init --preset mock --allow-write`、`cw init --preset deepseek --allow-write`、`cw init --preset opencode --allow-write` 这类 preset 先快速落地，再按需调整更底层的 flags。
 
 当前版本不会读取仓库内旧 `.cw/` 目录；旧路径不受支持，也不会被兼容处理。
 
