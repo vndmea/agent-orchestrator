@@ -1871,7 +1871,7 @@ describe("cli parsing", () => {
         "tmp/candidate.patch",
         "--allow-write"
       ]);
-      expect(output.at(-1)).toContain("\"mode\": \"blocked\"");
+      expect(output.at(-1)).toContain("\"mode\": \"denied\"");
 
       await cli.parseAsync([
         "node",

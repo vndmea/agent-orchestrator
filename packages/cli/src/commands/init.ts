@@ -23,7 +23,7 @@ import {
   saveWorkerBenchmarkArtifact
 } from "@mcp-code-worker/graph";
 import {
-  createWorkerConnectivityDoctorChecks,
+  createWorkerDoctorChecks,
   getWorkerRegistration,
   saveWorkerProfile,
   saveWorkerRegistration
@@ -846,7 +846,7 @@ const registerAdditionalWorkers = async (
       return "skipped";
     }
 
-    const checks = await createWorkerConnectivityDoctorChecks({
+    const checks = await createWorkerDoctorChecks({
       ...resolvedContext,
       defaultWorkerId: worker.workerId,
       workerModel: {
@@ -855,7 +855,7 @@ const registerAdditionalWorkers = async (
         model: worker.workerModel,
         baseURL: worker.baseUrl
       }
-    });
+    }, { probe: true, includeLocalClient: false });
 
     return checks[0]?.status === "pass" ? "completed" : "unavailable";
   };

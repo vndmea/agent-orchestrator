@@ -24,8 +24,7 @@ import {
   saveWorkerBenchmarkArtifact
 } from "@mcp-code-worker/graph";
 import {
-  createWorkerConnectivityDoctorChecks,
-  createWorkerProfileDoctorChecks,
+  createWorkerDoctorChecks,
   deriveWorkerRegistrationId,
   getWorkerProfileStorePath,
   getWorkerRegistryPath,
@@ -339,11 +338,11 @@ const buildProbeChecks = async (
   workerId: string,
   workerModel: ModelConfig
 ): Promise<DoctorCheck[]> =>
-  createWorkerConnectivityDoctorChecks({
+  createWorkerDoctorChecks({
     ...context,
     defaultWorkerId: workerId,
     workerModel
-  });
+  }, { probe: true, includeLocalClient: false });
 
 export const formatSetupResult = (result: SetupResult): string[] => {
   const unavailableSteps = result.steps.filter((step) => step.status === "unavailable");
@@ -841,7 +840,7 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
   });
   const finalDoctor = await runDoctor(finalContext, {
     additionalChecks: [
-      ...(await createWorkerProfileDoctorChecks(finalContext)),
+      ...(await createWorkerDoctorChecks(finalContext, { includeLocalClient: false })),
       ...probeChecks
     ]
   });

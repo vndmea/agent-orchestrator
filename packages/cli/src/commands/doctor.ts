@@ -19,9 +19,7 @@ import {
 } from "@mcp-code-worker/core";
 import { buildMcpToolCatalogView } from "@mcp-code-worker/mcp-server";
 import {
-  createLocalClientDoctorChecks,
-  createWorkerConnectivityDoctorChecks,
-  createWorkerProfileDoctorChecks
+  createWorkerDoctorChecks
 } from "@mcp-code-worker/models";
 
 import type { CliIo } from "../index.js";
@@ -907,11 +905,9 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
 
       const context = await resolveExecutionContext();
       const additionalChecks = [
-        ...(await createWorkerProfileDoctorChecks(context)),
-        ...(await createLocalClientDoctorChecks(context)),
-        ...(options.probe
-          ? await createWorkerConnectivityDoctorChecks(context)
-          : []),
+        ...(await createWorkerDoctorChecks(context, {
+          probe: options.probe
+        })),
         ...(options.mcp
           ? await createHostMcpDoctorChecks(context, requestedHost)
           : [])

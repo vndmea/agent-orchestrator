@@ -12,7 +12,7 @@ import {
   qualifiesPatchGenerationCapability
 } from "@mcp-code-worker/graph";
 import {
-  createWorkerConnectivityDoctorChecks,
+  createWorkerDoctorChecks,
   getWorkerRegistration,
   requireConfiguredWorkerId,
   resolveWorkerProfile,
@@ -117,7 +117,11 @@ const readProbeCheck = async (
     ...createExecutionContextWithWorkerModel(context, context.workerModel),
     defaultWorkerId: workerId
   };
-  const checks = await createWorkerConnectivityDoctorChecks(probeContext);
+  const checks = await createWorkerDoctorChecks(probeContext, {
+    probe: true,
+    includeLocalClient: false,
+    includeProfile: false
+  });
   const probe = checks[0];
 
   return probe?.status === "pass"

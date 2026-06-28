@@ -5,7 +5,7 @@ import {
   runDoctor,
   writeAuditEvent
 } from "@mcp-code-worker/core";
-import { createWorkerProfileDoctorChecks } from "@mcp-code-worker/models";
+import { createWorkerDoctorChecks } from "@mcp-code-worker/models";
 
 import type { CwToolDefinition } from "./tool-types.js";
 
@@ -21,7 +21,7 @@ export const cwDoctorTool: CwToolDefinition<
   execute: async () => {
     const context = await resolveExecutionContext();
     const report = await runDoctor(context, {
-      additionalChecks: await createWorkerProfileDoctorChecks(context)
+      additionalChecks: await createWorkerDoctorChecks(context)
     });
     await writeAuditEvent(context, {
       actor: "mcp",
