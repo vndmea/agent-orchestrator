@@ -18,6 +18,7 @@ const ANSI_PATTERN = /\u001b\[[0-9;]*m/gu;
 const unique = (values: string[]): string[] => Array.from(new Set(values));
 
 const stripAnsi = (value: string): string => value.replace(ANSI_PATTERN, "");
+const normalizeSlashPath = (value: string): string => value.replaceAll("\\", "/");
 
 const readValidationOutputLines = (check: ValidationCheck): string[] =>
   [check.stderr, check.stdout]
@@ -38,11 +39,44 @@ const looksLikeErrorFile = (value: string): boolean =>
   /[\\/]/u.test(value) ||
   /\.(?:[cm]?[jt]sx?|json|ya?ml|mjs|cjs)$/iu.test(value);
 
+const normalizeReportedPath = (
+  value: string,
+  check: ValidationCheck
+): string => {
+  const normalizedValue = normalizeSlashPath(value.trim());
+  const affectedPaths = unique(check.diagnosticSummary?.affectedPaths ?? []).map(
+    normalizeSlashPath
+  );
+  const exactMatch = affectedPaths.find((path) => path === normalizedValue);
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const suffixMatches = affectedPaths
+    .filter(
+      (path) =>
+        normalizedValue.endsWith(`/${path}`) ||
+        path.endsWith(`/${normalizedValue}`)
+    )
+    .sort((left, right) => left.length - right.length);
+
+  if (suffixMatches.length > 0) {
+    return suffixMatches[0]!;
+  }
+
+  return normalizedValue;
+};
+
 const firstErrorFile = (check: ValidationCheck): string | undefined =>
-  unique(check.diagnosticSummary?.affectedPaths ?? []).find((value) =>
-    /[\\/]/u.test(value)
-  ) ??
-  unique(check.diagnosticSummary?.affectedPaths ?? []).find(looksLikeErrorFile);
+  unique(check.diagnosticSummary?.affectedPaths ?? [])
+    .find((value) => /[\\/]/u.test(value))
+    ?.trim()
+    .replaceAll("\\", "/") ??
+  unique(check.diagnosticSummary?.affectedPaths ?? [])
+    .find(looksLikeErrorFile)
+    ?.trim()
+    .replaceAll("\\", "/");
 
 const summarizeBuildCheck = (check: ValidationCheck) => ({
   ...(check.status === "failure" && firstErrorFile(check)
@@ -107,7 +141,7 @@ const summarizeLintCheck = (check: ValidationCheck, maxBytes: number) => {
     }
 
     if (looksLikeErrorFile(line)) {
-      currentFile = line;
+      currentFile = normalizeReportedPath(line, check);
     }
   }
 
@@ -168,7 +202,7 @@ const summarizeTestCheck = (check: ValidationCheck, maxBytes: number) => {
     }
 
     failedTests.push({
-      file: failedFile,
+      file: normalizeReportedPath(failedFile, check),
       name: truncateText(failedName, maxBytes),
       ...(message ? { message } : {}),
       ...(stackLine ? { firstStackLine: stackLine } : {})
