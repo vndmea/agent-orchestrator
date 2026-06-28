@@ -29,8 +29,10 @@ export const getWorkerRegistryPath = (
 
 export const DEFAULT_WORKER_ID = "default-worker";
 
-export const deriveWorkerRegistrationId = (_config?: unknown): string =>
-  DEFAULT_WORKER_ID;
+export const deriveWorkerRegistrationId = (config?: unknown): string => {
+  void config;
+  return DEFAULT_WORKER_ID;
+};
 
 export const readWorkerRegistry = async (
   rootDir: string,

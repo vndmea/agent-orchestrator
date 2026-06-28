@@ -738,7 +738,7 @@ const executeReviewStep = async (input: {
     scope: input.scope,
     validate: input.validate
   });
-  const repositoryContextPath = await persistArtifact(
+  await persistArtifact(
     input.context,
     input.session,
     ARTIFACT_NAMES.repositoryContext,
