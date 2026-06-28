@@ -56,7 +56,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
     workerId: "mock:gpt-5.4-mini",
     provider: "mock",
     model: "gpt-5.4-mini",
-    status: "active",
+    status: "qualified",
     supportedTaskTypes: [
       "summarization",
       "code-understanding",

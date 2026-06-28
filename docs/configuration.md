@@ -97,7 +97,7 @@ After changing configuration, run:
 
 ```bash
 cw doctor
-cw doctor --check-worker
+cw doctor --probe
 cw mcp list-tools
 ```
 

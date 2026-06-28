@@ -164,7 +164,7 @@ cw worker profile litellm:qwen3-coder
 
 评估结果会生成 `WorkerCapabilityProfile`，并直接影响路由：
 
-- `active`：可以接收其通过评估的任务类型
+- `qualified`：可以接收其通过评估的任务类型
 - `limited`：只允许低风险任务，并且需要宿主复核
 - `blocked`：禁止进入生产工作流，并输出告警
 

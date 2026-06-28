@@ -187,7 +187,7 @@ const createProfile = () => ({
   workerId: "mock:gpt-5.4-mini",
   provider: "mock",
   model: "gpt-5.4-mini",
-  status: "active",
+  status: "qualified",
   supportedTaskTypes: [
     "summarization",
     "code-understanding",
@@ -449,7 +449,7 @@ describe("mcp tool registration", () => {
       });
 
       expect(result.profile.workerId).toBe("mock:interview-worker");
-      expect(result.status).toBe("active");
+      expect(result.status).toBe("qualified");
       expect(result.persistence?.mode).toBe("execute");
       if (result.persistence?.mode !== "execute") {
         throw new Error("Expected persisted worker interview profile.");

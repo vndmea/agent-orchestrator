@@ -15,7 +15,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) => ({
   workerId: "mock:worker-model",
   provider: "mock",
   model: "worker-model",
-  status: "active",
+  status: "qualified",
   supportedTaskTypes: ["summarization", "doc-generation"],
   unsupportedTaskTypes: ["codegen", "validation-fix"],
   score: {

@@ -249,7 +249,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) => ({
   workerId: "mock:gpt-5.4-mini",
   provider: "mock",
   model: "gpt-5.4-mini",
-  status: "active",
+  status: "qualified",
   supportedTaskTypes: [
     "summarization",
     "code-understanding",
@@ -732,7 +732,7 @@ describe("cli parsing", () => {
       const { io, output } = createIo();
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "cw", "doctor", "--check-worker"]);
+      await cli.parseAsync(["node", "cw", "doctor", "--probe"]);
 
       expect(output.at(-1)).toContain("\"worker-connectivity\"");
       expect(output.at(-1)).toContain("\"status\": \"pass\"");

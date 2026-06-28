@@ -65,16 +65,16 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
     .command("doctor")
     .description("Inspect resolved configuration and local workflow prerequisites.")
     .option(
-      "--check-worker",
+      "--probe",
       "Run a real worker connectivity probe after the static prerequisite checks.",
       false
     )
-    .action(async (options: { checkWorker?: boolean }) => {
+    .action(async (options: { probe?: boolean }) => {
       const context = await resolveExecutionContext();
       const additionalChecks = [
         ...(await createWorkerProfileDoctorChecks(context)),
         ...(await createLocalClientDoctorChecks(context)),
-        ...(options.checkWorker
+        ...(options.probe
           ? await createWorkerConnectivityDoctorChecks(context)
           : [])
       ];
@@ -85,7 +85,7 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
         actor: "cli",
         action: "doctor",
         mode: context.dryRun ? "dry-run" : "execute",
-        inputSummary: options.checkWorker ? "cw doctor --check-worker" : "cw doctor",
+        inputSummary: options.probe ? "cw doctor --probe" : "cw doctor",
         outputSummary: `Doctor completed with ok=${String(report.ok)}.`,
         warnings: report.checks
           .filter((check) => check.status === "warning")

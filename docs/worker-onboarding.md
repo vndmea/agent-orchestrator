@@ -16,7 +16,7 @@ Onboarding establishes:
 - whether it returns structured JSON reliably
 - whether it respects narrow repository scope
 - whether it is safe to route production tasks through it
-- whether it should remain blocked, limited, or active
+- whether it should remain blocked, limited, or qualified
 
 ## When A Worker Can Actually Save Tokens
 
@@ -46,7 +46,7 @@ cw worker register \
   --base-url <base-url-if-needed> \
   --allow-write
 
-cw doctor --check-worker
+cw doctor --probe
 cw worker interview --worker <workerId> --save
 cw worker profile <workerId>
 ```
@@ -81,7 +81,7 @@ The interview workflow checks:
 
 Interview output produces a `WorkerCapabilityProfile` that affects routing.
 
-- `active`: the worker can receive the task types it qualified for
+- `qualified`: the worker can receive the task types it qualified for
 - `limited`: the worker is restricted to lower-risk tasks and requires host review
 - `blocked`: the worker should not receive production tasks
 
@@ -151,6 +151,6 @@ Stop and fix the environment before retrying when:
 - the base URL or model name is wrong
 - a local client provider points to the wrong executable
 
-Use `cw doctor --check-worker` before a retry when you want a live connectivity probe for the currently resolved default worker.
+Use `cw doctor --probe` before a retry when you want a live connectivity probe for the currently resolved default worker.
 
 Do not treat a provider-failure-style blocked profile as a completed qualification result.

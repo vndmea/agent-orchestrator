@@ -1701,7 +1701,7 @@ const buildCapabilityProfile = (
         score.reliability < 0.78 ||
         evidence.genericAnswerCases.length > 0
       ? "limited"
-      : "active";
+      : "qualified";
 
   const knownFailureModes = Array.from(
     new Set(taskResults.flatMap((result) => result.findings))
@@ -1719,20 +1719,20 @@ const buildCapabilityProfile = (
     warnings,
     routingPolicy: {
       maxTaskComplexity:
-        status === "active"
+        status === "qualified"
           ? score.reliability >= 0.9
             ? "high"
             : "medium"
           : status === "limited"
             ? "low"
             : "low",
-      requiresHostReview: status !== "active" || score.reliability < 0.85,
+      requiresHostReview: status !== "qualified" || score.reliability < 0.85,
       allowCodegen: supported.has("codegen"),
       allowPatchGeneration:
         supported.has("codegen") &&
         codeQuality >= 0.82 &&
         score.reliability >= 0.8,
-      allowDomainTasks: status === "active" && score.domainKnowledge >= 0.75
+      allowDomainTasks: status === "qualified" && score.domainKnowledge >= 0.75
     },
     evaluatedAt: new Date().toISOString(),
     expiresAt: addDays(new Date().toISOString(), 30),
@@ -1819,7 +1819,7 @@ export const runWorkerInterviewWorkflow = async (
         runtimeTasks
       );
       const warnings =
-        profile.status === "active"
+        profile.status === "qualified"
           ? []
           : [
               `Worker ${workerId} failed onboarding evaluation.`,

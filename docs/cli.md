@@ -30,7 +30,7 @@ cw audit list
 cw cleanup runs
 cw cleanup audit
 cw doctor
-cw doctor --check-worker
+cw doctor --probe
 cw mcp config
 cw mcp serve
 cw mcp list-tools

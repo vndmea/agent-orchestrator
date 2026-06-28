@@ -167,7 +167,7 @@ The interview workflow evaluates:
 
 Interview results produce a `WorkerCapabilityProfile` that affects routing:
 
-- `active`: worker can receive the task types it qualified for
+- `qualified`: worker can receive the task types it qualified for
 - `limited`: worker is restricted to low-risk tasks and requires host review
 - `blocked`: worker is excluded from production workflows and emits warnings
 

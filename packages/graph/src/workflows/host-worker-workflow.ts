@@ -447,7 +447,7 @@ const resolveProfile = async (
     return {
       profile: input.workerCapabilityProfile,
       warnings:
-        input.workerCapabilityProfile.status === "active"
+        input.workerCapabilityProfile.status === "qualified"
           ? []
           : [
               `Worker ${input.workerCapabilityProfile.workerId} is ${input.workerCapabilityProfile.status}.`,
@@ -467,7 +467,7 @@ const resolveProfile = async (
     return {
       profile: resolution.profile,
       warnings:
-        resolution.profile.status === "active"
+        resolution.profile.status === "qualified"
           ? []
           : [
               `Worker ${resolution.profile.workerId} is ${resolution.profile.status}.`,

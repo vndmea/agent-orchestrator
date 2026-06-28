@@ -35,7 +35,7 @@ const createProfile = (
   workerId: "mock:worker-model",
   provider: "mock",
   model: "worker-model",
-  status: "active",
+  status: "qualified",
   supportedTaskTypes: [
     "summarization",
     "code-understanding",

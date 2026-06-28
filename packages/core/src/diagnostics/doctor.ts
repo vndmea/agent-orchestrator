@@ -699,7 +699,7 @@ export const runDoctor = async (
     minimalSuccessPath: [
       `1. Confirm the active root directory is ${context.rootDir}.`,
       "2. Verify the worker model credential or local client.",
-      "3. Use `cw doctor --check-worker` when you want a live connectivity probe.",
+      "3. Use `cw doctor --probe` when you want a live connectivity probe.",
       "4. Start a dry-run task with `cw task start --goal \"Review this repository\"`.",
       "5. Read the returned report summary or `cw task report <task-id>` if the session is persisted.",
       "6. Decide whether to continue into patch proposal and patch inspection."

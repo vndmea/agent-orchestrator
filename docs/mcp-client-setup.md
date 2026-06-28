@@ -30,7 +30,7 @@ Before connecting any client, verify the runtime locally:
 
 ```bash
 cw doctor
-cw doctor --check-worker
+cw doctor --probe
 cw mcp list-tools
 cw mcp config
 ```

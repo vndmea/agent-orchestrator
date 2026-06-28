@@ -40,7 +40,7 @@ The following commands completed successfully on the commit above:
 - Command: `node packages/cli/dist/main.js worker interview --worker openai-compatible:deepseek-v4-flash --save`
 - Result: passed
 - `providerInvocationFailures`: `0`
-- Profile status: `active`
+- Profile status: `qualified`
 - Persistence mode: `execute`
 - Profile path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-profiles.json`
 
@@ -79,7 +79,7 @@ The following commands completed successfully on the commit above:
 - Command: `node packages/cli/dist/main.js worker interview --worker openai-compatible:deepseek-v4-pro --save`
 - Result: passed
 - `providerInvocationFailures`: `0`
-- Profile status: `active`
+- Profile status: `qualified`
 - Persistence mode: `execute`
 - Profile path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-profiles.json`
 

@@ -34,12 +34,12 @@ const createContext = () =>
   });
 
 describe("worker interview workflow", () => {
-  it("generates an active capability profile for the default mock worker", async () => {
+  it("generates a qualified capability profile for the default mock worker", async () => {
     const result = await runWorkerInterviewWorkflow({
       context: createContext()
     });
 
-    expect(result.status).toBe("active");
+    expect(result.status).toBe("qualified");
     expect(result.profile.supportedTaskTypes).toContain("codegen");
     expect(result.profile.supportedTaskTypes).toContain("doc-generation");
     expect(result.profile.supportedTaskTypes).toContain("risk-analysis");

@@ -303,7 +303,7 @@ const buildInitTips = (result: Pick<InitResult, "enableMcp" | "paths">): string[
   result.enableMcp
     ? "Paste the MCP snippet into a workspace-scoped host config for this repository only, or into the host's global MCP config for every repository."
     : "You can always rerun `cw mcp config` later when you are ready to wire an MCP host.",
-  "Run `cw doctor --check-worker` when you want a live connectivity probe for the resolved default worker."
+  "Run `cw doctor --probe` when you want a live connectivity probe for the resolved default worker."
 ];
 
 const formatWorkerSummary = (result: InitResult["worker"]): string => {
@@ -347,7 +347,7 @@ const formatInitResult = (result: InitResult): string[] => {
     `workers: ${formatWorkerSummary(result.worker)}`,
     `setup: ${result.setup.status}`,
     `agents: project -> ${formatDisplayPath(result.rootDir, result.paths.projectAgentsPath)} | global -> ${formatDisplayPath(result.rootDir, result.paths.globalAgentsPath)}`,
-    `next: ${result.setup.recommendedActions.slice(0, 2).join(" | ") || "Run cw doctor"} | cw doctor --check-worker`
+    `next: ${result.setup.recommendedActions.slice(0, 2).join(" | ") || "Run cw doctor"} | cw doctor --probe`
   ];
 
   lines.push(
