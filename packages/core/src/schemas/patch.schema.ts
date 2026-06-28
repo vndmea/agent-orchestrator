@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ValidationReportSchema } from "./validation.schema.js";
+import { PatchApplyModeSchema } from "./status-contract.schema.js";
 
 export const PatchFileChangeSchema = z.object({
   path: z.string().min(1),
@@ -67,7 +68,7 @@ export const PatchRecoverySchema = z.object({
 });
 
 export const PatchApplyResultSchema = z.object({
-  mode: z.enum(["dry-run", "execute", "blocked"]),
+  mode: PatchApplyModeSchema,
   applied: z.boolean(),
   patchId: z.string().optional(),
   touchedFiles: z.array(z.string()),

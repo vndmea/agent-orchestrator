@@ -4,6 +4,8 @@ import {
   CwConfigSchema,
   AgentResultSchema,
   AgentTaskSchema,
+  ExecutionGateStatusSchema,
+  PatchApplyModeSchema,
   ModelConfigSchema,
   RuntimeDecisionSchema,
   PatchApplyResultSchema,
@@ -12,9 +14,11 @@ import {
   RepositoryContextPackSchema,
   TaskPlanSchema,
   TaskSessionSchema,
+  StepStatusSchema,
   ValidationReportSchema,
   WorkerBenchmarkResultSchema,
   WorkerCapabilityProfileSchema,
+  QualificationStatusSchema,
   WorkerRegistrationSchema,
   WorkerRegistrySchema,
   WorkflowStateSchema
@@ -186,6 +190,13 @@ describe("core schemas", () => {
     ).not.toThrow();
   });
 
+  it("exposes unified status contracts", () => {
+    expect(QualificationStatusSchema.parse("qualified")).toBe("qualified");
+    expect(StepStatusSchema.parse("denied")).toBe("denied");
+    expect(ExecutionGateStatusSchema.parse("dry-run")).toBe("dry-run");
+    expect(PatchApplyModeSchema.parse("denied")).toBe("denied");
+  });
+
   it("parses worker benchmark results", () => {
     expect(() =>
       WorkerBenchmarkResultSchema.parse({
@@ -320,6 +331,27 @@ describe("core schemas", () => {
     ).not.toThrow();
 
     expect(() =>
+      TaskSessionSchema.parse({
+        taskId: "task-2",
+        goal: "Review packages/core",
+        status: "needs-review",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        steps: [
+          {
+            id: "step-1",
+            name: "Inspect",
+            status: "denied"
+          }
+        ],
+        artifacts: {},
+        warnings: [],
+        errors: [],
+        metadata: {}
+      })
+    ).not.toThrow();
+
+    expect(() =>
       CwConfigSchema.parse({
         version: 1,
         defaultWorkerId: "mock:default-worker",
@@ -407,7 +439,7 @@ describe("core schemas", () => {
 
     expect(() =>
       PatchApplyResultSchema.parse({
-        mode: "blocked",
+        mode: "denied",
         applied: false,
         touchedFiles: [],
         inspection: {

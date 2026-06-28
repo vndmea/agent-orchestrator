@@ -163,8 +163,8 @@ describe("task session workflow", () => {
       allowWrite: true
     });
 
-    expect(result.patchApplyResult?.mode).toBe("blocked");
-    expect(result.session.status).toBe("blocked");
+    expect(result.patchApplyResult?.mode).toBe("denied");
+    expect(result.session.status).toBe("needs-review");
     expect(result.nextRecommendedActions[0]?.action).toBe("view_report");
   });
 
@@ -194,8 +194,8 @@ describe("task session workflow", () => {
       allowWriteSession: true
     });
 
-    expect(resumed.patchApplyResult?.mode).toBe("blocked");
-    expect(resumed.session.steps.find((step) => step.id === "patch-applied")?.status).toBe("blocked");
+    expect(resumed.patchApplyResult?.mode).toBe("denied");
+    expect(resumed.session.steps.find((step) => step.id === "patch-applied")?.status).toBe("denied");
     expect(resumed.session.steps.find((step) => step.id === "reviewed")?.status).toBe("success");
   });
 

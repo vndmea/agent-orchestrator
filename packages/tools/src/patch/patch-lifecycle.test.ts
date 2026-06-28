@@ -267,7 +267,7 @@ describe("patch lifecycle tools", () => {
 
     expect(dryRunResult.mode).toBe("dry-run");
     expect(dryRunResult.applied).toBe(false);
-    expect(blockedResult.mode).toBe("blocked");
+    expect(blockedResult.mode).toBe("denied");
     expect(blockedResult.errors[0]).toContain("confirm");
   });
 
@@ -280,7 +280,7 @@ describe("patch lifecycle tools", () => {
       dryRun: true
     });
 
-    expect(result.mode).toBe("blocked");
+    expect(result.mode).toBe("denied");
     expect(result.errors[0]).toContain("Dirty worktree detected");
     expect(result.dirtyWorktree?.untrackedFiles).toContain("notes.txt");
   });

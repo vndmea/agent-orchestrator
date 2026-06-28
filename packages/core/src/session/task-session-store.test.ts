@@ -62,7 +62,7 @@ describe("task session store", () => {
       true
     );
 
-    created.session.status = "reviewed";
+    created.session.status = "completed";
     created.session.steps.push({
       id: "review",
       name: "Repository review",
@@ -90,7 +90,7 @@ describe("task session store", () => {
     expect(created.mode).toBe("execute");
     expect(updated.mode).toBe("execute");
     expect(artifact.mode).toBe("execute");
-    expect(session?.status).toBe("reviewed");
+    expect(session?.status).toBe("completed");
     expect(session?.steps).toHaveLength(1);
     expect(storedArtifact.exists).toBe(true);
     expect(storedArtifact.value).toEqual({ ok: true });

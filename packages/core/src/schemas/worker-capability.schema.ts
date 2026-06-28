@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { QualificationStatusSchema } from "./status-contract.schema.js";
+
 export const WorkerTaskTypeSchema = z.enum([
   "summarization",
   "code-understanding",
@@ -32,7 +34,7 @@ export const WorkerInterviewFailureKindSchema = z.enum([
   "schema-validation"
 ]);
 
-export const WorkerStatusSchema = z.enum(["qualified", "not-qualified"]);
+export const WorkerStatusSchema = QualificationStatusSchema;
 
 export const WorkerEvaluationScoreSchema = z.object({
   instructionFollowing: z.number().min(0).max(1),

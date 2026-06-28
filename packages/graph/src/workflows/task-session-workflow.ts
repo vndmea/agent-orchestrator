@@ -647,11 +647,11 @@ const resolveFinalStatus = (input: {
 
   if (input.applyPatchRequested) {
     if (!input.patchApplyResult) {
-      return "blocked";
+      return "needs-review";
     }
 
     if (!input.patchApplyResult.applied) {
-      return "blocked";
+      return "needs-review";
     }
   }
 
@@ -717,15 +717,7 @@ const executeReviewStep = async (input: {
   session: TaskSession;
   validate: TaskSessionValidationOptions;
 }): Promise<ReviewWorkflowOutput> => {
-  markStepRunning(getStep(input.session, "context-built"));
   markStepRunning(getStep(input.session, "reviewed"));
-  markStepRunning(getStep(input.session, "validated"));
-  await syncSessionState(
-    input.context,
-    input.session,
-    "context-built",
-    input.allowWriteSession
-  );
   const reviewResult = await runReviewWorkflow({
     context: input.context,
     scope: input.scope,
@@ -736,16 +728,6 @@ const executeReviewStep = async (input: {
     input.session,
     ARTIFACT_NAMES.repositoryContext,
     reviewResult.repositoryContext,
-    input.allowWriteSession
-  );
-  finalizeStep(getStep(input.session, "context-built"), "success", {
-    artifactPath: repositoryContextPath,
-    warnings: reviewResult.repositoryContext.warnings
-  });
-  await syncSessionState(
-    input.context,
-    input.session,
-    "context-built",
     input.allowWriteSession
   );
   const reviewArtifactPath = await persistArtifact(
@@ -767,7 +749,7 @@ const executeReviewStep = async (input: {
   await syncSessionState(
     input.context,
     input.session,
-    reviewResult.accepted ? "reviewed" : "needs-review",
+    reviewResult.accepted ? "running" : "needs-review",
     input.allowWriteSession
   );
   const validationArtifactPath = await persistArtifact(
@@ -793,10 +775,8 @@ const executeReviewStep = async (input: {
   await syncSessionState(
     input.context,
     input.session,
-    reviewResult.accepted
-      ? reviewResult.validationReport.ok
-        ? "validated"
-        : "reviewed"
+    reviewResult.accepted && reviewResult.validationReport.ok
+      ? "running"
       : "needs-review",
     input.allowWriteSession
   );
@@ -813,7 +793,7 @@ const blockRemainingExecutionSteps = async (input: {
   input.steps.forEach((stepId) => {
     const step = getStep(input.session, stepId);
     if (step.status === "pending" || step.status === "running") {
-      finalizeStep(step, "blocked", {
+      finalizeStep(step, "denied", {
         warnings: [input.reason]
       });
     }
@@ -875,7 +855,7 @@ const executeFixStep = async (input: {
   await syncSessionState(
     input.context,
     input.session,
-    fixResult.accepted ? "fix-planned" : "needs-review",
+    fixResult.accepted ? "running" : "needs-review",
     input.allowWriteSession
   );
   return fixResult;
@@ -936,7 +916,7 @@ const executePatchProposalStep = async (input: {
   });
   finalizeStep(
     inspectionStep,
-    patchResult.inspection.ok ? "success" : "blocked",
+    patchResult.inspection.ok ? "success" : "denied",
     {
       artifactPath: inspectionPath,
       errors: patchResult.inspection.blockedReasons,
@@ -947,13 +927,13 @@ const executePatchProposalStep = async (input: {
   await syncSessionState(
     input.context,
     input.session,
-    "patch-proposed",
+    "running",
     input.allowWriteSession
   );
   await syncSessionState(
     input.context,
     input.session,
-    patchResult.inspection.ok ? "patch-inspected" : "needs-review",
+    patchResult.inspection.ok ? "running" : "needs-review",
     input.allowWriteSession
   );
   return patchResult;
@@ -990,8 +970,8 @@ const executePatchApplyStep = async (input: {
     step,
     applyResult.applied
       ? "success"
-      : applyResult.mode === "blocked"
-        ? "blocked"
+      : applyResult.mode === "denied"
+        ? "denied"
         : "skipped",
     {
       artifactPath,
@@ -1002,7 +982,7 @@ const executePatchApplyStep = async (input: {
   await syncSessionState(
     input.context,
     input.session,
-    applyResult.applied ? "patch-applied" : "blocked",
+    applyResult.applied ? "completed" : "needs-review",
     input.allowWriteSession
   );
   return applyResult;

@@ -512,7 +512,7 @@ export const runDoctor = async (
     context.cwStorageDir
   );
   const failedSessions = sessionScan.sessions.filter(
-    (session) => session.status === "failed" || session.status === "blocked"
+    (session) => session.status === "failed"
   );
 
   addCheck(checks, {
@@ -537,7 +537,7 @@ export const runDoctor = async (
       sessionScan.invalidSessions.length > 0
         ? `Found ${sessionScan.invalidSessions.length} invalid task session file(s).`
         : failedSessions.length > 0
-          ? `Found ${failedSessions.length} recent failed or blocked task session(s).`
+          ? `Found ${failedSessions.length} recent failed task session(s).`
           : "Stored task sessions look healthy.",
     metadata: {
       invalidSessions: sessionScan.invalidSessions.length,

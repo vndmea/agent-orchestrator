@@ -16,6 +16,7 @@ export * from "./session/task-session-store.js";
 export * from "./schemas/agent-result.schema.js";
 export * from "./schemas/agent-task.schema.js";
 export * from "./schemas/config.schema.js";
+export * from "./schemas/status-contract.schema.js";
 export * from "./schemas/runtime-decision.schema.js";
 export * from "./schemas/model-config.schema.js";
 export * from "./schemas/patch.schema.js";

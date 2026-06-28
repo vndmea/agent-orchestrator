@@ -620,7 +620,7 @@ describe("mcp tool registration", () => {
       expect(proposedFull.proposal.unifiedDiff).toContain("diff --git");
       expect(inspected.files[0]?.path).toBe("packages/core/src/index.ts");
       expect(dryRunApply.mode).toBe("dry-run");
-      expect(blockedApply.mode).toBe("blocked");
+      expect(blockedApply.mode).toBe("denied");
     });
   });
 

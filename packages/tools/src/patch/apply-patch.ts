@@ -177,7 +177,7 @@ const buildResult = ({
 
 const auditPatchAction = async (
   context: ExecutionContext,
-  mode: "blocked" | "dry-run" | "execute",
+  mode: "execute" | "dry-run" | "blocked",
   proposal: PatchProposal,
   inspection: PatchInspection,
   dirtyWorktree: DirtyWorktree | undefined,
@@ -196,7 +196,7 @@ const auditPatchAction = async (
         ? "Patch application completed."
         : mode === "dry-run"
           ? "Patch application checked in dry-run mode."
-          : "Patch application was blocked.",
+          : "Patch application was denied.",
     warnings,
     errors,
     metadata: {
@@ -221,7 +221,7 @@ export async function applyPatchProposal(
 
   if (!inspection.ok) {
     const result = buildResult({
-      mode: "blocked",
+      mode: "denied",
       applied: false,
       proposal,
       inspection,
@@ -243,7 +243,7 @@ export async function applyPatchProposal(
 
   if (hasBlockingDirtyWorktree(dirtyWorktree) && !options.allowDirtyWorktree) {
     const result = buildResult({
-      mode: "blocked",
+      mode: "denied",
       applied: false,
       proposal,
       inspection,
@@ -284,7 +284,7 @@ export async function applyPatchProposal(
 
     if (checkResult.code !== 0) {
       const result = buildResult({
-        mode: "blocked",
+        mode: "denied",
         applied: false,
         proposal,
         inspection,
@@ -329,7 +329,7 @@ export async function applyPatchProposal(
 
   if (!options.confirmApply) {
     const result = buildResult({
-      mode: "blocked",
+      mode: "denied",
       applied: false,
       proposal,
       inspection,
@@ -357,7 +357,7 @@ export async function applyPatchProposal(
 
   if (applyResult.code !== 0) {
     const result = buildResult({
-        mode: "blocked",
+        mode: "denied",
         applied: false,
         proposal,
         inspection,

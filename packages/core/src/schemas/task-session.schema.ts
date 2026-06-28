@@ -1,28 +1,10 @@
 import { z } from "zod";
 
-export const TaskSessionStatusSchema = z.enum([
-  "created",
-  "context-built",
-  "reviewed",
-  "fix-planned",
-  "patch-proposed",
-  "patch-inspected",
-  "patch-applied",
-  "validated",
-  "needs-review",
-  "completed",
-  "failed",
-  "blocked"
-]);
+import { StepStatusSchema, WorkflowStatusSchema } from "./status-contract.schema.js";
 
-export const TaskSessionStepStatusSchema = z.enum([
-  "pending",
-  "running",
-  "success",
-  "failure",
-  "skipped",
-  "blocked"
-]);
+export const TaskSessionStatusSchema = WorkflowStatusSchema;
+
+export const TaskSessionStepStatusSchema = StepStatusSchema;
 
 export const TaskSessionStepSchema = z.object({
   id: z.string().min(1),
