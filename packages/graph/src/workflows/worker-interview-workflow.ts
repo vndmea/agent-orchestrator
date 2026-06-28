@@ -1700,7 +1700,7 @@ const buildCapabilityProfile = (
         taskScores.codeUnderstanding < 0.74 ||
         score.reliability < 0.78 ||
         evidence.genericAnswerCases.length > 0
-      ? "limited"
+      ? "not-qualified"
       : "qualified";
 
   const knownFailureModes = Array.from(
@@ -1723,7 +1723,7 @@ const buildCapabilityProfile = (
           ? score.reliability >= 0.9
             ? "high"
             : "medium"
-          : status === "limited"
+          : status === "not-qualified"
             ? "low"
             : "low",
       requiresHostReview: status !== "qualified" || score.reliability < 0.85,
@@ -1790,7 +1790,7 @@ export const runWorkerInterviewWorkflow = async (
     goal: `Evaluate worker onboarding capability for ${workerId}`,
     constraints: [
       "Assess instruction following, structured output, scope discipline, summarization, evidence-linked review grounding, insufficient-evidence refusal, code understanding, code generation, and confidence calibration.",
-      "Warn when the worker should be limited or blocked."
+      "Warn when the worker should be not-qualified or blocked."
     ],
     assignedRole: "reviewer",
     priority: "high",

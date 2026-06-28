@@ -117,7 +117,7 @@ describe("core schemas", () => {
         workerId: "mock:gpt-5.4-mini",
         provider: "mock",
         model: "gpt-5.4-mini",
-        status: "limited",
+        status: "not-qualified",
         supportedTaskTypes: ["summarization", "json-extraction", "doc-generation"],
         unsupportedTaskTypes: ["codegen", "validation-fix"],
         score: {

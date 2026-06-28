@@ -29,7 +29,7 @@ export interface ResolveWorkerProfileResult {
   workerId: string;
 }
 
-const knownStatuses = new Set<WorkerStatus>(["qualified", "limited", "blocked"]);
+const knownStatuses = new Set<WorkerStatus>(["qualified", "not-qualified", "blocked"]);
 const providerFailureWarningPattern = /provider invocation failed/iu;
 const supportedSuiteVersion = "6";
 

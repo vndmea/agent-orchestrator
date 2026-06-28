@@ -145,7 +145,7 @@ const formatWorkerBenchmarkResult = (result: {
 }): string[] => {
   const lines: string[] = [
     `worker benchmark: ${result.workerId}`,
-    `patch generation qualified: ${result.patchGenerationQualified ? "yes" : "no"}`,
+    `patch generation capability: ${result.patchGenerationQualified ? "qualified" : "not-qualified"}`,
     `capability update applied: ${result.capabilityUpdateApplied ? "yes" : "no"}`
   ];
 

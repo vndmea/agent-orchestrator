@@ -121,7 +121,7 @@ describe("worker interview workflow", () => {
       result.taskResults.find((task) => task.type === "review-grounding")?.score
     ).toBeLessThan(0.6);
     expect(result.profile.admission?.passed).toBe(true);
-    expect(result.status).toBe("limited");
+    expect(result.status).toBe("not-qualified");
     expect(result.profile.unsupportedTaskTypes).toContain("review-lite");
     expect(result.profile.unsupportedTaskTypes).toContain("risk-analysis");
     expect(result.profile.evidence?.genericAnswerCases).toContain(
@@ -146,7 +146,7 @@ describe("worker interview workflow", () => {
     expect(result.profile.supportedTaskTypes).not.toContain("review-lite");
     expect(result.profile.supportedTaskTypes).not.toContain("risk-analysis");
     expect(result.profile.admission?.passed).toBe(true);
-    expect(result.status).toBe("limited");
+    expect(result.status).toBe("not-qualified");
     expect(result.profile.unsupportedTaskTypes).toContain("summarization");
     expect(result.profile.unsupportedTaskTypes).toContain("doc-generation");
     expect(result.profile.evidence?.genericAnswerCases).toContain(
@@ -154,7 +154,7 @@ describe("worker interview workflow", () => {
     );
   });
 
-  it("routes weak code understanding to limited with code-understanding unsupported", async () => {
+  it("routes weak code understanding to not-qualified with code-understanding unsupported", async () => {
     const result = await runWorkerInterviewWorkflow({
       context: createContext(),
       simulatedResponses: {
@@ -170,7 +170,7 @@ describe("worker interview workflow", () => {
       "code-understanding"
     );
     expect(result.profile.admission?.passed).toBe(true);
-    expect(result.status).toBe("limited");
+    expect(result.status).toBe("not-qualified");
     expect(result.profile.unsupportedTaskTypes).toContain("code-understanding");
   });
 
@@ -220,7 +220,7 @@ describe("worker interview workflow", () => {
       workerCapabilityProfile: interview.profile
     });
 
-    expect(interview.status).toBe("limited");
+    expect(interview.status).toBe("not-qualified");
     expect(interview.profile.routingPolicy.allowCodegen).toBe(false);
     expect(workflow.workerResult).toBeNull();
     expect(workflow.warnings.join("\n")).toContain("not qualified for codegen");

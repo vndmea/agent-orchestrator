@@ -122,7 +122,7 @@ const buildCodingV1Fixtures = (): BenchmarkFixture[] => [
       summary: "Add targeted workflow tests around unsupported and skipped worker tasks.",
       testPlan: [
         "Cover a plan with a known but unregistered worker task type.",
-        "Cover a limited profile that skips only some planned tasks."
+        "Cover a not-qualified profile that skips only some planned tasks."
       ],
       confidence: 0.71
     },
