@@ -403,6 +403,10 @@ describe("cli parsing", () => {
       await cli.parseAsync(["node", "cw", "doctor"]);
 
       expect(output.at(-1)).toContain("cw doctor:");
+      expect(output.at(-1)).toContain("binding:");
+      expect(output.at(-1)).toContain("paths:");
+      expect(output.at(-1)).toContain("env:");
+      expect(output.at(-1)).toContain("worker:");
       expect(output.at(-1)).toContain("\u001b[");
       expect(output.at(-1)).not.toContain("\"checks\"");
     });
@@ -741,6 +745,25 @@ describe("cli parsing", () => {
 
       expect(output.at(-1)).toContain("\"worker-connectivity\"");
       expect(output.at(-1)).toContain("\"status\": \"pass\"");
+    });
+  });
+
+  it("renders doctor probe details in compact human mode", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeCwConfig(rootDir, {
+        workerModel: {
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        }
+      });
+      const { io, output } = createIo("human");
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "cw", "doctor", "--probe"]);
+
+      expect(output.at(-1)).toContain("probe:");
+      expect(output.at(-1)).toContain("provider=mock");
+      expect(output.at(-1)).toContain("model=gpt-5.4-mini");
     });
   });
 

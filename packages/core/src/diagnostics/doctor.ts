@@ -16,7 +16,9 @@ import {
   type ValidationScriptResolution
 } from "../validation/validation-scripts.js";
 import {
+  getCwHomeDir,
   getCwWorkspaceAuditDirFromStorageDir,
+  getCwWorkspaceId,
   getCwWorkspaceRunsDirFromStorageDir
 } from "../storage/cw-paths.js";
 
@@ -61,6 +63,8 @@ export interface RunDoctorOptions {
 const WHY_THIS_MATTERS: Record<string, string> = {
   "root-dir":
     "If the active root directory is wrong, cw can inspect or persist work against the wrong repository.",
+  "runtime-bootstrap":
+    "These resolved paths and bootstrap sources explain which repository, config file, and user-scoped storage cw is actually using right now.",
   "worker-model":
     "The worker model handles scoped execution steps such as review, validation guidance, and patch generation.",
   "local-client-command":
@@ -134,6 +138,9 @@ const canCreateDirectory = async (path: string): Promise<boolean> => {
   }
 };
 
+const hasEnvValue = (value: string | undefined): boolean =>
+  typeof value === "string" && value.trim().length > 0;
+
 const LOCAL_CLIENT_PROVIDERS = new Set(["client", "local-client"]);
 
 const resolveLocalClientCommand = (
@@ -198,6 +205,16 @@ const resolveCommandOnPath = async (
 
   return null;
 };
+
+const summarizeRootSource = (
+  env: NodeJS.ProcessEnv,
+  workspaceBinding: WorkspaceBindingSummary
+): "cwd" | "cw-root-dir" | "workspace-switch" =>
+  hasEnvValue(env.CW_ROOT_DIR)
+    ? "cw-root-dir"
+    : workspaceBinding.matchesCallerWorkingDirectory
+      ? "cwd"
+      : "workspace-switch";
 
 const readRootScripts = async (
   rootDir: string
@@ -318,19 +335,27 @@ export const runDoctor = async (
 ): Promise<DoctorReport> => {
   const checks: DoctorCheck[] = [];
   const recommendedActions: string[] = [];
+  const env = process.env;
   const rootDirExists = await checkExists(context.rootDir);
   const workspaceBinding = buildWorkspaceBindingSummary(context.rootDir);
+  const rootSource = summarizeRootSource(env, workspaceBinding);
+  const cwHomeDir = getCwHomeDir(env);
+  const workspaceId = getCwWorkspaceId(context.rootDir);
 
   addCheck(checks, {
     name: "root-dir",
     status: rootDirExists ? "pass" : "fail",
     message: rootDirExists
       ? workspaceBinding.matchesCallerWorkingDirectory
-        ? `Resolved rootDir exists and matches the caller workspace: ${context.rootDir}`
+        ? rootSource === "cw-root-dir"
+          ? `Resolved rootDir exists and is pinned by CW_ROOT_DIR: ${context.rootDir}`
+          : `Resolved rootDir exists and matches the caller workspace: ${context.rootDir}`
         : `Resolved rootDir exists but is bound away from the caller workspace: ${context.rootDir}`
       : `Resolved rootDir does not exist: ${context.rootDir}`,
     metadata: {
       rootDir: context.rootDir,
+      rootSource,
+      cwRootDir: env.CW_ROOT_DIR,
       callerWorkingDirectory: workspaceBinding.callerWorkingDirectory,
       matchesCallerWorkingDirectory: workspaceBinding.matchesCallerWorkingDirectory,
       switchedFrom: workspaceBinding.switchedFrom
@@ -345,6 +370,9 @@ export const runDoctor = async (
         : "fail",
     message: `Resolved worker model: ${context.workerModel.provider}:${context.workerModel.model}`,
     metadata: {
+      apiKeyConfigured: Boolean(context.workerModel.apiKey),
+      baseURL: context.workerModel.baseURL,
+      clientCommand: context.workerModel.clientCommand,
       model: context.workerModel.model,
       provider: context.workerModel.provider
     }
@@ -414,6 +442,32 @@ export const runDoctor = async (
   });
 
   const config = await loadCwConfig(context.rootDir);
+  addCheck(checks, {
+    name: "runtime-bootstrap",
+    status: rootDirExists ? "pass" : "warning",
+    message:
+      `Resolved config=${config.path}; storage=${context.cwStorageDir}; cwHome=${cwHomeDir}; workspaceId=${workspaceId}; rootSource=${rootSource}; CW_HOME_DIR=${hasEnvValue(env.CW_HOME_DIR) ? "set" : "default"}.`,
+    metadata: {
+      callerWorkingDirectory: workspaceBinding.callerWorkingDirectory,
+      configPath: config.path,
+      cwHomeDir,
+      cwStorageDir: context.cwStorageDir,
+      env: {
+        CW_HOME_DIR: env.CW_HOME_DIR,
+        CW_ROOT_DIR: env.CW_ROOT_DIR,
+        CW_WORKER_CLIENT_COMMAND: env.CW_WORKER_CLIENT_COMMAND,
+        WORKER_MODEL_API_KEY: hasEnvValue(env.WORKER_MODEL_API_KEY)
+          ? "[set]"
+          : undefined,
+        WORKER_MODEL_BASE_URL: env.WORKER_MODEL_BASE_URL,
+        WORKER_MODEL_NAME: env.WORKER_MODEL_NAME,
+        WORKER_MODEL_PROVIDER: env.WORKER_MODEL_PROVIDER
+      },
+      rootDir: context.rootDir,
+      rootSource,
+      workspaceId
+    }
+  });
   addCheck(checks, {
     name: "cw-config",
     status: config.error ? "fail" : config.exists ? "pass" : "warning",

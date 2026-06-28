@@ -63,8 +63,12 @@ export const createLocalClientDoctorChecks = async (
 export const createWorkerConnectivityDoctorChecks = async (
   context: ExecutionContext
 ): Promise<DoctorCheck[]> => {
+  let resolvedWorker:
+    | Awaited<ReturnType<typeof resolveWorkerModel>>
+    | undefined;
+
   try {
-    const resolvedWorker = await resolveWorkerModel({ context });
+    resolvedWorker = await resolveWorkerModel({ context });
     const probeConfig = createProbeConfig(resolvedWorker.modelConfig);
     const router = new ModelRouter(probeConfig);
     const routed = router.route("worker");
@@ -82,6 +86,7 @@ export const createWorkerConnectivityDoctorChecks = async (
         status: "pass",
         message: `Resolved worker ${resolvedWorker.workerId} responded to the connectivity probe.`,
         metadata: {
+          baseURL: probeConfig.baseURL,
           model: probeConfig.model,
           provider: probeConfig.provider,
           responsePreview: summarizeWorkerResponse(result.text),
@@ -99,7 +104,18 @@ export const createWorkerConnectivityDoctorChecks = async (
         status: "warning",
         message: `Worker connectivity probe failed: ${message}`,
         metadata: {
-          error: message
+          baseURL: resolvedWorker?.modelConfig.baseURL ?? context.workerModel.baseURL,
+          clientCommand:
+            resolvedWorker?.modelConfig.clientCommand ??
+            context.workerModel.clientCommand,
+          defaultWorkerId: context.defaultWorkerId,
+          error: message,
+          model: resolvedWorker?.modelConfig.model ?? context.workerModel.model,
+          provider:
+            resolvedWorker?.modelConfig.provider ?? context.workerModel.provider,
+          rootDir: context.rootDir,
+          source: resolvedWorker?.source,
+          workerId: resolvedWorker?.workerId
         }
       }
     ];

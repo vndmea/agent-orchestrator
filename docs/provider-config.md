@@ -33,6 +33,124 @@ Runtime configuration resolves in this order:
 
 Do not store raw API keys in repository files or in persisted `config.json`. Provide secrets through environment variables such as `WORKER_MODEL_API_KEY`. Treat `config.json` as the primary source for persisted non-secret worker settings used by both CLI and MCP flows.
 
+## 3-Minute Quickstarts
+
+These are the fastest supported paths for getting one worker configuration running without reading the entire document first.
+
+### Quickstart: mock provider
+
+Use this when you want to verify local CLI and MCP wiring first.
+
+1. Install and initialize:
+
+```bash
+npm i -g mcp-code-worker
+cw init
+```
+
+2. Confirm the stored config points at `mock`:
+
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "mock",
+    "model": "gpt-5.4-mini"
+  }
+}
+```
+
+3. Verify locally:
+
+```bash
+cw doctor
+cw doctor --probe
+cw mcp config
+```
+
+No API key is required for this path.
+
+### Quickstart: OpenAI-compatible / DeepSeek-style API
+
+Use this when you want a real hosted model quickly.
+
+1. Install and initialize:
+
+```bash
+npm i -g mcp-code-worker
+cw init
+```
+
+2. Persist the non-secret runtime defaults in `config.json`:
+
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "openai-compatible",
+    "model": "deepseek-v4-flash",
+    "baseURL": "https://api.deepseek.com"
+  }
+}
+```
+
+3. Set the secret in the same runtime that will launch `cw`:
+
+PowerShell:
+
+```powershell
+$env:WORKER_MODEL_API_KEY="sk-..."
+```
+
+bash:
+
+```bash
+export WORKER_MODEL_API_KEY="sk-..."
+```
+
+4. Verify the resolved runtime:
+
+```bash
+cw doctor
+cw doctor --probe
+cw worker interview --save
+```
+
+If `cw doctor --probe` fails, check the reported `root-dir`, `runtime-bootstrap`, `worker-model`, and `worker-connectivity` diagnostics before changing anything else.
+
+### Quickstart: local client provider
+
+Use this when a compatible local CLI should proxy the model call.
+
+1. Install and initialize:
+
+```bash
+npm i -g mcp-code-worker
+cw init
+```
+
+2. Persist the provider and client command in `config.json`:
+
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "client",
+    "model": "qwen3-coder"
+  },
+  "workerClientCommand": "/path/to/compatible-client"
+}
+```
+
+3. Verify locally:
+
+```bash
+cw doctor
+cw doctor --probe
+```
+
+If this path fails, inspect the `local-client-command`, `local-client-compatibility`, `runtime-bootstrap`, and `worker-connectivity` checks first.
+
 ## Supported Provider Shapes
 
 ### `mock`

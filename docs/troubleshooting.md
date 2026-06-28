@@ -39,6 +39,7 @@ If you are using a repository checkout, run the commands as `pnpm exec cw ...` f
 - Start `cw mcp serve` from the intended workspace root
 - Or set `CW_ROOT_DIR`
 - Re-run `cw mcp config` after changing root assumptions
+- Read the `root-dir` and `runtime-bootstrap` checks from `cw doctor` to confirm which root, config path, and CW home path are actually active
 
 Different absolute repository roots produce different workspace ids, so a root mismatch can look like “missing” state when the real issue is path resolution.
 
@@ -54,6 +55,7 @@ Different absolute repository roots produce different workspace ids, so a root m
 - Confirm whether `CW_HOME_DIR` is set
 - Confirm whether `CW_ROOT_DIR` changed
 - Remember that default state lives under `~/.cw/workspaces/<workspace-id>/`
+- Read the `runtime-bootstrap` check from `cw doctor` for the resolved `config.json`, `cwStorageDir`, `cwHomeDir`, and `workspaceId`
 
 ## Worker Interview Is Blocked By Provider Failures
 
@@ -85,6 +87,7 @@ Do not treat a provider-failure-style blocked interview as a completed onboardin
 - Use `CW_WORKER_CLIENT_COMMAND` only as a bootstrap fallback when no persisted config exists yet
 - Re-run `cw doctor`
 - Use `cw doctor --probe` when you also want a live connectivity probe
+- Read `local-client-command`, `local-client-compatibility`, `runtime-bootstrap`, and `worker-connectivity` together before changing paths blindly
 
 ## MCP Server Starts But Client Cannot Use It
 
@@ -98,6 +101,7 @@ Do not treat a provider-failure-style blocked interview as a completed onboardin
 - Start the client against the correct workspace root, or set `CW_ROOT_DIR`
 - Compare the client snippet with the output of `cw mcp config`
 - Confirm the client process sees the same environment variables as your shell
+- Read `root-dir`, `runtime-bootstrap`, and `worker-connectivity` from `cw doctor --probe` to verify the active root, config path, and worker wiring
 
 ## Patch Apply Is Blocked
 

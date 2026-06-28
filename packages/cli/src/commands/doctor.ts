@@ -15,6 +15,18 @@ import {
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
 
+const readMetadataString = (
+  metadata: Record<string, unknown>,
+  key: string,
+  fallback: string
+): string => {
+  const value = metadata[key];
+
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+    ? String(value)
+    : fallback;
+};
+
 const formatDoctorReport = (report: DoctorReport): string[] => {
   const failedChecks = report.checks.filter((check) => check.status === "fail");
   const warningChecks = report.checks.filter((check) => check.status === "warning");
@@ -22,6 +34,14 @@ const formatDoctorReport = (report: DoctorReport): string[] => {
   const doctorSummary: string = report.summary;
   const activeRootDir: string = report.activeRootDir;
   const capabilityPairs: string[] = [];
+  const runtimeBootstrap = report.checks.find(
+    (check) => check.name === "runtime-bootstrap"
+  );
+  const rootCheck = report.checks.find((check) => check.name === "root-dir");
+  const workerModel = report.checks.find((check) => check.name === "worker-model");
+  const workerConnectivity = report.checks.find(
+    (check) => check.name === "worker-connectivity"
+  );
 
   for (const capability of report.capabilities) {
     capabilityPairs.push(`${capability.name}=${capability.status}`);
@@ -33,6 +53,33 @@ const formatDoctorReport = (report: DoctorReport): string[] => {
   lines.push(`cw doctor: ${doctorStatus}`);
   lines.push(doctorSummary);
   lines.push(`workspace: ${activeRootDir}`);
+  if (rootCheck?.metadata) {
+    lines.push(
+      `binding: rootSource=${readMetadataString(rootCheck.metadata, "rootSource", "unknown")} | caller=${readMetadataString(rootCheck.metadata, "callerWorkingDirectory", "unknown")}`
+    );
+  }
+  if (runtimeBootstrap?.metadata) {
+    lines.push(
+      `paths: config=${readMetadataString(runtimeBootstrap.metadata, "configPath", "unknown")} | storage=${readMetadataString(runtimeBootstrap.metadata, "cwStorageDir", "unknown")} | home=${readMetadataString(runtimeBootstrap.metadata, "cwHomeDir", "unknown")}`
+    );
+    const env = runtimeBootstrap.metadata["env"];
+    if (env && typeof env === "object") {
+      const runtimeEnv = env as Record<string, unknown>;
+      lines.push(
+        `env: CW_ROOT_DIR=${readMetadataString(runtimeEnv, "CW_ROOT_DIR", "(default)")} | CW_HOME_DIR=${readMetadataString(runtimeEnv, "CW_HOME_DIR", "(default)")} | apiKey=${readMetadataString(runtimeEnv, "WORKER_MODEL_API_KEY", "(missing)")}`
+      );
+    }
+  }
+  if (workerModel?.metadata) {
+    lines.push(
+      `worker: provider=${readMetadataString(workerModel.metadata, "provider", "unknown")} | model=${readMetadataString(workerModel.metadata, "model", "unknown")} | baseURL=${readMetadataString(workerModel.metadata, "baseURL", "(default)")} | client=${readMetadataString(workerModel.metadata, "clientCommand", "(default)")}`
+    );
+  }
+  if (workerConnectivity?.metadata) {
+    lines.push(
+      `probe: worker=${readMetadataString(workerConnectivity.metadata, "workerId", "(default-worker)")} | source=${readMetadataString(workerConnectivity.metadata, "source", "default")} | provider=${readMetadataString(workerConnectivity.metadata, "provider", "unknown")} | model=${readMetadataString(workerConnectivity.metadata, "model", "unknown")} | baseURL=${readMetadataString(workerConnectivity.metadata, "baseURL", "(default)")} | client=${readMetadataString(workerConnectivity.metadata, "clientCommand", "(default)")}`
+    );
+  }
   lines.push(`capabilities: ${capabilitySummary}`);
 
   if (failedChecks.length > 0) {
