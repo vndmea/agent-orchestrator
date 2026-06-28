@@ -7,11 +7,11 @@ This document explains how runtime configuration is resolved in `mcp-code-worker
 Runtime configuration resolves in this order:
 
 1. CLI flags
-2. Environment variables
-3. `~/.cw/workspaces/<workspace-id>/config.json`
+2. `~/.cw/workspaces/<workspace-id>/config.json`
+3. Environment variables
 4. built-in defaults
 
-This means a CLI override wins over environment configuration, and environment configuration wins over persisted user-scoped CW config.
+This means a CLI override wins over persisted user-scoped CW config, and persisted CW config wins over environment defaults for non-secret runtime settings.
 
 ## Core Environment Variables
 
@@ -60,8 +60,9 @@ The persisted config is intended for non-secret defaults such as:
 - validation script preferences
 - default ignored paths
 - session retention settings
+- worker and MCP-adjacent runtime defaults that should stay consistent across CLI and MCP entrypoints
 
-Do not put secrets into persisted config. API credentials should remain in environment variables.
+Do not put secrets into persisted config. API credentials should remain in environment variables. Launch-location bootstrap values such as `CW_ROOT_DIR` and `CW_HOME_DIR` also remain environment-driven.
 
 Path-like inputs such as `CW_ROOT_DIR`, `CW_HOME_DIR`, and `workerClientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
 

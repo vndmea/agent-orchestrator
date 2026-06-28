@@ -9,7 +9,10 @@ Use this guide when configuring `mcp-code-worker` inside Cursor.
   "mcpServers": {
     "mcp-code-worker": {
       "command": "cw",
-      "args": ["mcp", "serve", "--root", "${workspaceFolder}"]
+      "args": ["mcp", "serve"],
+      "env": {
+        "CW_ROOT_DIR": "${workspaceFolder}"
+      }
     }
   }
 }
@@ -18,4 +21,5 @@ Use this guide when configuring `mcp-code-worker` inside Cursor.
 ## Notes
 
 - `cw mcp config` is the quickest way to compare the expected stdio snippet with what you pasted into the client.
-- If the client starts from a shared tools checkout, the explicit `--root` is what keeps file access and CW state aligned to the active workspace.
+- Keep worker/provider/local-client defaults in `config.json`.
+- If the client starts from a shared tools checkout, `CW_ROOT_DIR` is what keeps file access and CW state aligned to the active workspace.

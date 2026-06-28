@@ -34,6 +34,8 @@ By default, the MCP server resolves `rootDir` from the server process cwd. When 
 
 Regular CLI commands can still take their own `--root` flags where supported, but the MCP entrypoint itself does not expose `--root`.
 
+Treat that MCP snippet as launch-only. Worker/provider/base URL/local client defaults should be persisted in `config.json` so both CLI commands and MCP tools resolve the same runtime settings.
+
 If the resolved worker model uses the local client provider, `opencode` is the default command. Persist a different compatible local CLI with `workerClientCommand` in `config.json` or `cw setup --worker-client-command <command> --allow-write`.
 
 Example:
@@ -102,7 +104,7 @@ By default, the MCP server stores CW-managed state under:
 
 - Internal trial workflow: start with `docs/trial-runbook.md`.
 - MCP client integration: start with `cw_start_task`, `cw_resume_task`, and `cw_get_task_report`.
-- New-user onboarding: start with `docs/minimal-success-path.md` and `cw setup`.
+- New-user onboarding: start with `docs/minimal-success-path.md` and `cw init`.
 - Command/operator detail: refer to `docs/cli.md`.
 - Workspace install and launch: refer to `docs/install.md`.
 

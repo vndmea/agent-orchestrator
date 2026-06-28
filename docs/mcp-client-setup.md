@@ -22,6 +22,8 @@ For most clients, the recommended command shape is:
 }
 ```
 
+Use `cw mcp config` as the copy source for this snippet. The host snippet should only define how to launch `cw`; worker/provider/base URL/local client defaults should live in `config.json`.
+
 If the client launches from a shared tools checkout instead of the active repository, set `CW_ROOT_DIR` in the server environment.
 
 ## Validation Before Client Setup

@@ -9,7 +9,10 @@ Use this guide when connecting `mcp-code-worker` to a VS Code MCP-capable extens
   "mcpServers": {
     "mcp-code-worker": {
       "command": "cw",
-      "args": ["mcp", "serve", "--root", "${workspaceFolder}"]
+      "args": ["mcp", "serve"],
+      "env": {
+        "CW_ROOT_DIR": "${workspaceFolder}"
+      }
     }
   }
 }
@@ -21,4 +24,4 @@ After applying the snippet:
 
 - run `cw mcp list-tools` locally and compare the expected tool list
 - confirm the VS Code-side integration can connect and list the same tools
-- keep `CW_ROOT_DIR` unset unless you intentionally need it; prefer an explicit `--root`
+- keep runtime worker/provider settings in `config.json`; only add `CW_ROOT_DIR` when VS Code does not launch `cw` from the target workspace root

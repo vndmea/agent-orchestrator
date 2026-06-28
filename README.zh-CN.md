@@ -76,6 +76,7 @@ docs/
 
 ```bash
 npm i -g mcp-code-worker
+cw init
 cw doctor
 cw mcp list-tools
 ```
@@ -95,13 +96,15 @@ pnpm test
 ## 首次使用
 
 ```bash
-pnpm exec cw init
-pnpm exec cw doctor
-pnpm exec cw mcp config
+cw init
+cw doctor --probe
+cw mcp config
 ```
 
-当前 internal-trial 安装路径下，除非特别说明，下面所有 `cw ...` 示例都等价于在仓库根目录执行 `pnpm exec cw ...`。
+公开安装和 MCP 启动路径见 [docs/install.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/install.md)。
 当前官方内部交付形态见 [docs/distribution.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/distribution.md)。
+
+除非特别说明，下面所有 `cw ...` 示例都按公开 npm 安装后的 CLI 理解；如果你在仓库 checkout 中开发，则等价于在仓库根目录执行 `pnpm exec cw ...`。
 
 默认建议使用 `cw init` 完成引导式初始化；只有在你明确想走更底层、脚本化的配置流程时，再使用 `cw setup --allow-write`。
 
@@ -358,11 +361,11 @@ cw mcp list-tools
 运行时配置按以下顺序解析：
 
 1. CLI flags
-2. 环境变量
-3. `~/.cw/workspaces/<workspace-id>/config.json`
+2. `~/.cw/workspaces/<workspace-id>/config.json`
+3. 环境变量
 4. 内置默认值
 
-`config.json` 不再记录密钥环境变量名。运行时密钥统一通过 `WORKER_MODEL_API_KEY` 这类固定变量提供。
+`config.json` 应作为 worker、validation、安全策略和 MCP 相关运行时默认值的主配置面；`WORKER_MODEL_API_KEY`、`CW_ROOT_DIR`、`CW_HOME_DIR` 这类密钥或启动定位变量仍通过环境变量提供。
 
 用户级 CW `config.json` 里的 repository context 配置用于控制 review、fix、patch 和 task workflow 的默认 `ignoredPaths` 与 `strictFiles` 行为。
 

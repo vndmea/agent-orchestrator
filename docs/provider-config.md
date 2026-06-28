@@ -27,11 +27,11 @@ Additional related settings include:
 Runtime configuration resolves in this order:
 
 1. CLI flags
-2. Environment variables
-3. `~/.cw/workspaces/<workspace-id>/config.json`
+2. `~/.cw/workspaces/<workspace-id>/config.json`
+3. Environment variables
 4. Built-in defaults
 
-Do not store raw API keys in repository files or in persisted `config.json`. Provide secrets through environment variables such as `WORKER_MODEL_API_KEY`.
+Do not store raw API keys in repository files or in persisted `config.json`. Provide secrets through environment variables such as `WORKER_MODEL_API_KEY`. Treat `config.json` as the primary source for persisted non-secret worker settings used by both CLI and MCP flows.
 
 ## Supported Provider Shapes
 
@@ -77,7 +77,7 @@ Use a local client provider when a compatible local CLI bridges the model calls.
 
 - `opencode` is the default compatible command.
 - Persist `workerClientCommand` in `config.json` when the executable name or path differs.
-- Use `CW_WORKER_CLIENT_COMMAND` only as a temporary runtime override.
+- Use `CW_WORKER_CLIENT_COMMAND` only as a bootstrap fallback when no persisted config exists yet.
 
 Example:
 

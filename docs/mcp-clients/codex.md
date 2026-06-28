@@ -9,7 +9,10 @@ Use this guide when `mcp-code-worker` is launched as an MCP server from Codex.
   "mcpServers": {
     "mcp-code-worker": {
       "command": "cw",
-      "args": ["mcp", "serve", "--root", "${workspaceFolder}"]
+      "args": ["mcp", "serve"],
+      "env": {
+        "CW_ROOT_DIR": "${workspaceFolder}"
+      }
     }
   }
 }
@@ -23,4 +26,4 @@ Before relying on the client integration:
 - run `cw mcp list-tools`
 - run `cw mcp config`
 
-If Codex launches from a shared tools checkout instead of the active repository, keep the explicit `--root` or set `CW_ROOT_DIR`.
+Keep runtime worker and safety settings in `config.json`; use the MCP snippet only for launch wiring such as `CW_ROOT_DIR` when needed.

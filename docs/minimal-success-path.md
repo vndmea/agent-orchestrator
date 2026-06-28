@@ -5,7 +5,7 @@ If you are new to `cw`, use this five-step path instead of learning every low-le
 1. Bind the current repository and inspect readiness.
 
 ```bash
-cw setup
+cw init
 cw doctor
 ```
 

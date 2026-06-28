@@ -76,6 +76,7 @@ Global npm install:
 
 ```bash
 npm i -g mcp-code-worker
+cw init
 cw doctor
 cw mcp list-tools
 ```
@@ -96,17 +97,17 @@ pnpm test
 ## First run
 
 ```bash
-pnpm exec cw init
-pnpm exec cw doctor
-pnpm exec cw mcp config
+cw init
+cw doctor --probe
+cw mcp config
 ```
 
 Use `cw init` as the default onboarding path. Reach for `cw setup --allow-write` when you want the lower-level, explicitly scripted setup flow instead of the guided interview.
 
-Internal-trial installation and MCP launch guidance lives in [docs/install.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/install.md).
+Public installation and MCP launch guidance lives in [docs/install.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/install.md).
 The current official internal distribution shape is documented in [docs/distribution.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/distribution.md).
 
-Unless noted otherwise, read every `cw ...` example below as `pnpm exec cw ...` from the repository root for the current internal-trial install path.
+Unless noted otherwise, read every `cw ...` example below as the public npm-installed CLI. In a repository checkout, use `pnpm exec cw ...` from the repository root instead.
 
 Legacy repository-local `.cw/` directories are unsupported and ignored by current builds.
 
@@ -363,11 +364,11 @@ See [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.ex
 Runtime configuration resolves in this order:
 
 1. CLI flags
-2. Environment variables
-3. `~/.cw/workspaces/<workspace-id>/config.json`
+2. `~/.cw/workspaces/<workspace-id>/config.json`
+3. Environment variables
 4. built-in defaults
 
-`config.json` no longer stores secret env-var names. Provide runtime secrets through fixed variables such as `WORKER_MODEL_API_KEY`.
+Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults. Keep secrets and launch-location bootstrap values such as `WORKER_MODEL_API_KEY`, `CW_ROOT_DIR`, and `CW_HOME_DIR` in environment variables.
 
 Repository context settings in the user-scoped CW `config.json` control default `ignoredPaths` and `strictFiles` behavior for review, fix, patch, and task workflows.
 
