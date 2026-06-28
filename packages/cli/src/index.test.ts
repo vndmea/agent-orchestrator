@@ -12,6 +12,7 @@ import {
   getCwWorkspaceAuditDir,
   getCwWorkspaceFilePath,
   getCwWorkspaceRunsDir,
+  normalizeFileSystemPath,
   PatchProposalSchema
 } from "@mcp-code-worker/core";
 import type { InitPrompter } from "./commands/init.js";
@@ -376,7 +377,17 @@ describe("cli parsing", () => {
       "C:\\workspace\\repo"
     ]);
 
-    expect(output.join("\n")).toContain("\"CW_ROOT_DIR\": \"C:\\\\workspace\\\\repo\"");
+    const config = parseLastJson<{
+      mcpServers?: {
+        "mcp-code-worker"?: {
+          env?: Record<string, string>;
+        };
+      };
+    }>(output);
+
+    expect(config.mcpServers?.["mcp-code-worker"]?.env?.CW_ROOT_DIR).toBe(
+      normalizeFileSystemPath("C:\\workspace\\repo")
+    );
     expect(output.join("\n")).not.toContain("${workspaceFolder}");
   });
 
@@ -395,9 +406,18 @@ describe("cli parsing", () => {
       "C:\\Users\\me\\.cw"
     ]);
 
-    expect(output.join("\n")).toContain("\"env\"");
-    expect(output.join("\n")).toContain("\"CW_ROOT_DIR\": \"C:\\\\workspace\\\\repo\"");
-    expect(output.join("\n")).toContain("\"CW_HOME_DIR\": \"C:\\\\Users\\\\me\\\\.cw\"");
+    const config = parseLastJson<{
+      mcpServers?: {
+        "mcp-code-worker"?: {
+          env?: Record<string, string>;
+        };
+      };
+    }>(output);
+
+    expect(config.mcpServers?.["mcp-code-worker"]?.env).toEqual({
+      CW_ROOT_DIR: normalizeFileSystemPath("C:\\workspace\\repo"),
+      CW_HOME_DIR: normalizeFileSystemPath("C:\\Users\\me\\.cw")
+    });
   });
 
   it("runs worker list", async () => {

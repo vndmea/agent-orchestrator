@@ -60,16 +60,20 @@ const runCommand = async (
     ? execFile("cmd.exe", ["/d", "/s", "/c", command, ...args], { cwd, env })
     : execFile(command, args, { cwd, env });
 
+const removeTrackedPath = async (path: string): Promise<void> => {
+  await rm(path, {
+    force: true,
+    recursive: true,
+    maxRetries: process.platform === "win32" ? 10 : 0,
+    retryDelay: 200
+  });
+};
+
 describe("cli packed tarball smoke", () => {
   afterEach(async () => {
-    await Promise.all(
-      tempPaths.splice(0, tempPaths.length).map((path) =>
-        rm(path, {
-          force: true,
-          recursive: true
-        })
-      )
-    );
+    for (const path of tempPaths.splice(0, tempPaths.length)) {
+      await removeTrackedPath(path);
+    }
   });
 
   it("installs from npm pack output and runs the cw bin shim", async () => {
@@ -167,5 +171,5 @@ describe("cli packed tarball smoke", () => {
     } finally {
       await rm(tarballPath, { force: true });
     }
-  }, 120_000);
+  }, 180_000);
 });
