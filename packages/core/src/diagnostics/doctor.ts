@@ -2,6 +2,7 @@ import { access, mkdir, stat } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, isAbsolute, join } from "node:path";
 
+import type { WorkerAvailabilitySnapshot } from "../schemas/worker-availability.schema.js";
 import { listAuditEvents } from "../audit/audit-log.js";
 import { loadCwConfig } from "../config/cw-config.js";
 import type { ExecutionContext } from "../runtime/execution-context.js";
@@ -53,6 +54,7 @@ export interface DoctorReport {
   }>;
   status: DoctorStatus;
   summary: string;
+  workerAvailability?: WorkerAvailabilitySnapshot;
   workspaceBinding: WorkspaceBindingSummary;
 }
 

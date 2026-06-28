@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 
 import { z } from "zod";
 
@@ -12,7 +12,9 @@ import type {
   WorkerEvaluationSummary
 } from "@mcp-code-worker/core";
 import {
-  getCwWorkspaceDir,
+  CODING_V1_SUITE_NAME,
+  getWorkerBenchmarkArtifactPath,
+  qualifiesPatchGenerationCapability,
   WorkerCapabilityProfileSchema,
   WorkerBenchmarkResultSchema,
   resolveExecutionContext,
@@ -20,7 +22,6 @@ import {
 } from "@mcp-code-worker/core";
 import { ModelRouter, invokeStructured } from "@mcp-code-worker/models";
 
-const CODING_V1_SUITE_NAME = "coding-v1";
 const CODING_V1_SUITE_VERSION = "2";
 
 interface BenchmarkFixture {
@@ -255,21 +256,6 @@ const buildEvaluationSummary = (
   };
 };
 
-const hasPassingFixture = (
-  result: WorkerBenchmarkResult,
-  fixtureId: string
-): boolean =>
-  result.fixtureResults.some((fixture) => fixture.fixtureId === fixtureId && fixture.passed);
-
-export const qualifiesPatchGenerationCapability = (
-  result: WorkerBenchmarkResult
-): boolean =>
-  result.suiteName === CODING_V1_SUITE_NAME &&
-  result.evaluationSummary.confidenceBand === "high" &&
-  result.evaluationSummary.passedCount === result.evaluationSummary.sampleCount &&
-  hasPassingFixture(result, "scope-control") &&
-  hasPassingFixture(result, "validation-honesty");
-
 export const applyBenchmarkCapabilityUpdate = (
   profile: WorkerCapabilityProfile,
   benchmarkResult: WorkerBenchmarkResult,
@@ -321,19 +307,6 @@ export const applyBenchmarkCapabilityUpdate = (
     capabilityUpdateApplied
   };
 };
-
-export const getWorkerBenchmarkArtifactPath = (
-  rootDir: string,
-  workerId: string,
-  suite: string,
-  cwStorageDir?: string
-): string =>
-  join(
-    cwStorageDir ?? getCwWorkspaceDir(rootDir),
-    "worker-benchmarks",
-    workerId.replace(/[^a-z0-9._-]+/giu, "_"),
-    `${suite}.json`
-  );
 
 export const saveWorkerBenchmarkArtifact = async (
   context: ExecutionContext,
