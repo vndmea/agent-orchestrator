@@ -46,11 +46,9 @@ const styleHumanLine = (line: string): string => {
     return humanChalk.bold(
       line.includes(": ready")
         ? humanChalk.green(`✔ ${line}`)
-        : line.includes(": degraded")
-          ? humanChalk.yellow(`⚠ ${line}`)
-          : line.includes(": blocked")
-            ? humanChalk.red(`✖ ${line}`)
-            : humanChalk.cyan(`• ${line}`)
+        : line.includes(": blocked")
+          ? humanChalk.red(`✖ ${line}`)
+          : humanChalk.cyan(`• ${line}`)
     );
   }
 

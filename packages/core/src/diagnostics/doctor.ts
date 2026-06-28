@@ -30,7 +30,7 @@ export interface DoctorCheck {
   whyItMatters?: string;
 }
 
-export type DoctorStatus = "degraded" | "misconfigured" | "ready";
+export type DoctorStatus = "blocked" | "ready";
 
 export interface DoctorCapability {
   available: boolean;
@@ -81,8 +81,6 @@ const WHY_THIS_MATTERS: Record<string, string> = {
     "Local configuration controls safety defaults, model resolution, validation mappings, and session retention.",
   "worker-api-key":
     "Without a worker credential for non-mock providers, worker-routed tasks can degrade or fail.",
-  "env-file":
-    "This is one common place to load local secrets and overrides, but it is optional if configuration comes from elsewhere.",
   "runs-dir":
     "Persisted task sessions live here. If it is unavailable, reports may be temporary and not resumable.",
   "task-sessions":
@@ -91,12 +89,6 @@ const WHY_THIS_MATTERS: Record<string, string> = {
     "Audit logs help explain what cw wrote and why, especially when explicit write gates are used.",
   "validation-scripts":
     "Deterministic validation is how cw proves a result instead of just sounding confident.",
-  "cli-entrypoint":
-    "The CLI entrypoint is required for local command-based integrations and MCP launch snippets.",
-  "mcp-config-hint":
-    "This is the quickest way to connect an MCP client to the local cw server.",
-  "retention-summary":
-    "Retention limits control how long session artifacts stay available for resume and audit.",
   "worker-profile-store":
     "Persisted worker profiles let cw reuse capability interviews instead of rediscovering routing quality every time.",
   "worker-registry":
@@ -245,22 +237,10 @@ const getCheck = (
 const statusToDoctorStatus = (
   value: DoctorCheck["status"] | undefined
 ): DoctorStatus =>
-  value === "fail"
-    ? "misconfigured"
-    : value === "warning"
-      ? "degraded"
-      : "ready";
+  value === "pass" ? "ready" : "blocked";
 
 const combineDoctorStatuses = (statuses: DoctorStatus[]): DoctorStatus => {
-  if (statuses.includes("misconfigured")) {
-    return "misconfigured";
-  }
-
-  if (statuses.includes("degraded")) {
-    return "degraded";
-  }
-
-  return "ready";
+  return statuses.includes("blocked") ? "blocked" : "ready";
 };
 
 const buildCapability = (input: {
@@ -277,17 +257,18 @@ const buildCapability = (input: {
   const status = combineDoctorStatuses(
     relatedStatuses.map((value) => statusToDoctorStatus(value))
   );
+  const hasFailure = relatedStatuses.includes("fail");
 
   return {
     name: input.name,
     status,
-    available: status !== "misconfigured",
+    available: !hasFailure,
     summary:
       status === "ready"
         ? input.readySummary
-        : status === "degraded"
-          ? input.degradedSummary
-          : input.failSummary
+        : hasFailure
+          ? input.failSummary
+          : input.degradedSummary
   };
 };
 
@@ -524,20 +505,6 @@ export const runDoctor = async (
     });
   });
 
-  const envPath = join(context.rootDir, ".env");
-  const envExists = rootDirExists ? await checkExists(envPath) : false;
-  addCheck(checks, {
-    name: "env-file",
-    status: envExists ? "pass" : "warning",
-    message: envExists
-      ? ".env file is present."
-      : ".env file is not present. This is informational only if configuration is resolved elsewhere.",
-    metadata: {
-      envPath,
-      exists: envExists
-    }
-  });
-
   const runsDir = getCwWorkspaceRunsDirFromStorageDir(context.cwStorageDir);
   const runsDirExists = await checkExists(runsDir);
   const sessionScan = await scanTaskSessions(
@@ -629,41 +596,6 @@ export const runDoctor = async (
     }
   });
 
-  const cliMainPath = join(context.rootDir, "packages", "cli", "src", "main.ts");
-  const cliMainExists = await checkExists(cliMainPath);
-  addCheck(checks, {
-    name: "cli-entrypoint",
-    status:
-      cliMainExists || !workspaceBinding.matchesCallerWorkingDirectory
-        ? "pass"
-        : "warning",
-    message: cliMainExists
-      ? "CLI entrypoint source is available."
-      : !workspaceBinding.matchesCallerWorkingDirectory
-        ? "CLI entrypoint source is not in the active workspace, which is expected when cw is launched from a separate tools checkout."
-        : "CLI entrypoint source was not found in the workspace.",
-    metadata: {
-      path: cliMainPath
-    }
-  });
-
-  addCheck(checks, {
-    name: "mcp-config-hint",
-    status: "pass",
-    message: "Use `cw mcp config` to print a generic local MCP server snippet.",
-    metadata: {
-      command: "cw",
-      args: ["mcp", "serve"]
-    }
-  });
-
-  addCheck(checks, {
-    name: "retention-summary",
-    status: "pass",
-    message: `Retention defaults resolve to ${config.config.sessions.retentionDays} day(s) and ${config.config.sessions.maxStoredSessions} stored session(s).`,
-    metadata: config.config.sessions
-  });
-
   options.additionalChecks?.forEach((check) => {
     addCheck(checks, check);
   });
@@ -738,23 +670,18 @@ export const runDoctor = async (
   const status = combineDoctorStatuses(
     capabilities.map((capability) => capability.status)
   );
-  const degradedCapabilities = capabilities.filter(
-    (capability) => capability.status === "degraded"
-  );
-  const misconfiguredCapabilities = capabilities.filter(
-    (capability) => capability.status === "misconfigured"
+  const blockedCapabilities = capabilities.filter(
+    (capability) => capability.status === "blocked"
   );
   const summary =
     status === "ready"
       ? `ready: cw is bound to ${context.rootDir} and core task workflows are available.`
-      : status === "degraded"
-        ? `degraded: cw is bound to ${context.rootDir}; ${degradedCapabilities.map((capability) => capability.name).join(", ") || "some subsystems"} need attention before the experience is smooth.`
-        : `misconfigured: cw is bound to ${context.rootDir}, but ${misconfiguredCapabilities.map((capability) => capability.name).join(", ") || "core prerequisites"} are blocking reliable use.`;
+      : `blocked: cw is bound to ${context.rootDir}, but ${blockedCapabilities.map((capability) => capability.name).join(", ") || "core prerequisites"} still need attention before the workflow is reliable.`;
 
   return {
     activeRootDir: context.rootDir,
     capabilities,
-    ok: checks.every((check) => check.status !== "fail"),
+    ok: status === "ready",
     checks,
     minimalSuccessPath: [
       `1. Confirm the active root directory is ${context.rootDir}.`,

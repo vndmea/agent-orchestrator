@@ -1,11 +1,17 @@
+import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
 import type { Command } from "commander";
 
 import {
   resolveExecutionContext,
   runDoctor,
+  type DoctorCheck,
   type DoctorReport,
   writeAuditEvent
 } from "@mcp-code-worker/core";
+import { buildMcpToolCatalogView } from "@mcp-code-worker/mcp-server";
 import {
   createLocalClientDoctorChecks,
   createWorkerConnectivityDoctorChecks,
@@ -14,6 +20,48 @@ import {
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
+
+const createHostMcpDoctorChecks = async (): Promise<DoctorCheck[]> => {
+  const codexConfigPath = join(homedir(), ".codex", "config.toml");
+  let contents: string | null = null;
+
+  try {
+    contents = await readFile(codexConfigPath, "utf8");
+  } catch {
+    contents = null;
+  }
+
+  const hasNamedServer =
+    contents?.includes("mcp-code-worker") &&
+    contents.includes("mcp") &&
+    contents.includes("serve");
+  const catalog = buildMcpToolCatalogView();
+
+  return [
+    {
+      name: "host-mcp-config",
+      status: hasNamedServer ? "pass" : "warning",
+      message: hasNamedServer
+        ? `Codex host config includes an mcp-code-worker server entry at ${codexConfigPath}.`
+        : `Codex host config is missing an mcp-code-worker MCP server entry at ${codexConfigPath}. Add it before expecting host-side MCP discovery to work.`,
+      metadata: {
+        codexConfigPath,
+        configured: Boolean(hasNamedServer)
+      }
+    },
+    {
+      name: "mcp-tool-catalog",
+      status: catalog.groups.some((group) => group.tools.length > 0)
+        ? "pass"
+        : "fail",
+      message: `cw currently exposes ${catalog.groups.reduce((count, group) => count + group.tools.length, 0)} MCP tool(s) through 'cw mcp serve'.`,
+      metadata: {
+        recommendedEntrypoints: catalog.recommendedEntrypoints.map((tool) => tool.name),
+        toolCount: catalog.groups.reduce((count, group) => count + group.tools.length, 0)
+      }
+    }
+  ];
+};
 
 const readMetadataString = (
   metadata: Record<string, unknown>,
@@ -121,6 +169,7 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
       const additionalChecks = [
         ...(await createWorkerProfileDoctorChecks(context)),
         ...(await createLocalClientDoctorChecks(context)),
+        ...(await createHostMcpDoctorChecks()),
         ...(options.probe
           ? await createWorkerConnectivityDoctorChecks(context)
           : [])

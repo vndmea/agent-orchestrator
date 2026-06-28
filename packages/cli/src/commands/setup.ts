@@ -859,12 +859,7 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
 
   steps.push({
     id: "readiness-summary",
-    status:
-      finalDoctor.status === "ready"
-        ? "completed"
-        : finalDoctor.status === "degraded"
-          ? "needs-input"
-          : "blocked",
+    status: finalDoctor.status === "ready" ? "completed" : "blocked",
     command: "cw doctor",
     summary: readinessSummary,
     details: readinessCapabilities
