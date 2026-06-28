@@ -217,8 +217,9 @@ const createReadlinePrompter = (): InitPrompter => {
   };
 
   return {
-    close: async () => {
+    close: () => {
       readline.close();
+      return Promise.resolve();
     },
     confirm: async (message: string, defaultValue: boolean) => {
       while (true) {

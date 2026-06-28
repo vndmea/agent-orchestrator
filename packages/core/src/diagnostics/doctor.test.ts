@@ -89,6 +89,7 @@ describe("doctor", () => {
       JSON.stringify(
         {
           scripts: {
+            build: "node -e \"process.exit(0)\"",
             typecheck: "node -e \"process.exit(0)\"",
             lint: "node -e \"process.exit(0)\"",
             test: "node -e \"process.exit(0)\""

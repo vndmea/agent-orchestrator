@@ -15,12 +15,42 @@ import {
 import { runSafeCommand } from "../shell/safe-command.js";
 import { resolveRepositoryScope } from "./file-selection.js";
 
+const VALIDATION_COMMAND_TIMEOUT_MS = 180_000;
+
 export interface RunRepositoryValidationOptions {
+  all?: boolean;
+  build?: boolean;
   lint?: boolean;
   scope?: string;
+  stopOnFailure?: boolean;
   test?: boolean;
   typecheck?: boolean;
 }
+
+type RequestedValidationCheck = "build" | "typecheck" | "lint" | "test";
+
+const appendNotRunChecks = (
+  checks: ValidationCheck[],
+  scripts: Record<string, string>,
+  rootConfig: Awaited<ReturnType<typeof loadCwConfig>>,
+  checkNames: RequestedValidationCheck[]
+): void => {
+  for (const checkName of checkNames) {
+    const resolution = resolveValidationScript(
+      scripts,
+      rootConfig.config.validation,
+      checkName
+    );
+
+    checks.push({
+      name: checkName,
+      command: resolution.command ?? `pnpm run ${checkName}`,
+      status: "not-run",
+      scriptName: resolution.scriptName,
+      resolutionSource: resolution.source
+    });
+  }
+};
 
 const readScripts = async (rootDir: string): Promise<Record<string, string>> => {
   try {
@@ -104,10 +134,12 @@ export const runRepositoryValidation = async (
   const rootConfig = await loadCwConfig(context.rootDir);
   const checks: ValidationCheck[] = [];
   const warnings: string[] = [];
+  const runAll = options.all ?? false;
   const requestedChecks = [
-    { enabled: options.typecheck, name: "typecheck" as const },
-    { enabled: options.lint, name: "lint" as const },
-    { enabled: options.test, name: "test" as const }
+    { enabled: runAll || options.build, name: "build" as const },
+    { enabled: runAll || options.typecheck, name: "typecheck" as const },
+    { enabled: runAll || options.lint, name: "lint" as const },
+    { enabled: runAll || options.test, name: "test" as const }
   ];
 
   for (const check of requestedChecks) {
@@ -126,12 +158,27 @@ export const runRepositoryValidation = async (
       warnings.push(
         `Validation for ${check.name} is not configured in ${scopedContext.rootDir}.`
       );
+
+      if (options.stopOnFailure) {
+        const remainingChecks = requestedChecks
+          .filter((candidate) => candidate.enabled)
+          .slice(requestedChecks.indexOf(check) + 1)
+          .map((candidate) => candidate.name);
+
+        if (remainingChecks.length > 0) {
+          appendNotRunChecks(checks, scripts, rootConfig, remainingChecks);
+          warnings.push(
+            `Validation stopped after ${check.name} was not configured. Skipped: ${remainingChecks.join(", ")}.`
+          );
+        }
+        break;
+      }
       continue;
     }
 
     const result = await runSafeCommand(resolution.command, scopedContext, {
       maxOutputBytes: 120_000,
-      timeoutMs: 120_000
+      timeoutMs: VALIDATION_COMMAND_TIMEOUT_MS
     });
 
     checks.push({
@@ -164,6 +211,21 @@ export const runRepositoryValidation = async (
       warnings.push(
         `Validation for ${check.name} auto-discovered script ${resolution.scriptName}. Consider persisting a mapping in the cw workspace config.`
       );
+    }
+
+    if (options.stopOnFailure && result.code !== 0) {
+      const remainingChecks = requestedChecks
+        .filter((candidate) => candidate.enabled)
+        .slice(requestedChecks.indexOf(check) + 1)
+        .map((candidate) => candidate.name);
+
+      if (remainingChecks.length > 0) {
+        appendNotRunChecks(checks, scripts, rootConfig, remainingChecks);
+        warnings.push(
+          `Validation stopped after ${check.name} failed. Skipped: ${remainingChecks.join(", ")}.`
+        );
+      }
+      break;
     }
   }
 

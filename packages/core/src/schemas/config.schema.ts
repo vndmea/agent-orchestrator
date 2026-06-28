@@ -33,6 +33,7 @@ export const CwSessionConfigSchema = z.object({
 });
 
 const ValidationScriptMappingSchema = z.object({
+  build: z.array(z.string().min(1)).default([]),
   typecheck: z.array(z.string().min(1)).default([]),
   lint: z.array(z.string().min(1)).default([]),
   test: z.array(z.string().min(1)).default([])
@@ -41,6 +42,7 @@ const ValidationScriptMappingSchema = z.object({
 export const CwValidationConfigSchema = z.object({
   autoDiscover: z.boolean().default(true),
   scripts: ValidationScriptMappingSchema.default({
+    build: [],
     typecheck: [],
     lint: [],
     test: []
@@ -76,6 +78,7 @@ export const CwConfigSchema = z.object({
   validation: CwValidationConfigSchema.default({
     autoDiscover: true,
     scripts: {
+      build: [],
       typecheck: [],
       lint: [],
       test: []

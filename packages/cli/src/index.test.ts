@@ -14,6 +14,7 @@ import {
   getCwWorkspaceRunsDir,
   PatchProposalSchema
 } from "@mcp-code-worker/core";
+import type { InitPrompter } from "./commands/init.js";
 
 const execFile = promisify(execFileCallback);
 
@@ -36,7 +37,7 @@ const createIo = (outputMode?: "human" | "json") => {
   };
 };
 
-const createInitPrompter = (answers: Array<boolean | string>) => {
+const createInitPrompter = (answers: Array<boolean | string>): InitPrompter => {
   let index = 0;
 
   const nextAnswer = (): boolean | string => {
@@ -51,32 +52,32 @@ const createInitPrompter = (answers: Array<boolean | string>) => {
   };
 
   return {
-    confirm: async () => {
+    confirm: () => {
       const answer = nextAnswer();
 
       if (typeof answer !== "boolean") {
         throw new Error(`Expected boolean init answer but received ${typeof answer}.`);
       }
 
-      return answer;
+      return Promise.resolve(answer);
     },
-    select: async () => {
+    select: <T extends string>() => {
       const answer = nextAnswer();
 
       if (typeof answer !== "string") {
         throw new Error(`Expected string init answer but received ${typeof answer}.`);
       }
 
-      return answer;
+      return Promise.resolve(answer as T);
     },
-    text: async () => {
+    text: () => {
       const answer = nextAnswer();
 
       if (typeof answer !== "string") {
         throw new Error(`Expected string init answer but received ${typeof answer}.`);
       }
 
-      return answer;
+      return Promise.resolve(answer);
     }
   };
 };
@@ -126,6 +127,7 @@ const writeWorkspaceFixture = async (rootDir: string): Promise<void> => {
     JSON.stringify(
       {
         scripts: {
+          build: "node -e \"process.exit(0)\"",
           typecheck: "node -e \"process.exit(0)\"",
           lint: "node -e \"process.exit(0)\"",
           test: "node -e \"process.exit(0)\""
@@ -572,9 +574,9 @@ describe("cli parsing", () => {
           true,
           true
         ]),
-        pathOpener: async (targetPath: string) => {
+        pathOpener: (targetPath: string) => {
           openedPath = targetPath;
-          return true;
+          return Promise.resolve(true);
         }
       });
 
@@ -1030,6 +1032,49 @@ describe("cli parsing", () => {
       ]);
       expect(output.at(-1)).toContain("\"rootCauseAnalysis\"");
       expect(output.at(-1)).toContain("\"repositoryContext\"");
+    });
+  });
+
+  it("supports validate --all and --stop-on-failure", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeWorkspaceFixture(rootDir);
+      await writeFile(
+        join(rootDir, "package.json"),
+        JSON.stringify(
+          {
+            scripts: {
+              build: "node -e \"process.exit(1)\"",
+              typecheck: "node -e \"process.exit(0)\"",
+              lint: "node -e \"process.exit(0)\"",
+              test: "node -e \"process.exit(0)\""
+            }
+          },
+          null,
+          2
+        ),
+        "utf8"
+      );
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "cw",
+        "validate",
+        "--all",
+        "--stop-on-failure",
+        "--execute",
+        "--summary"
+      ]);
+
+      const result = JSON.parse(output.at(-1) ?? "{}") as {
+        failedChecks?: string[];
+        skippedChecks?: string[];
+        summary?: string;
+      };
+      expect(result.failedChecks).toEqual(["build"]);
+      expect(result.skippedChecks).toEqual(["typecheck", "lint", "test"]);
+      expect(result.summary).toContain("build");
     });
   });
 

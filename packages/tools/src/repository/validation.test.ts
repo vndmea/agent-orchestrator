@@ -163,4 +163,45 @@ describe("runRepositoryValidation", () => {
     },
     15_000
   );
+
+  it("can stop after the first failed check and mark the rest as not run", async () => {
+    const rootDir = await createRootDir();
+    await writePackage(rootDir, "package.json", {
+      build: `node -e "process.exit(1)"`,
+      typecheck: `node -e "process.exit(0)"`,
+      lint: `node -e "process.exit(0)"`,
+      test: `node -e "process.exit(0)"`
+    });
+    const context = createExecutionContextFromEnv(undefined, {
+      dryRun: false,
+      allowWrite: false,
+      rootDir
+    });
+
+    const result = await runRepositoryValidation(context, {
+      all: true,
+      stopOnFailure: true
+    });
+
+    expect(result.checks).toEqual([
+      expect.objectContaining({
+        name: "build",
+        status: "failure"
+      }),
+      expect.objectContaining({
+        name: "typecheck",
+        status: "not-run"
+      }),
+      expect.objectContaining({
+        name: "lint",
+        status: "not-run"
+      }),
+      expect.objectContaining({
+        name: "test",
+        status: "not-run"
+      })
+    ]);
+    expect(result.warnings.at(-1)).toContain("Validation stopped after build failed.");
+    expect(result.ok).toBe(false);
+  });
 });

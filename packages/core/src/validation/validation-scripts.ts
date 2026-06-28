@@ -1,6 +1,6 @@
 import type { CwConfig } from "../schemas/config.schema.js";
 
-export type ValidationCheckName = "lint" | "test" | "typecheck";
+export type ValidationCheckName = "build" | "lint" | "test" | "typecheck";
 export type ValidationScriptResolutionSource =
   | "canonical"
   | "configured"
@@ -16,6 +16,13 @@ export interface ValidationScriptResolution {
 }
 
 const DEFAULT_SCRIPT_CANDIDATES: Record<ValidationCheckName, string[]> = {
+  build: [
+    "build",
+    "compile",
+    "bundle",
+    "build:prod",
+    "build:ci"
+  ],
   typecheck: [
     "typecheck",
     "type-check",
@@ -121,6 +128,7 @@ export const resolveValidationScripts = (
   availableScripts: Record<string, string>,
   config: CwConfig["validation"] | undefined
 ): Record<ValidationCheckName, ValidationScriptResolution> => ({
+  build: resolveValidationScript(availableScripts, config, "build"),
   typecheck: resolveValidationScript(availableScripts, config, "typecheck"),
   lint: resolveValidationScript(availableScripts, config, "lint"),
   test: resolveValidationScript(availableScripts, config, "test")

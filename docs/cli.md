@@ -13,7 +13,8 @@ cw setup
 cw review repo --scope packages/graph
 cw review diff --base main --head HEAD
 cw review files --file packages/graph/src/index.ts
-cw validate --typecheck --lint --test
+cw validate --all
+cw validate --all --stop-on-failure --execute
 cw fix error --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
 cw task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
 cw task report <taskId>
