@@ -18,7 +18,7 @@ const createWorkspace = async (): Promise<{
   const rootDir = await mkdtemp(join(tmpdir(), "cw-cleanup-"));
   const env = {
     ...process.env,
-    CW_HOME_DIR: join(rootDir, "cw-home")
+    CW_STORAGE_DIR: join(rootDir, "cw-home")
   };
   const runsDir = getCwWorkspaceRunsDir(rootDir, env);
   const auditDir = getCwWorkspaceAuditDir(rootDir, env);

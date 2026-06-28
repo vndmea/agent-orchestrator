@@ -84,7 +84,7 @@ export const createExecutionContextFromEnv = (
   overrides: ExecutionContextOverrides = {}
 ): ExecutionContext => {
   const rootDir = normalizeFileSystemPath(
-    overrides.rootDir ?? env.CW_ROOT_DIR ?? process.cwd()
+    overrides.rootDir ?? env.CW_WORKSPACE_DIR ?? process.cwd()
   );
   const cwStorageDir = getCwWorkspaceDir(rootDir, env);
   const dryRun = overrides.dryRun ?? parseBoolean(env.CW_DRY_RUN, true);

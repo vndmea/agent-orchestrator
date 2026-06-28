@@ -41,7 +41,7 @@ const resolveRootDir = (
 ): string => {
   const cliOverrides = options.cliOverrides ?? {};
   const configuredRootDir =
-    options.rootDir ?? cliOverrides.rootDir ?? env.CW_ROOT_DIR ?? process.cwd();
+    options.rootDir ?? cliOverrides.rootDir ?? env.CW_WORKSPACE_DIR ?? process.cwd();
 
   return normalizeFileSystemPath(configuredRootDir);
 };

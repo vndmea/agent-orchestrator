@@ -158,14 +158,14 @@ describe("doctor", () => {
     }
   });
 
-  it("records bootstrap source details when CW_ROOT_DIR and CW_HOME_DIR are set", async () => {
+  it("records bootstrap source details when CW_WORKSPACE_DIR and CW_STORAGE_DIR are set", async () => {
     const rootDir = await createWorkspace();
     const cwHomeDir = join(rootDir, ".cw-home");
-    const originalRootDir = process.env.CW_ROOT_DIR;
-    const originalHomeDir = process.env.CW_HOME_DIR;
+    const originalRootDir = process.env.CW_WORKSPACE_DIR;
+    const originalHomeDir = process.env.CW_STORAGE_DIR;
 
-    process.env.CW_ROOT_DIR = rootDir;
-    process.env.CW_HOME_DIR = cwHomeDir;
+    process.env.CW_WORKSPACE_DIR = rootDir;
+    process.env.CW_STORAGE_DIR = cwHomeDir;
 
     try {
       const report = await runDoctor(
@@ -178,25 +178,25 @@ describe("doctor", () => {
       const runtimeBootstrapMetadata = findCheck(report, "runtime-bootstrap")?.metadata;
       const runtimeEnv = runtimeBootstrapMetadata?.["env"];
 
-      expect(rootMetadata?.["cwRootDir"]).toBe(rootDir);
-      expect(rootMetadata?.["rootSource"]).toBe("cw-root-dir");
+      expect(rootMetadata?.["cwWorkspaceDir"]).toBe(rootDir);
+      expect(rootMetadata?.["rootSource"]).toBe("cw-workspace-dir");
       expect(runtimeBootstrapMetadata?.["cwHomeDir"]).toBe(cwHomeDir);
       expect(runtimeEnv).toMatchObject({
-        CW_HOME_DIR: cwHomeDir,
-        CW_ROOT_DIR: rootDir
+        CW_STORAGE_DIR: cwHomeDir,
+        CW_WORKSPACE_DIR: rootDir
       });
       expect(typeof runtimeBootstrapMetadata?.["workspaceId"]).toBe("string");
     } finally {
       if (originalRootDir === undefined) {
-        delete process.env.CW_ROOT_DIR;
+        delete process.env.CW_WORKSPACE_DIR;
       } else {
-        process.env.CW_ROOT_DIR = originalRootDir;
+        process.env.CW_WORKSPACE_DIR = originalRootDir;
       }
 
       if (originalHomeDir === undefined) {
-        delete process.env.CW_HOME_DIR;
+        delete process.env.CW_STORAGE_DIR;
       } else {
-        process.env.CW_HOME_DIR = originalHomeDir;
+        process.env.CW_STORAGE_DIR = originalHomeDir;
       }
     }
   });

@@ -359,7 +359,7 @@ describe("cli parsing", () => {
 
     await cli.parseAsync(["node", "cw", "mcp", "config", "--host", "codex"]);
 
-    expect(output.join("\n")).toContain("\"CW_ROOT_DIR\": \"${workspaceFolder}\"");
+    expect(output.join("\n")).toContain("\"CW_WORKSPACE_DIR\": \"${workspaceFolder}\"");
   });
 
   it("lets an explicit root dir override the host preset snippet", async () => {
@@ -385,7 +385,7 @@ describe("cli parsing", () => {
       };
     }>(output);
 
-    expect(config.mcpServers?.["mcp-code-worker"]?.env?.CW_ROOT_DIR).toBe(
+    expect(config.mcpServers?.["mcp-code-worker"]?.env?.CW_WORKSPACE_DIR).toBe(
       normalizeFileSystemPath("C:\\workspace\\repo")
     );
     expect(output.join("\n")).not.toContain("${workspaceFolder}");
@@ -415,8 +415,8 @@ describe("cli parsing", () => {
     }>(output);
 
     expect(config.mcpServers?.["mcp-code-worker"]?.env).toEqual({
-      CW_ROOT_DIR: normalizeFileSystemPath("C:\\workspace\\repo"),
-      CW_HOME_DIR: normalizeFileSystemPath("C:\\Users\\me\\.cw")
+      CW_WORKSPACE_DIR: normalizeFileSystemPath("C:\\workspace\\repo"),
+      CW_STORAGE_DIR: normalizeFileSystemPath("C:\\Users\\me\\.cw")
     });
   });
 

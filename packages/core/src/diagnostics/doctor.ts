@@ -201,9 +201,9 @@ const resolveCommandOnPath = async (
 const summarizeRootSource = (
   env: NodeJS.ProcessEnv,
   workspaceBinding: WorkspaceBindingSummary
-): "cwd" | "cw-root-dir" | "workspace-switch" =>
-  hasEnvValue(env.CW_ROOT_DIR)
-    ? "cw-root-dir"
+): "cwd" | "cw-workspace-dir" | "workspace-switch" =>
+  hasEnvValue(env.CW_WORKSPACE_DIR)
+    ? "cw-workspace-dir"
     : workspaceBinding.matchesCallerWorkingDirectory
       ? "cwd"
       : "workspace-switch";
@@ -327,16 +327,16 @@ export const runDoctor = async (
     name: "root-dir",
     status: rootDirExists ? "pass" : "fail",
     message: rootDirExists
-      ? workspaceBinding.matchesCallerWorkingDirectory
-        ? rootSource === "cw-root-dir"
-          ? `Resolved rootDir exists and is pinned by CW_ROOT_DIR: ${context.rootDir}`
+        ? workspaceBinding.matchesCallerWorkingDirectory
+        ? rootSource === "cw-workspace-dir"
+          ? `Resolved rootDir exists and is pinned by CW_WORKSPACE_DIR: ${context.rootDir}`
           : `Resolved rootDir exists and matches the caller workspace: ${context.rootDir}`
         : `Resolved rootDir exists but is bound away from the caller workspace: ${context.rootDir}`
       : `Resolved rootDir does not exist: ${context.rootDir}`,
     metadata: {
       rootDir: context.rootDir,
       rootSource,
-      cwRootDir: env.CW_ROOT_DIR,
+      cwWorkspaceDir: env.CW_WORKSPACE_DIR,
       callerWorkingDirectory: workspaceBinding.callerWorkingDirectory,
       matchesCallerWorkingDirectory: workspaceBinding.matchesCallerWorkingDirectory,
       switchedFrom: workspaceBinding.switchedFrom
@@ -427,15 +427,15 @@ export const runDoctor = async (
     name: "runtime-bootstrap",
     status: rootDirExists ? "pass" : "warning",
     message:
-      `Resolved config=${config.path}; storage=${context.cwStorageDir}; cwHome=${cwHomeDir}; workspaceId=${workspaceId}; rootSource=${rootSource}; CW_HOME_DIR=${hasEnvValue(env.CW_HOME_DIR) ? "set" : "default"}.`,
+      `Resolved config=${config.path}; storage=${context.cwStorageDir}; cwHome=${cwHomeDir}; workspaceId=${workspaceId}; rootSource=${rootSource}; CW_STORAGE_DIR=${hasEnvValue(env.CW_STORAGE_DIR) ? "set" : "default"}.`,
     metadata: {
       callerWorkingDirectory: workspaceBinding.callerWorkingDirectory,
       configPath: config.path,
       cwHomeDir,
       cwStorageDir: context.cwStorageDir,
       env: {
-        CW_HOME_DIR: env.CW_HOME_DIR,
-        CW_ROOT_DIR: env.CW_ROOT_DIR,
+        CW_STORAGE_DIR: env.CW_STORAGE_DIR,
+        CW_WORKSPACE_DIR: env.CW_WORKSPACE_DIR,
         CW_WORKER_CLIENT_COMMAND: env.CW_WORKER_CLIENT_COMMAND,
         WORKER_MODEL_API_KEY: hasEnvValue(env.WORKER_MODEL_API_KEY)
           ? "[set]"

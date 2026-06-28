@@ -142,26 +142,26 @@ describe("cw config", () => {
     expect(context.allowedCommands).toEqual(["git", "node"]);
   });
 
-  it("uses CW_ROOT_DIR when rootDir is not passed explicitly", async () => {
+  it("uses CW_WORKSPACE_DIR when rootDir is not passed explicitly", async () => {
     const rootDir = await createWorkspace();
 
     const context = await resolveExecutionContext({
       env: {
-        CW_ROOT_DIR: rootDir
+        CW_WORKSPACE_DIR: rootDir
       }
     });
 
     expect(context.rootDir).toBe(rootDir);
   });
 
-  it("prefers explicit rootDir over CW_ROOT_DIR", async () => {
+  it("prefers explicit rootDir over CW_WORKSPACE_DIR", async () => {
     const rootDir = await createWorkspace();
     const envRootDir = await createWorkspace();
 
     const context = await resolveExecutionContext({
       rootDir,
       env: {
-        CW_ROOT_DIR: envRootDir
+        CW_WORKSPACE_DIR: envRootDir
       }
     });
 

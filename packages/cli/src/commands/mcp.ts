@@ -52,17 +52,17 @@ export const buildMcpConfigSnippet = (options: {
   }
 
   if (options.rootDir) {
-    env.CW_ROOT_DIR = normalizeFileSystemPath(options.rootDir);
+    env.CW_WORKSPACE_DIR = normalizeFileSystemPath(options.rootDir);
   } else {
     const hostRootDir = getHostPresetRootDir(requestedHost);
 
     if (hostRootDir) {
-      env.CW_ROOT_DIR = hostRootDir;
+      env.CW_WORKSPACE_DIR = hostRootDir;
     }
   }
 
   if (options.cwHomeDir) {
-    env.CW_HOME_DIR = normalizeFileSystemPath(options.cwHomeDir);
+    env.CW_STORAGE_DIR = normalizeFileSystemPath(options.cwHomeDir);
   }
 
   return {
@@ -117,11 +117,11 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
     )
     .option(
       "--root-dir <path>",
-      "Embed CW_ROOT_DIR in the snippet when the host does not launch cw from the target workspace root."
+      "Embed CW_WORKSPACE_DIR in the snippet when the host does not launch cw from the target workspace root."
     )
     .option(
       "--home-dir <path>",
-      "Embed CW_HOME_DIR in the snippet when CW-managed state should use a custom home root."
+      "Embed CW_STORAGE_DIR in the snippet when CW-managed state should use a custom storage root."
     )
     .action((options: {
       args?: string[];

@@ -20,7 +20,7 @@ export const getCwHomeDir = (
   env: NodeJS.ProcessEnv = process.env
 ): string =>
   normalizeFileSystemPath(
-    env.CW_HOME_DIR ?? process.env.CW_HOME_DIR ?? join(homedir(), ".cw")
+    env.CW_STORAGE_DIR ?? process.env.CW_STORAGE_DIR ?? join(homedir(), ".cw")
   );
 
 export const getCwWorkspaceId = (rootDir: string): string => {

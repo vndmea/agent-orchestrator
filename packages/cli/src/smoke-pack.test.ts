@@ -102,7 +102,7 @@ describe("cli packed tarball smoke", () => {
       const cwPath = installedCwPath(installPrefix);
       const commandEnv = {
         ...process.env,
-        CW_HOME_DIR: cwHomeDir
+        CW_STORAGE_DIR: cwHomeDir
       };
 
       const help = await runCommand(cwPath, ["--help"], workspaceRoot, commandEnv);
@@ -141,7 +141,7 @@ describe("cli packed tarball smoke", () => {
           }
         >;
       };
-      expect(parsedConfig.mcpServers?.["mcp-code-worker"]?.env?.CW_HOME_DIR).toBe(
+      expect(parsedConfig.mcpServers?.["mcp-code-worker"]?.env?.CW_STORAGE_DIR).toBe(
         cwHomeDir
       );
 
