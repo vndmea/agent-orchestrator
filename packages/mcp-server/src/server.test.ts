@@ -184,7 +184,7 @@ const initGitRepo = async (rootDir: string): Promise<void> => {
 };
 
 const createProfile = () => ({
-  workerId: "mock:gpt-5.4-mini",
+  workerId: "default-worker",
   provider: "mock",
   model: "gpt-5.4-mini",
   status: "qualified",
@@ -444,12 +444,13 @@ describe("mcp tool registration", () => {
   it("runs a fresh worker interview and can persist the generated profile through MCP", async () => {
     await withTempCwd(async () => {
       const result = await cwRunWorkerInterviewTool.execute({
+        workerId: "interview-worker",
         provider: "mock",
         model: "interview-worker",
         persistProfile: true
       });
 
-      expect(result.profile.workerId).toBe("mock:interview-worker");
+      expect(result.profile.workerId).toBe("interview-worker");
       expect(result.status).toBe("qualified");
       expect(result.persistence?.mode).toBe("execute");
       if (result.persistence?.mode !== "execute") {

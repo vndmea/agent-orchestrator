@@ -888,6 +888,8 @@ describe("cli parsing", () => {
         "cw",
         "worker",
         "register",
+        "--worker",
+        "mock:registered-worker",
         "--provider",
         "mock",
         "--model",
@@ -900,6 +902,8 @@ describe("cli parsing", () => {
         "cw",
         "worker",
         "register",
+        "--worker",
+        "mock:registered-worker",
         "--provider",
         "mock",
         "--model",
@@ -965,6 +969,8 @@ describe("cli parsing", () => {
         "cw",
         "worker",
         "interview",
+        "--worker",
+        "mock:manual-worker",
         "--provider",
         "mock",
         "--model",
@@ -982,7 +988,7 @@ describe("cli parsing", () => {
           "--worker",
           "mock:unknown"
         ])
-      ).rejects.toThrow("not registered");
+      ).rejects.toThrow("was not found in the worker registry");
     });
   });
 
