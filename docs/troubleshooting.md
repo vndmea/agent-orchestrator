@@ -8,6 +8,7 @@ Start every investigation with:
 
 ```bash
 cw doctor
+cw doctor --check-worker
 cw mcp list-tools
 ```
 
@@ -82,7 +83,8 @@ Do not treat a provider-failure-style blocked interview as a completed onboardin
 - If you use the local client provider, remember that `opencode` is the default compatible command
 - Prefer persisting `workerClientCommand` in `config.json` or via `cw setup --worker-client-command <command> --allow-write`
 - Use `CW_WORKER_CLIENT_COMMAND` only as a temporary runtime override
-- Re-run `cw doctor` after changing the command path
+- Re-run `cw doctor`
+- Use `cw doctor --check-worker` when you also want a live connectivity probe
 
 ## MCP Server Starts But Client Cannot Use It
 

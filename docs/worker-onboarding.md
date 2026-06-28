@@ -46,6 +46,7 @@ cw worker register \
   --base-url <base-url-if-needed> \
   --allow-write
 
+cw doctor --check-worker
 cw worker interview --worker <workerId> --save
 cw worker profile <workerId>
 ```
@@ -96,6 +97,7 @@ By default, onboarding-related state is stored under:
 
 Typical files include:
 
+- `config.json`
 - `workers.json`
 - `worker-profiles.json`
 - `worker-benchmarks/<sanitized-worker-id>/coding-v1.json`
@@ -148,5 +150,7 @@ Stop and fix the environment before retrying when:
 - API key wiring is missing from the actual runtime
 - the base URL or model name is wrong
 - a local client provider points to the wrong executable
+
+Use `cw doctor --check-worker` before a retry when you want a live connectivity probe for the currently resolved default worker.
 
 Do not treat a provider-failure-style blocked profile as a completed qualification result.

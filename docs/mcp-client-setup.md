@@ -30,6 +30,7 @@ Before connecting any client, verify the runtime locally:
 
 ```bash
 cw doctor
+cw doctor --check-worker
 cw mcp list-tools
 cw mcp config
 ```
@@ -69,6 +70,15 @@ The MCP client snippet stays unchanged:
   }
 }
 ```
+
+## Project Scope vs Global Scope
+
+- Put MCP configuration into a workspace-scoped host config when the integration should only apply to one repository.
+- Put the same snippet into the host's global MCP config when every repository should see `mcp-code-worker`.
+- Put repository-specific instruction defaults in `./AGENTS.md`.
+- Put cross-repository Codex defaults in `~/.codex/AGENTS.md`.
+
+`cw init` prints the resolved CW storage paths so you can find and manually edit `~/.cw/workspaces/<workspace-id>/config.json` later if needed.
 
 ## Client-specific Guides
 

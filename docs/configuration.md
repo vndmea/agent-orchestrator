@@ -48,6 +48,11 @@ This means a CLI override wins over environment configuration, and environment c
 
 See [docs/examples/cw-config.example.json](https://github.com/vndmea/mcp-code-worker/blob/master/docs/examples/cw-config.example.json) for an example shape.
 
+By default, the resolved config file lives at:
+
+- macOS / Linux: `~/.cw/workspaces/<workspace-id>/config.json`
+- Windows: `%USERPROFILE%/.cw/workspaces/<workspace-id>/config.json`
+
 The persisted config is intended for non-secret defaults such as:
 
 - worker model provider, model, and base URL
@@ -57,6 +62,8 @@ The persisted config is intended for non-secret defaults such as:
 - session retention settings
 
 Do not put secrets into persisted config. API credentials should remain in environment variables.
+
+Path-like inputs such as `CW_ROOT_DIR`, `CW_HOME_DIR`, and `workerClientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
 
 ## Repository Context Defaults
 
@@ -90,6 +97,7 @@ After changing configuration, run:
 
 ```bash
 cw doctor
+cw doctor --check-worker
 cw mcp list-tools
 ```
 

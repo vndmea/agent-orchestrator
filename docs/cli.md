@@ -8,6 +8,7 @@ For write gates and local artifact boundaries, see `docs/permissions.md`.
 ## Core Commands
 
 ```bash
+cw init
 cw setup
 cw review repo --scope packages/graph
 cw review diff --base main --head HEAD
@@ -29,6 +30,7 @@ cw audit list
 cw cleanup runs
 cw cleanup audit
 cw doctor
+cw doctor --check-worker
 cw mcp config
 cw mcp serve
 cw mcp list-tools
@@ -43,6 +45,10 @@ Writes remain in dry-run mode unless a command explicitly enables repository wri
 For MCP clients, `cw mcp serve` does not take `--root`. Launch it from the intended repository root by default, or set `CW_ROOT_DIR` when the client starts `cw` from some other directory.
 
 For local client providers, `opencode` is the default command. Persist a different compatible CLI name or path with `cw setup --worker-client-command <command> --allow-write` when needed.
+
+`cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.cw/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
+
+For instruction scoping, put repository-specific guidance in `./AGENTS.md` and global Codex defaults in `~/.codex/AGENTS.md`.
 
 ## Review Commands
 
