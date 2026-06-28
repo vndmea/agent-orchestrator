@@ -81,7 +81,7 @@ describe("cw config", () => {
     expect(result.config.safety.dryRun).toBe(true);
   });
 
-  it("applies precedence cli overrides > env > config > defaults", async () => {
+  it("applies precedence cli overrides > config > env > defaults for persisted runtime settings", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
       version: 1,
@@ -89,6 +89,7 @@ describe("cw config", () => {
         provider: "litellm",
         model: "config-worker"
       },
+      workerClientCommand: "config-client",
       safety: {
         dryRun: false,
         allowWrite: false,
@@ -114,9 +115,31 @@ describe("cw config", () => {
 
     expect(context.workerModel.provider).toBe("cli-provider");
     expect(context.workerModel.model).toBe("cli-worker");
-    expect(context.dryRun).toBe(true);
+    expect(context.workerModel.clientCommand).toBe("config-client");
+    expect(context.dryRun).toBe(false);
     expect(context.allowWrite).toBe(true);
     expect(context.allowedCommands).toEqual(["git"]);
+  });
+
+  it("uses env fallbacks when persisted config does not exist", async () => {
+    const rootDir = await createWorkspace();
+
+    const context = await resolveExecutionContext({
+      rootDir,
+      env: {
+        WORKER_MODEL_PROVIDER: "openai-compatible",
+        WORKER_MODEL_NAME: "env-worker",
+        CW_DRY_RUN: "false",
+        CW_ALLOW_WRITE: "true",
+        CW_ALLOWED_COMMANDS: "git,node"
+      }
+    });
+
+    expect(context.workerModel.provider).toBe("openai-compatible");
+    expect(context.workerModel.model).toBe("env-worker");
+    expect(context.dryRun).toBe(false);
+    expect(context.allowWrite).toBe(true);
+    expect(context.allowedCommands).toEqual(["git", "node"]);
   });
 
   it("uses CW_ROOT_DIR when rootDir is not passed explicitly", async () => {

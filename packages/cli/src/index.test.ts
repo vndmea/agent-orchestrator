@@ -352,7 +352,7 @@ describe("cli parsing", () => {
     expect(output.join("\n")).toContain("\"serve\"");
   });
 
-  it("prints an mcp config snippet with custom env overrides", async () => {
+  it("prints an mcp config snippet with explicit launch path env", async () => {
     const { io, output } = createIo();
     const cli = buildCli(io);
 
@@ -361,11 +361,14 @@ describe("cli parsing", () => {
       "cw",
       "mcp",
       "config",
-      "--env",
-      "CW_HOME_DIR=C:\\Users\\me\\.cw"
+      "--root-dir",
+      "C:\\workspace\\repo",
+      "--home-dir",
+      "C:\\Users\\me\\.cw"
     ]);
 
     expect(output.join("\n")).toContain("\"env\"");
+    expect(output.join("\n")).toContain("\"CW_ROOT_DIR\": \"C:\\\\workspace\\\\repo\"");
     expect(output.join("\n")).toContain("\"CW_HOME_DIR\": \"C:\\\\Users\\\\me\\\\.cw\"");
   });
 

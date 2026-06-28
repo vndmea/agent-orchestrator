@@ -48,5 +48,8 @@ jobs:
       - name: Smoke
         run: pnpm smoke
 
+      - name: Smoke Pack
+        run: pnpm smoke:pack
+
       - name: Smoke Dist
         run: pnpm smoke:dist

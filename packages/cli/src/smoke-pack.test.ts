@@ -1,5 +1,5 @@
 import { execFile as execFileCallback } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -10,6 +10,7 @@ const execFile = promisify(execFileCallback);
 const repoRoot = process.cwd();
 const cliPackageDir = join(repoRoot, "packages", "cli");
 const publishDir = join(cliPackageDir, ".publish");
+const cwStorageRoot = (prefixDir: string): string => join(prefixDir, ".cw-home");
 const installedCwPath = (prefixDir: string): string =>
   join(prefixDir, "node_modules", ".bin", process.platform === "win32" ? "cw.cmd" : "cw");
 
@@ -52,11 +53,12 @@ const parsePackEntries = (stdout: string): Array<{ filename: string }> => {
 const runCommand = async (
   command: string,
   args: string[],
-  cwd: string
+  cwd: string,
+  env?: NodeJS.ProcessEnv
 ): Promise<{ stdout: string; stderr: string }> =>
   process.platform === "win32"
-    ? execFile("cmd.exe", ["/d", "/s", "/c", command, ...args], { cwd })
-    : execFile(command, args, { cwd });
+    ? execFile("cmd.exe", ["/d", "/s", "/c", command, ...args], { cwd, env })
+    : execFile(command, args, { cwd, env });
 
 describe("cli packed tarball smoke", () => {
   afterEach(async () => {
@@ -73,8 +75,9 @@ describe("cli packed tarball smoke", () => {
   it("installs from npm pack output and runs the cw bin shim", async () => {
     const installPrefix = await trackTempDir("cw-pack-prefix-");
     const workspaceRoot = await trackTempDir("cw-pack-workspace-");
+    const cwHomeDir = cwStorageRoot(installPrefix);
 
-    await runCommand("pnpm", ["run", "prepare:publish"], cliPackageDir);
+    await runCommand("pnpm", ["run", "prepack"], cliPackageDir);
 
     const pack = await runCommand("npm", ["pack", "--json"], publishDir);
     const packEntries = parsePackEntries(pack.stdout);
@@ -93,15 +96,74 @@ describe("cli packed tarball smoke", () => {
       );
 
       const cwPath = installedCwPath(installPrefix);
+      const commandEnv = {
+        ...process.env,
+        CW_HOME_DIR: cwHomeDir
+      };
 
-      const help = await runCommand(cwPath, ["--help"], workspaceRoot);
+      const help = await runCommand(cwPath, ["--help"], workspaceRoot, commandEnv);
       expect(help.stdout).toContain("MCP Code Worker CLI");
 
-      const doctor = await runCommand(cwPath, ["doctor"], workspaceRoot);
+      const doctor = await runCommand(cwPath, ["doctor"], workspaceRoot, commandEnv);
       expect(JSON.parse(doctor.stdout) as { checks: unknown[] }).toHaveProperty("checks");
 
-      const tools = await runCommand(cwPath, ["mcp", "list-tools"], workspaceRoot);
+      const probe = await runCommand(
+        cwPath,
+        ["doctor", "--probe"],
+        workspaceRoot,
+        commandEnv
+      );
+      expect(probe.stdout).toContain("\"worker-connectivity\"");
+
+      const setup = await runCommand(
+        cwPath,
+        ["setup", "--allow-write"],
+        workspaceRoot,
+        commandEnv
+      );
+      expect(setup.stdout).toContain("\"mode\": \"execute\"");
+
+      const config = await runCommand(
+        cwPath,
+        ["mcp", "config", "--home-dir", cwHomeDir],
+        workspaceRoot,
+        commandEnv
+      );
+      const parsedConfig = JSON.parse(config.stdout) as {
+        mcpServers?: Record<
+          string,
+          {
+            env?: Record<string, string>;
+          }
+        >;
+      };
+      expect(parsedConfig.mcpServers?.["mcp-code-worker"]?.env?.CW_HOME_DIR).toBe(
+        cwHomeDir
+      );
+
+      const tools = await runCommand(
+        cwPath,
+        ["mcp", "list-tools"],
+        workspaceRoot,
+        commandEnv
+      );
       expect(listToolNames(tools.stdout)).toContain("cw_start_task");
+
+      const workspaceDirs = await readdir(join(cwHomeDir, "workspaces"), {
+        withFileTypes: true
+      });
+      const workspaceDir = workspaceDirs.find((entry) => entry.isDirectory());
+      expect(workspaceDir?.name).toBeTruthy();
+
+      const storedConfig = JSON.parse(
+        await readFile(
+          join(cwHomeDir, "workspaces", workspaceDir!.name, "config.json"),
+          "utf8"
+        )
+      ) as {
+        version?: number;
+      };
+      expect(storedConfig.version).toBe(1);
     } finally {
       await rm(tarballPath, { force: true });
     }

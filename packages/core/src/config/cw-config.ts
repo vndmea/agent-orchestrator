@@ -35,9 +35,6 @@ const buildDefaultConfig = (): CwConfig =>
     version: 1
   });
 
-const hasEnvValue = (env: NodeJS.ProcessEnv, key: string): boolean =>
-  typeof env[key] === "string" && env[key].length > 0;
-
 const resolveRootDir = (
   env: NodeJS.ProcessEnv,
   options: ResolveExecutionContextOptions
@@ -53,26 +50,25 @@ const mergeModelConfig = (
   base: ExecutionContext["workerModel"],
   configModel: CwModelConfig | undefined,
   configWorkerClientCommand: string | undefined,
-  env: NodeJS.ProcessEnv,
-  envPrefix: "WORKER",
   cliOverride?: ExecutionContextOverrides["workerModel"]
 ) => {
   const provider =
     cliOverride?.provider ??
-    (hasEnvValue(env, `${envPrefix}_MODEL_PROVIDER`) ? base.provider : configModel?.provider ?? base.provider);
+    configModel?.provider ??
+    base.provider;
   const model =
     cliOverride?.model ??
-    (hasEnvValue(env, `${envPrefix}_MODEL_NAME`) ? base.model : configModel?.model ?? base.model);
+    configModel?.model ??
+    base.model;
   const baseURL =
     cliOverride?.baseURL ??
-    (hasEnvValue(env, `${envPrefix}_MODEL_BASE_URL`) ? base.baseURL : configModel?.baseURL ?? base.baseURL);
+    configModel?.baseURL ??
+    base.baseURL;
   const clientCommand =
     cliOverride?.clientCommand ??
-    (hasEnvValue(env, "CW_WORKER_CLIENT_COMMAND")
-      ? base.clientCommand
-      : configWorkerClientCommand
-        ? normalizeCommandInput(configWorkerClientCommand)
-        : base.clientCommand);
+    (configWorkerClientCommand
+      ? normalizeCommandInput(configWorkerClientCommand)
+      : base.clientCommand);
   const apiKey = cliOverride?.apiKey ?? base.apiKey;
   const temperature = cliOverride?.temperature ?? configModel?.temperature ?? base.temperature;
   const maxTokens = cliOverride?.maxTokens ?? configModel?.maxTokens ?? base.maxTokens;
@@ -140,33 +136,33 @@ export async function resolveExecutionContext(
     rootDir
   });
   const config = configResult.config;
+  const usePersistedConfig = configResult.exists && !configResult.error;
 
   const dryRun =
     cliOverrides.dryRun ??
-    (hasEnvValue(env, "CW_DRY_RUN") ? baseContext.dryRun : config.safety.dryRun);
+    (usePersistedConfig ? config.safety.dryRun : baseContext.dryRun);
   const allowWrite =
     cliOverrides.allowWrite ??
-    (hasEnvValue(env, "CW_ALLOW_WRITE")
-      ? baseContext.allowWrite
-      : config.safety.allowWrite);
+    (usePersistedConfig ? config.safety.allowWrite : baseContext.allowWrite);
   const allowedCommands =
     cliOverrides.allowedCommands ??
-    (hasEnvValue(env, "CW_ALLOWED_COMMANDS")
-      ? baseContext.allowedCommands
-      : config.safety.allowedCommands);
+    (usePersistedConfig
+      ? config.safety.allowedCommands
+      : baseContext.allowedCommands);
   const contextBudget = {
     ...baseContext.contextBudget,
-    ...(cliOverrides.contextBudget ?? config.context),
+    ...(usePersistedConfig ? config.context : {}),
+    ...(cliOverrides.contextBudget ?? {}),
     ignoredPaths:
       cliOverrides.contextBudget?.ignoredPaths ??
-      config.context.ignoredPaths
+      (usePersistedConfig
+        ? config.context.ignoredPaths
+        : baseContext.contextBudget.ignoredPaths)
   };
   const workerModel = mergeModelConfig(
     baseContext.workerModel,
     config.workerModel,
     config.workerClientCommand,
-    env,
-    "WORKER",
     cliOverrides.workerModel
   );
 

@@ -4,53 +4,27 @@ import {
   buildMcpToolCatalogView,
   serveCwMcpServer
 } from "@mcp-code-worker/mcp-server";
+import { normalizeFileSystemPath } from "@mcp-code-worker/core";
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
 
-const collect = (value: string, previous: string[]): string[] => [
-  ...previous,
-  value
-];
-
-const parseEnvAssignments = (
-  assignments: string[]
-): Record<string, string> => {
-  const env: Record<string, string> = {};
-
-  for (const assignment of assignments) {
-    const separatorIndex = assignment.indexOf("=");
-
-    if (separatorIndex <= 0) {
-      throw new Error(
-        `Invalid --env assignment '${assignment}'. Expected KEY=VALUE.`
-      );
-    }
-
-    const key = assignment.slice(0, separatorIndex).trim();
-    const value = assignment.slice(separatorIndex + 1);
-
-    if (!/^[A-Z_][A-Z0-9_]*$/u.test(key)) {
-      throw new Error(
-        `Invalid environment variable name '${key}' in --env assignment.`
-      );
-    }
-
-    env[key] = value;
-  }
-
-  return env;
-};
-
 export const buildMcpConfigSnippet = (options: {
   args?: string[];
   command?: string;
-  env?: Record<string, string>;
+  cwHomeDir?: string;
+  rootDir?: string;
 } = {}) => {
   const args = [...(options.args ?? ["mcp", "serve"])];
-  const env = {
-    ...(options.env ?? {})
-  };
+  const env: Record<string, string> = {};
+
+  if (options.rootDir) {
+    env.CW_ROOT_DIR = normalizeFileSystemPath(options.rootDir);
+  }
+
+  if (options.cwHomeDir) {
+    env.CW_HOME_DIR = normalizeFileSystemPath(options.cwHomeDir);
+  }
 
   return {
     mcpServers: {
@@ -94,26 +68,30 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
 
   mcp
     .command("config")
-    .description("Print a minimal local MCP stdio server config snippet. Worker selection stays in cw config and registry state.")
+    .description("Print a minimal local MCP stdio server config snippet. Worker, validation, and safety settings should live in cw config.json.")
     .option("--command <command>", "Command to launch the server", "cw")
     .option("--args <args...>", "Arguments passed to the command")
     .option(
-      "--env <assignment>",
-      "Add an environment variable assignment such as CW_HOME_DIR=C:\\\\Users\\\\me\\\\.cw",
-      collect,
-      []
+      "--root-dir <path>",
+      "Embed CW_ROOT_DIR in the snippet when the host does not launch cw from the target workspace root."
+    )
+    .option(
+      "--home-dir <path>",
+      "Embed CW_HOME_DIR in the snippet when CW-managed state should use a custom home root."
     )
     .action((options: {
       args?: string[];
       command: string;
-      env: string[];
+      homeDir?: string;
+      rootDir?: string;
     }) => {
       io.write(
         JSON.stringify(
           buildMcpConfigSnippet({
             args: options.args,
             command: options.command,
-            env: parseEnvAssignments(options.env)
+            ...(options.homeDir ? { cwHomeDir: options.homeDir } : {}),
+            ...(options.rootDir ? { rootDir: options.rootDir } : {})
           }),
           null,
           2
