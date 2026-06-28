@@ -144,7 +144,7 @@ describe("patch proposal workflow", () => {
     expect(result.inspection.files.length).toBeGreaterThan(0);
   });
 
-  it("marks fallback proposals as blocked when model output is invalid", async () => {
+  it("marks fallback proposals as denied when model output is invalid", async () => {
     const rootDir = await createWorkspace();
     const invokeStructuredSpy = vi
       .spyOn(models, "invokeStructured")
@@ -176,7 +176,7 @@ describe("patch proposal workflow", () => {
       dryRun: true
     });
 
-    expect(applyResult.mode).toBe("blocked");
+    expect(applyResult.mode).toBe("denied");
     expect(applyResult.errors).toContain(
       "Patch proposal is a fallback placeholder and must not be applied."
     );
