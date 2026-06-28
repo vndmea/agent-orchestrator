@@ -273,7 +273,7 @@ const createReadlinePrompter = (): InitPrompter => {
 const resolveApiProviderDefault = (
   provider: string
 ): string =>
-  ["mock", "client", "local-client"].includes(provider)
+  ["mock", "client"].includes(provider)
     ? "openai-compatible"
     : provider;
 
@@ -463,7 +463,7 @@ const collectInitSetupOptions = async (
       workerMode === "api" &&
       (options.advanced ||
         Boolean(workerContext.workerModel.baseURL) ||
-        !["mock", "client", "local-client"].includes(workerProvider))
+        !["mock", "client"].includes(workerProvider))
     ) {
       const promptedBaseUrl = await prompter.text(
         "Worker base URL? Leave blank to skip.",
@@ -477,7 +477,7 @@ const collectInitSetupOptions = async (
 
     if (
       workerMode === "api" &&
-      !["mock", "client", "local-client"].includes(workerProvider)
+      !["mock", "client"].includes(workerProvider)
     ) {
       const promptedApiKey = await prompter.text(
         "Worker API key? Leave blank to skip.",

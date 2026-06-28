@@ -29,13 +29,10 @@ export class ModelRouter {
 
     this.providers = new Map<string, ModelProvider>([
       ["mock", new MockModelProvider()],
-      ["openai", new AiSdkProvider()],
       ["openai-compatible", new AiSdkProvider()],
-      ["anthropic", anthropicProvider],
       ["claude-compatible", anthropicProvider],
       ["client", new LocalClientProvider()],
-      ["litellm", new LiteLlmProvider()],
-      ["local-client", new LocalClientProvider()]
+      ["litellm", new LiteLlmProvider()]
     ]);
   }
 
@@ -55,10 +52,17 @@ export class ModelRouter {
 
   public route(role: AgentRole): RoutedModel {
     const config = this.workerModel;
-    const provider =
-      this.providers.get(config.provider) ??
-      this.providers.get("mock") ??
-      new MockModelProvider();
+    const provider = this.providers.get(config.provider);
+
+    if (!provider) {
+      throw new AgentError(
+        "MODEL_PROVIDER_UNSUPPORTED",
+        `Unsupported worker provider '${config.provider}'. Expected one of: ${Array.from(this.providers.keys()).join(", ")}.`,
+        {
+          provider: config.provider
+        }
+      );
+    }
 
     return {
       config,

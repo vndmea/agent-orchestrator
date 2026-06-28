@@ -328,7 +328,6 @@ describe("mcp tool registration", () => {
     expect(names).toContain("cw_list_audit_events");
     expect(names).toContain("cw_register_worker");
     expect(names).toContain("cw_run_worker_interview");
-    expect(names).toContain("cw_interview_worker");
     expect(names).toContain("cw_benchmark_worker");
     expect(names).toContain("cw_run_host_worker");
     expect(names).toContain("cw_propose_patch");

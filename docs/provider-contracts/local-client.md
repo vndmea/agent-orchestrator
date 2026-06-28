@@ -6,7 +6,7 @@ Use this document when `cw` should proxy worker calls through a compatible local
 
 Use this contract when:
 
-- provider is `client` or `local-client`
+- provider is `client`
 - a compatible local executable should bridge the model call
 - the bridge command is local to the machine where `cw` runs
 
@@ -33,7 +33,7 @@ Notes:
 
 ## Required Environment Variables
 
-No API key is required by `cw` for `client` / `local-client` providers.
+No API key is required by `cw` for `client` providers.
 
 You may still need upstream secrets if the compatible local client itself expects them.
 
@@ -55,7 +55,7 @@ The static local client checks matter before probe:
 
 Expected static checks:
 
-- `worker-model`: shows `provider=client` or `provider=local-client`
+- `worker-model`: shows `provider=client`
 - `worker-api-key`: `pass`
 - `local-client-command`: `pass`
 - `local-client-compatibility`: `pass`

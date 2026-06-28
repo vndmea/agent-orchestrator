@@ -232,7 +232,7 @@ Contracts:
 - DeepSeek-specific:
   - [docs/provider-contracts/deepseek.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/deepseek.md)
 
-### `claude-compatible` / `anthropic`
+### `claude-compatible`
 
 Use `claude-compatible` when the upstream API is Claude / Anthropic native rather than OpenAI-compatible.
 
@@ -267,7 +267,7 @@ Contract:
 
 - [docs/provider-contracts/litellm.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/litellm.md)
 
-### `client` / `local-client`
+### `client`
 
 Use a local client provider when a compatible local CLI bridges the model calls.
 

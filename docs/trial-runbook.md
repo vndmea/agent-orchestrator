@@ -165,7 +165,7 @@ cw audit list
 
 For MCP clients, use `cw_get_task_report` and `cw_read_task_artifact` against the returned artifact refs instead of rehydrating large task payloads eagerly.
 
-If onboarding is driven from an MCP client rather than the CLI, use `cw_run_worker_interview` first and then `cw_benchmark_worker` so benchmark evidence and optional capability promotion stay inside the same reviewed tool surface. `cw_interview_worker` remains as a compatibility alias.
+If onboarding is driven from an MCP client rather than the CLI, use `cw_run_worker_interview` first and then `cw_benchmark_worker` so benchmark evidence and optional capability promotion stay inside the same reviewed tool surface.
 
 If a patch proposal was generated and inspection passed:
 

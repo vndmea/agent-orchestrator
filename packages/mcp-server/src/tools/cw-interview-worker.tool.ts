@@ -91,14 +91,3 @@ export const cwRunWorkerInterviewTool: CwToolDefinition<
   inputSchema,
   execute: executeWorkerInterview
 };
-
-export const cwInterviewWorkerTool: CwToolDefinition<
-  typeof inputSchema.shape,
-  WorkerInterviewToolResult
-> = {
-  name: "cw_interview_worker",
-  description:
-    "Alias for cw_run_worker_interview. Evaluate a worker model, generate a capability profile, and optionally persist it.",
-  inputSchema,
-  execute: executeWorkerInterview
-};

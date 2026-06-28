@@ -36,7 +36,7 @@ const modelConfigFromRegistration = (
 });
 
 const requiresApiKey = (config: ModelConfig): boolean =>
-  !["client", "local-client", "mock"].includes(config.provider);
+  !["client", "mock"].includes(config.provider);
 
 export const resolveWorkerModel = async ({
   context,

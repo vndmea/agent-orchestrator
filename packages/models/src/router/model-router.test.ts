@@ -28,12 +28,26 @@ describe("model router", () => {
     expect(router.route("worker").provider.name).toBe("anthropic");
   });
 
-  it("routes anthropic alias workers to the anthropic provider", () => {
+  it("rejects removed provider aliases instead of silently routing them", () => {
     const router = new ModelRouter({
       provider: "anthropic",
       model: "claude-3-5-sonnet-latest"
     });
 
-    expect(router.route("worker").provider.name).toBe("anthropic");
+    expect(() => router.route("worker")).toThrow("Unsupported worker provider 'anthropic'");
+    expect(
+      () =>
+        new ModelRouter({
+          provider: "local-client",
+          model: "qwen3-coder"
+        }).route("worker")
+    ).toThrow("Unsupported worker provider 'local-client'");
+    expect(
+      () =>
+        new ModelRouter({
+          provider: "openai",
+          model: "gpt-4.1"
+        }).route("worker")
+    ).toThrow("Unsupported worker provider 'openai'");
   });
 });

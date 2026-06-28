@@ -147,12 +147,6 @@ export const mcpToolCatalog: McpToolCatalogEntry[] = [
       "Run a fresh worker interview, generate a capability profile, and optionally persist it."
   },
   {
-    name: "cw_interview_worker",
-    category: "management",
-    description:
-      "Alias for cw_run_worker_interview. Evaluate a worker model, generate a capability profile, and optionally persist it."
-  },
-  {
     name: "cw_benchmark_worker",
     category: "management",
     description: "Run the coding benchmark suite for a worker model, optionally persist the artifact, and optionally update persisted worker capabilities."

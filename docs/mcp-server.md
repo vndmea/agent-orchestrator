@@ -94,7 +94,6 @@ By default, the MCP server stores CW-managed state under:
 - `cw_list_worker_registry`
 - `cw_get_worker_registration`
 - `cw_run_worker_interview`
-- `cw_interview_worker`
 - `cw_benchmark_worker`
 - `cw_list_workers`
 - `cw_get_worker_profile`
@@ -119,8 +118,6 @@ For worker qualification over MCP, use:
 1. `cw_register_worker`
 2. `cw_run_worker_interview` with `persistProfile=true` when the new profile should replace the persisted capability record
 3. `cw_benchmark_worker` with artifact persistence and optional capability promotion
-
-`cw_interview_worker` remains as an alias for `cw_run_worker_interview`; prefer the explicit `cw_run_worker_interview` name in new MCP clients.
 
 ## Artifact-Oriented Usage
 

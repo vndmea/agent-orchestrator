@@ -7,7 +7,6 @@ Use this document when the worker should call Anthropic Claude models through th
 Use this contract when:
 
 - the worker provider is `claude-compatible`
-- or you use the accepted alias `anthropic`
 - the upstream API is Claude / Anthropic native rather than OpenAI-compatible
 
 ## Minimal Configuration
@@ -24,11 +23,6 @@ Persist the non-secret defaults in `config.json`:
   }
 }
 ```
-
-Accepted provider strings:
-
-- `claude-compatible`
-- `anthropic`
 
 ## Required Environment Variables
 
@@ -63,7 +57,7 @@ If you validate the upstream API directly, compare it against the same runtime t
 
 Expected static checks:
 
-- `worker-model`: `provider=claude-compatible` or `provider=anthropic`
+- `worker-model`: `provider=claude-compatible`
 - `worker-api-key`: `pass`
 - `runtime-bootstrap`: confirms the active `config.json`, CW storage root, and launch env
 

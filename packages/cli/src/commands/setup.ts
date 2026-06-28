@@ -731,7 +731,7 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
     recommendedEnv: unique([
       configToWrite.workerModel &&
       !configToWrite.workerModel.apiKey &&
-      !["mock", "client", "local-client"].includes(
+      !["mock", "client"].includes(
         configToWrite.workerModel.provider
       )
         ? "WORKER_MODEL_API_KEY"

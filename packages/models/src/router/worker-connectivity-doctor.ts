@@ -7,7 +7,7 @@ import {
 import { ModelRouter } from "./model-router.js";
 import { resolveWorkerModel } from "./worker-registry-resolution.js";
 
-const LOCAL_CLIENT_PROVIDERS = new Set(["client", "local-client"]);
+const LOCAL_CLIENT_PROVIDERS = new Set(["client"]);
 
 const summarizeWorkerResponse = (value: string): string =>
   value.replaceAll(/\s+/gu, " ").trim().slice(0, 160);

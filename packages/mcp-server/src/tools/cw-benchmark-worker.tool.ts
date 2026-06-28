@@ -89,7 +89,7 @@ export const cwBenchmarkWorkerTool: CwToolDefinition<
 
     if (args.updateProfileCapabilities && !existingProfile) {
       throw new Error(
-        `No persisted worker profile found for ${result.workerId}; run cw_interview_worker with persistProfile first.`
+        `No persisted worker profile found for ${result.workerId}; run cw_run_worker_interview with persistProfile first.`
       );
     }
 
