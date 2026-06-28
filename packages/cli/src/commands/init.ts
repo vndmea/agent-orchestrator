@@ -25,7 +25,12 @@ import type { CliIo } from "../index.js";
 import { formatDisplayPath, writeOutput } from "../output.js";
 import { openPathInSystemApp, type PathOpener } from "../system/open-path.js";
 import { buildMcpConfigSnippet } from "./mcp.js";
-import { runSetup, type SetupOptions, type SetupResult } from "./setup.js";
+import {
+  formatSetupResult,
+  runSetup,
+  type SetupOptions,
+  type SetupResult
+} from "./setup.js";
 
 export interface InitPrompter {
   close?: () => Promise<void> | void;
@@ -47,9 +52,9 @@ export interface InitPrompter {
   ) => Promise<string>;
 }
 
-interface InitOptions {
+interface InitOptions extends Omit<SetupOptions, "repositoryWriteMode"> {
   advanced: boolean;
-  root?: string;
+  repositoryWriteMode?: string;
 }
 
 interface InitWorkerPlan {
@@ -100,6 +105,11 @@ interface InitResult {
 
 const toYesNoSuffix = (defaultValue: boolean): string =>
   defaultValue ? " [Y/n]" : " [y/N]";
+
+const collect = (value: string, previous: string[]): string[] => [
+  ...previous,
+  value
+];
 
 const normalizeConfirmAnswer = (
   value: string,
@@ -369,6 +379,22 @@ const formatInitResult = (result: InitResult): string[] => {
 
   return lines;
 };
+
+const hasScriptedSetupInputs = (options: InitOptions): boolean =>
+  options.allowWrite ||
+  options.disableValidationAutoDiscover ||
+  options.interviewWorker ||
+  options.registerWorker ||
+  options.typecheckScript.length > 0 ||
+  options.lintScript.length > 0 ||
+  options.testScript.length > 0 ||
+  options.repositoryWriteMode !== undefined ||
+  Boolean(options.workerApiKey) ||
+  Boolean(options.workerBaseUrl) ||
+  Boolean(options.workerClientCommand) ||
+  Boolean(options.workerId) ||
+  Boolean(options.workerModel) ||
+  Boolean(options.workerProvider);
 
 const collectInitSetupOptions = async (
   options: InitOptions,
@@ -680,14 +706,67 @@ export const registerInitCommand = (
 ): void => {
   program
     .command("init")
-    .description("Run a Vue CLI-style onboarding flow for cw and persist the chosen local setup.")
+    .description("Run the cw onboarding flow, either interactively or through scripted flags, and persist the chosen local setup.")
     .option("--advanced", "Ask for additional worker and validation setup details.", false)
     .option("--root <path>", "Pre-fill the workspace root shown in the onboarding flow.")
+    .option("--worker-provider <provider>", "Worker provider")
+    .option("--worker-model <model>", "Worker model")
+    .option("--worker-base-url <url>", "Worker base URL")
+    .option("--worker-api-key <key>", "Persist a worker API key in the user-scoped cw config.")
+    .option(
+      "--worker-client-command <command>",
+      "Persist a non-default local client bridge command in cw config."
+    )
+    .option("--worker-id <workerId>", "Explicit worker id used for register/interview")
+    .option("--register-worker", "Register the configured worker in the cw workspace registry", false)
+    .option("--interview-worker", "Run worker onboarding interview and persist the profile when allowed", false)
+    .option("--typecheck-script <name>", "Add or replace the typecheck script mapping", collect, [])
+    .option("--lint-script <name>", "Add or replace the lint script mapping", collect, [])
+    .option("--test-script <name>", "Add or replace the test script mapping", collect, [])
+    .option("--disable-validation-auto-discover", "Turn off validation script auto-discovery", false)
+    .option(
+      "--repository-write-mode <mode>",
+      "Persist the default repository write mode in cw config (dry-run or allow-write)."
+    )
+    .option("--allow-write", "Persist cw workspace setup changes", false)
     .action(async (options: InitOptions) => {
-      if (!injectedPrompter && (!process.stdin.isTTY || !process.stdout.isTTY)) {
-        throw new Error(
-          "cw init requires an interactive terminal. Use 'cw setup' for scripted setup."
-        );
+      const repositoryWriteMode =
+        options.repositoryWriteMode === "dry-run" ||
+        options.repositoryWriteMode === "allow-write"
+          ? options.repositoryWriteMode
+          : options.repositoryWriteMode === undefined
+            ? undefined
+            : (() => {
+                throw new Error(
+                  "--repository-write-mode must be either 'dry-run' or 'allow-write'."
+                );
+              })();
+
+      const canPrompt =
+        Boolean(injectedPrompter) || (process.stdin.isTTY && process.stdout.isTTY);
+      const shouldRunScripted = !canPrompt || hasScriptedSetupInputs(options);
+
+      if (shouldRunScripted) {
+        const result = await runSetup({
+          allowWrite: options.allowWrite,
+          disableValidationAutoDiscover: options.disableValidationAutoDiscover,
+          interviewWorker: options.interviewWorker,
+          lintScript: options.lintScript,
+          registerWorker: options.registerWorker,
+          repositoryWriteMode,
+          root: options.root,
+          testScript: options.testScript,
+          typecheckScript: options.typecheckScript,
+          workerApiKey: options.workerApiKey,
+          workerBaseUrl: options.workerBaseUrl,
+          workerClientCommand: options.workerClientCommand,
+          workerId: options.workerId,
+          workerModel: options.workerModel,
+          workerProvider: options.workerProvider
+        });
+
+        writeOutput(io, result, formatSetupResult(result));
+        return;
       }
 
       const prompter = injectedPrompter ?? createReadlinePrompter();

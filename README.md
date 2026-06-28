@@ -104,7 +104,7 @@ cw doctor --probe
 cw mcp config
 ```
 
-Use `cw init` as the default onboarding path. Reach for `cw setup --allow-write` when you want the lower-level, explicitly scripted setup flow instead of the guided interview.
+Use `cw init` as the onboarding path. Run it interactively by default, or pass flags such as `--allow-write`, `--worker-provider`, and validation script options when you want the lower-level scripted setup flow instead of the guided interview.
 
 Public installation and MCP launch guidance lives in [docs/install.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/install.md).
 The current official internal distribution shape is documented in [docs/distribution.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/distribution.md).
@@ -113,7 +113,7 @@ Unless noted otherwise, read every `cw ...` example below as the public npm-inst
 
 Legacy repository-local `.cw/` directories are unsupported and ignored by current builds.
 
-`cw init` and `cw setup` write user-scoped CW workspace storage under `~/.cw/workspaces/<workspace-id>/` by default:
+`cw init` writes user-scoped CW workspace storage under `~/.cw/workspaces/<workspace-id>/` by default:
 
 - `config.json`
 - `workers.json`
@@ -423,7 +423,7 @@ Set `WORKER_MODEL_PROVIDER=litellm`, then provide:
 - File writes require explicit policy allowance.
 - Shell execution is allowlisted.
 - Read-only git inspection commands such as `git diff` can still execute inside dry-run so review workflows keep working without enabling writes.
-- `cw setup`, `cw cleanup`, worker registry writes, and task session persistence remain local-only inside CW-managed storage.
+- `cw init`, `cw cleanup`, worker registry writes, and task session persistence remain local-only inside CW-managed storage.
 - Repository reads stay inside the repo root and block secret-like files such as `.env` and private keys.
 - Dedicated review and fix flows return structured JSON and do not apply patches.
 - Patch proposal, inspection, and apply are separated to keep write actions reviewable.

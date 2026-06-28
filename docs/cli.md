@@ -9,7 +9,6 @@ For write gates and local artifact boundaries, see `docs/permissions.md`.
 
 ```bash
 cw init
-cw setup
 cw review repo --scope packages/graph
 cw review diff --base main --head HEAD
 cw review files --file packages/graph/src/index.ts
@@ -47,7 +46,7 @@ For MCP clients, `cw mcp serve` does not take `--root`. Launch it from the inten
 
 Treat `config.json` as the primary runtime config surface for worker, validation, safety, and local client defaults. Treat the MCP host snippet as launch-only: command, args, and optionally `CW_ROOT_DIR` / `CW_HOME_DIR`.
 
-For local client providers, `opencode` is the default command. Persist a different compatible CLI name or path in `config.json` through `cw init`, `cw setup --worker-client-command <command> --allow-write`, or a manual edit when needed.
+For local client providers, `opencode` is the default command. Persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command <command> --allow-write` or a manual edit when needed.
 
 `cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.cw/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
 
@@ -92,7 +91,7 @@ cw task resume <taskId> --apply-patch --allow-write --confirm-apply
 
 - `cw task report` is the primary human-readable artifact.
 - `cw task resume` should follow the `nextRecommendedActions` returned by task start/resume.
-- `cw setup` and `cw doctor` are the quickest readiness checks before you start a new task.
+- `cw init` and `cw doctor` are the quickest readiness checks before you start a new task.
 - `patch apply` stays explicitly gated even inside task sessions.
 - `task start`, `task status`, `task resume`, `task list`, `review`, `fix`, and `validate` accept summary-oriented flags such as `--summary` and `--max-bytes`.
 

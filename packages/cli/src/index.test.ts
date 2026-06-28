@@ -482,13 +482,13 @@ describe("cli parsing", () => {
     });
   });
 
-  it("runs setup and returns the minimal success path", async () => {
+  it("runs scripted init and returns the minimal success path", async () => {
     await withTempCwd(async (rootDir) => {
       await writeProfiles(rootDir, [createProfile()]);
       const { io, output } = createIo();
       const cli = buildCli(io);
 
-      await cli.parseAsync(["node", "cw", "setup"]);
+      await cli.parseAsync(["node", "cw", "init"]);
 
       const result = parseLastJson<{
         minimalSuccessPath: string[];
@@ -502,7 +502,7 @@ describe("cli parsing", () => {
     });
   });
 
-  it("can apply setup, register a worker, and persist an interviewed profile", async () => {
+  it("can apply scripted init, register a worker, and persist an interviewed profile", async () => {
     await withTempCwd(async (rootDir) => {
       const { io, output } = createIo();
       const cli = buildCli(io);
@@ -510,7 +510,7 @@ describe("cli parsing", () => {
       await cli.parseAsync([
         "node",
         "cw",
-        "setup",
+        "init",
         "--worker-provider",
         "mock",
         "--worker-model",
@@ -582,7 +582,7 @@ describe("cli parsing", () => {
     });
   });
 
-  it("rejects setup when an explicit local client path does not exist", async () => {
+  it("rejects scripted init when an explicit local client path does not exist", async () => {
     await withTempCwd(async () => {
       const { io } = createIo();
       const cli = buildCli(io);
@@ -591,7 +591,7 @@ describe("cli parsing", () => {
         cli.parseAsync([
           "node",
           "cw",
-          "setup",
+          "init",
           "--worker-client-command",
           "./missing/opencode.exe"
         ])

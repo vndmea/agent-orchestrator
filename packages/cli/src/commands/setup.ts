@@ -1,8 +1,6 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import type { Command } from "commander";
-
 import {
   AgentError,
   CwConfigSchema,
@@ -31,8 +29,7 @@ import {
   saveWorkerRegistration
 } from "@mcp-code-worker/models";
 
-import type { CliIo } from "../index.js";
-import { formatDisplayPath, writeOutput } from "../output.js";
+import { formatDisplayPath } from "../output.js";
 
 type SetupStepStatus =
   | "blocked"
@@ -319,12 +316,12 @@ const buildValidationSummary = (options: SetupOptions): string => {
   return `Validation mappings prepared: ${mappings.join("; ")}.`;
 };
 
-const formatSetupResult = (result: SetupResult): string[] => {
+export const formatSetupResult = (result: SetupResult): string[] => {
   const blockedSteps = result.steps.filter((step) => step.status === "blocked");
   const needsInputSteps = result.steps.filter((step) => step.status === "needs-input");
 
   const lines: string[] = [
-    `cw setup: ${result.status}`,
+    `cw init: ${result.status}`,
     result.summary,
     `workspace: ${result.rootDir}`,
     `mode: ${result.mode}`,
@@ -741,56 +738,4 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
     recommendedEntrypoints,
     recommendedActions: finalDoctor.recommendedActions.slice(0, 6)
   };
-};
-
-export const registerSetupCommand = (program: Command, io: CliIo): void => {
-  program
-    .command("setup")
-    .description("Guide and optionally apply the user-scoped setup steps needed before cw task workflows feel reliable.")
-    .option("--root <path>", "Resolve and persist setup state for this workspace root.")
-    .option("--worker-provider <provider>", "Worker provider")
-    .option("--worker-model <model>", "Worker model")
-    .option("--worker-base-url <url>", "Worker base URL")
-    .option("--worker-api-key <key>", "Persist a worker API key in the user-scoped cw config.")
-    .option(
-      "--worker-client-command <command>",
-      "Persist a non-default local client bridge command in cw config."
-    )
-    .option("--worker-id <workerId>", "Explicit worker id used for register/interview")
-    .option("--register-worker", "Register the configured worker in the cw workspace registry", false)
-    .option("--interview-worker", "Run worker onboarding interview and persist the profile when allowed", false)
-    .option("--typecheck-script <name>", "Add or replace the typecheck script mapping", collect, [])
-    .option("--lint-script <name>", "Add or replace the lint script mapping", collect, [])
-    .option("--test-script <name>", "Add or replace the test script mapping", collect, [])
-    .option("--disable-validation-auto-discover", "Turn off validation script auto-discovery", false)
-    .option(
-      "--repository-write-mode <mode>",
-      "Persist the default repository write mode in cw config (dry-run or allow-write)."
-    )
-    .option("--allow-write", "Persist cw workspace setup changes", false)
-    .action(
-      async (
-        options: SetupOptions & {
-          repositoryWriteMode?: string;
-        }
-      ) => {
-        const repositoryWriteMode =
-          options.repositoryWriteMode === "dry-run" ||
-          options.repositoryWriteMode === "allow-write"
-            ? options.repositoryWriteMode
-            : options.repositoryWriteMode === undefined
-              ? undefined
-              : (() => {
-                  throw new Error(
-                    "--repository-write-mode must be either 'dry-run' or 'allow-write'."
-                  );
-                })();
-        const result = await runSetup({
-          ...options,
-          repositoryWriteMode
-        });
-
-        writeOutput(io, result, formatSetupResult(result));
-      }
-    );
 };

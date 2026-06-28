@@ -72,7 +72,7 @@ For workspace-scoped editor use, launch `cw mcp serve` from the intended workspa
 
 ## Local Client Provider Note
 
-If the worker model uses the local client provider, `opencode` is the default compatible client bridge command. Persist a different command through `cw setup --worker-client-command <command> --allow-write` or by editing `config.json`.
+If the worker model uses the local client provider, `opencode` is the default compatible client bridge command. Persist a different command through `cw init --worker-client-command <command> --allow-write` or by editing `config.json`.
 
 Example:
 

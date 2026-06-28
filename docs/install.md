@@ -25,7 +25,7 @@ cw mcp serve
 Notes:
 
 - The published npm package installs the `cw` command.
-- Use `cw init` as the default guided onboarding path. Reach for `cw setup --allow-write` only when you need the lower-level scripted setup flow.
+- Use `cw init` as the default onboarding path. Run it interactively by default, or add flags such as `--allow-write` when you need the lower-level scripted setup flow.
 - Persist worker, validation, safety, local client defaults, and optional provider API keys in `config.json`; keep `CW_ROOT_DIR` and `CW_HOME_DIR` in environment variables when needed.
 - `cw mcp serve` resolves the workspace from the current directory by default.
 - When launching outside the target repository checkout, set `CW_ROOT_DIR` for the MCP client process.
@@ -83,6 +83,6 @@ pnpm exec cw mcp serve
 - Use `pnpm exec cw mcp config` to print a stdio config snippet.
 - The MCP snippet should only describe how to launch `cw`; runtime worker and safety settings should come from `config.json`.
 - For workspace-scoped IDE use, start `pnpm exec cw mcp serve` from the target repository root, or set `CW_ROOT_DIR` in the MCP server environment when the client launches from elsewhere.
-- For local client providers, `opencode` is the default command. Persist a different compatible local wrapper with `cw setup --worker-client-command <command> --allow-write`.
+- For local client providers, `opencode` is the default command. Persist a different compatible local wrapper with `cw init --worker-client-command <command> --allow-write`.
 - For cross-checkout or shared-tool setups, also decide whether `CW_HOME_DIR` should be fixed so CW-managed artifacts land in a predictable user-scoped location.
 - See `docs/distribution.md` for the current publish and development distribution shapes.

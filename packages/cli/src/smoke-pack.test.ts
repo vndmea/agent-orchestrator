@@ -115,13 +115,13 @@ describe("cli packed tarball smoke", () => {
       );
       expect(probe.stdout).toContain("\"worker-connectivity\"");
 
-      const setup = await runCommand(
+      const init = await runCommand(
         cwPath,
-        ["setup", "--allow-write"],
+        ["init", "--allow-write"],
         workspaceRoot,
         commandEnv
       );
-      expect(setup.stdout).toContain("\"mode\": \"execute\"");
+      expect(init.stdout).toContain("\"mode\": \"execute\"");
 
       const config = await runCommand(
         cwPath,

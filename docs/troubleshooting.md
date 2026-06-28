@@ -83,7 +83,7 @@ Do not treat a provider-failure-style blocked interview as a completed onboardin
 ### Checks
 
 - If you use the local client provider, remember that `opencode` is the default compatible command
-- Prefer persisting `workerClientCommand` in `config.json` or via `cw setup --worker-client-command <command> --allow-write`
+- Prefer persisting `workerClientCommand` in `config.json` or via `cw init --worker-client-command <command> --allow-write`
 - Use `CW_WORKER_CLIENT_COMMAND` only as a bootstrap fallback when no persisted config exists yet
 - Re-run `cw doctor`
 - Use `cw doctor --probe` when you also want a live connectivity probe

@@ -73,6 +73,6 @@ When something looks “missing,” verify:
 - the active repository root
 - the active `CW_HOME_DIR`
 - the derived workspace id
-- whether the state was created by `cw setup`, onboarding, task sessions, or audit-producing actions
+- whether the state was created by `cw init`, task sessions, or audit-producing actions
 
 The most common source of confusion is not data loss but a different effective root or CW home path.

@@ -54,24 +54,16 @@ const styleHumanLine = (line: string): string => {
     );
   }
 
-  if (line.startsWith("cw setup:")) {
-    return humanChalk.bold(
-      line.includes(": ready")
-        ? humanChalk.green(`✔ ${line}`)
-        : line.includes(": degraded")
-          ? humanChalk.yellow(`⚠ ${line}`)
-          : line.includes(": misconfigured")
-            ? humanChalk.red(`✖ ${line}`)
-            : humanChalk.cyan(`• ${line}`)
-    );
-  }
-
   if (line.startsWith("cw init:")) {
     return humanChalk.bold(
-      line.includes(": applied")
+      line.includes(": ready") || line.includes(": applied")
         ? humanChalk.green(`✔ ${line}`)
-        : line.includes(": preview") || line.includes(": cancelled")
+        : line.includes(": degraded") ||
+            line.includes(": preview") ||
+            line.includes(": cancelled")
           ? humanChalk.yellow(`⚠ ${line}`)
+          : line.includes(": blocked") || line.includes(": misconfigured")
+            ? humanChalk.red(`✖ ${line}`)
           : humanChalk.cyan(`• ${line}`)
     );
   }

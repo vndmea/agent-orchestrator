@@ -26,7 +26,7 @@ The current internal trial line follows semantic-style version labels even while
 - CW local state now persists under `~/.cw/workspaces/<workspace-id>/` by default instead of repository-local `.cw/`.
 - Legacy repository-local `.cw/` storage is no longer supported or read by current builds.
 - `CW_HOME_DIR` now overrides the user-scoped storage root and `CW_ROOT_DIR` now overrides workspace binding for CLI and MCP launches.
-- `cw setup` is now the primary onboarding path for creating config, worker registry/profile stores, runs, and audit directories.
+- `cw init` is now the primary onboarding path for creating config, worker registry/profile stores, runs, and audit directories.
 - MCP workspace-root guidance now documents `--root` and `CW_ROOT_DIR` for workspace-scoped launches.
 
 ### Rollback Guidance

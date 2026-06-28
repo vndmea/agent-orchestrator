@@ -12,7 +12,6 @@ import { registerMcpCommand } from "./commands/mcp.js";
 import { registerModelsCommand } from "./commands/models.js";
 import { registerPatchCommand } from "./commands/patch.js";
 import { registerReviewCommand } from "./commands/review.js";
-import { registerSetupCommand } from "./commands/setup.js";
 import { registerTaskCommand } from "./commands/task.js";
 import { registerValidateCommand } from "./commands/validate.js";
 import { registerWorkerCommand } from "./commands/worker.js";
@@ -53,7 +52,6 @@ export const buildCli = (
       writeOut: io.write
     });
 
-  registerSetupCommand(program, io);
   registerInitCommand(
     program,
     io,

@@ -63,7 +63,7 @@ The following evidence was recorded on 2026-06-28 against candidate release comm
   - verified `cw --help`
   - verified `cw doctor`
   - verified `cw doctor --probe`
-  - verified `cw setup --allow-write`
+  - verified scripted `cw init --allow-write`
   - verified `cw mcp config`
   - verified `cw mcp list-tools`
   - verified that user-scoped `config.json` was created under the configured CW home root
@@ -101,7 +101,7 @@ Recorded result for candidate release commit `c734da37a1cd47132cdf9d9ac9eaa71101
 - clean-environment install validation: passed through `pnpm smoke:pack`
 - additional public-install checks validated during `pnpm smoke:pack`:
   - `cw doctor --probe`
-  - `cw setup --allow-write`
+  - `cw init --allow-write`
   - `cw mcp config`
 
 ## Documentation Checks
