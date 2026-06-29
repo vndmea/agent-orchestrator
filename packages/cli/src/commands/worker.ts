@@ -1,6 +1,9 @@
 import type { Command } from "commander";
 
-import { resolveExecutionContext } from "@mcp-code-worker/core";
+import {
+  resolveExecutionContext,
+  type WorkerCapabilityProfile
+} from "@mcp-code-worker/core";
 import {
   runWorkerBenchmarkOnboarding,
   runWorkerInterviewOnboarding
@@ -200,6 +203,102 @@ const formatWorkerBenchmarkResult = (result: {
 
   return lines;
 };
+
+const buildWorkerProfileRecommendation = (
+  profile: Pick<
+    WorkerCapabilityProfile,
+    "routingPolicy" | "status" | "supportedTaskTypes"
+  >
+): {
+  blockedUses: string[];
+  recommendedSummary: string;
+  recommendedUses: string[];
+} => {
+  const recommendedUses: string[] = [];
+  const blockedUses: string[] = [];
+
+  if (
+    profile.supportedTaskTypes.includes("review-lite") ||
+    profile.supportedTaskTypes.includes("code-understanding")
+  ) {
+    recommendedUses.push("review and code understanding");
+  }
+
+  if (
+    profile.supportedTaskTypes.includes("summarization") ||
+    profile.supportedTaskTypes.includes("log-analysis")
+  ) {
+    recommendedUses.push("summarization and log analysis");
+  }
+
+  if (
+    profile.status === "qualified" &&
+    profile.routingPolicy.allowCodegen
+  ) {
+    recommendedUses.push("implementation planning and code generation");
+  }
+
+  if (
+    profile.status === "qualified" &&
+    profile.routingPolicy.allowPatchGeneration
+  ) {
+    recommendedUses.push("full workflow tasks including patch generation");
+  } else {
+    blockedUses.push("patch generation");
+  }
+
+  if (!profile.routingPolicy.allowCodegen) {
+    blockedUses.push("code generation");
+  }
+
+  const summaryParts: string[] = [];
+
+  if (recommendedUses.length > 0) {
+    summaryParts.push(`Recommended for ${recommendedUses.join(", ")}.`);
+  }
+
+  if (blockedUses.length > 0) {
+    summaryParts.push(`Not recommended for ${blockedUses.join(", ")}.`);
+  }
+
+  if (summaryParts.length === 0) {
+    summaryParts.push("No strong recommendation is available yet.");
+  }
+
+  return {
+    recommendedUses,
+    blockedUses,
+    recommendedSummary: summaryParts.join(" ")
+  };
+};
+
+const formatWorkerProfileResult = (
+  profile: WorkerCapabilityProfile
+): string[] => {
+  const recommendation = buildWorkerProfileRecommendation(profile);
+  const lines = [
+    `worker profile: ${profile.workerId}`,
+    `status: ${profile.status}`,
+    `recommended: ${recommendation.recommendedSummary}`
+  ];
+
+  if (profile.supportedTaskTypes.length > 0) {
+    lines.push(`supports: ${profile.supportedTaskTypes.join(", ")}`);
+  }
+
+  return lines;
+};
+
+const serializeWorkerProfileResult = (
+  profile: WorkerCapabilityProfile
+): WorkerCapabilityProfile & {
+  blockedUses: string[];
+  recommendedSummary: string;
+  recommendedUses: string[];
+} => ({
+  ...profile,
+  ...buildWorkerProfileRecommendation(profile)
+});
 
 export const registerWorkerCommand = (program: Command, io: CliIo): void => {
   const worker = program.command("worker").description("Manage worker onboarding and profiles.");
@@ -474,6 +573,10 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         throw new Error(`No worker profile found for ${resolvedWorkerId}`);
       }
 
-      writeOutput(io, profile, formatWorkerList("worker profile", [profile]));
+      writeOutput(
+        io,
+        serializeWorkerProfileResult(profile),
+        formatWorkerProfileResult(profile)
+      );
     });
 };

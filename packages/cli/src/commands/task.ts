@@ -31,6 +31,8 @@ const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[
         ? summary["status"]
         : "unknown";
   const goal = typeof summary["goal"] === "string" ? summary["goal"] : "";
+  const humanSummary =
+    typeof summary["humanSummary"] === "string" ? summary["humanSummary"] : null;
   const nextRecommendedActions = Array.isArray(summary["nextRecommendedActions"])
     ? summary["nextRecommendedActions"]
         .map((value) => {
@@ -108,6 +110,10 @@ const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[
 
   if (goal) {
     lines.push(`goal: ${goal}`);
+  }
+
+  if (humanSummary) {
+    lines.push(humanSummary);
   }
 
   if (readinessSummary) {

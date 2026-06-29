@@ -5,9 +5,18 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
+import { getCwWorkspaceId } from "@mcp-code-worker/core";
 
 const execFile = promisify(execFileCallback);
-const distCliPath = join(process.cwd(), "packages", "cli", "dist", "main.js");
+const repoRoot = process.cwd();
+const distCliPath = join(repoRoot, "packages", "cli", "dist", "main.js");
+const sourceCliPath = join(repoRoot, "packages", "cli", "src", "main.ts");
+const tsxPath = join(
+  repoRoot,
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? "tsx.cmd" : "tsx"
+);
 
 const withTempCwd = async (
   callback: (rootDir: string) => Promise<void>
@@ -23,6 +32,41 @@ const withTempHome = async (
   await callback(homeDir);
 };
 
+const runCommand = async (
+  command: string,
+  args: string[],
+  cwd: string,
+  env?: NodeJS.ProcessEnv
+): Promise<{ stderr: string; stdout: string }> =>
+  process.platform === "win32"
+    ? execFile("cmd.exe", ["/d", "/s", "/c", command, ...args], { cwd, env })
+    : execFile(command, args, { cwd, env });
+
+const runSourceCli = async (
+  args: string[],
+  cwd: string,
+  env?: NodeJS.ProcessEnv
+): Promise<{ stderr: string; stdout: string }> =>
+  runCommand(tsxPath, [sourceCliPath, ...args], cwd, env);
+
+const runDistCli = async (
+  args: string[],
+  cwd: string,
+  env?: NodeJS.ProcessEnv
+): Promise<{ stderr: string; stdout: string }> =>
+  execFile(process.execPath, [distCliPath, ...args], { cwd, env });
+
+const createCommandEnv = (homeDir: string): NodeJS.ProcessEnv => ({
+  ...process.env,
+  HOME: homeDir,
+  USERPROFILE: homeDir,
+  HOMEDRIVE: undefined,
+  HOMEPATH: undefined
+});
+
+const getWorkspaceStorageDir = (rootDir: string, homeDir: string): string =>
+  join(homeDir, ".cw", "workspaces", getCwWorkspaceId(rootDir));
+
 const listToolNames = (stdout: string): string[] => {
   const parsed = JSON.parse(stdout) as
     | Array<{ name: string }>
@@ -35,6 +79,108 @@ const listToolNames = (stdout: string): string[] => {
   return Array.isArray(parsed)
     ? parsed.map((tool) => tool.name)
     : (parsed.groups ?? []).flatMap((group) => group.tools.map((tool) => tool.name));
+};
+
+const writeCwConfig = async (
+  rootDir: string,
+  homeDir: string,
+  config: Record<string, unknown>
+): Promise<void> => {
+  const configDir = getWorkspaceStorageDir(rootDir, homeDir);
+  const configPath = join(configDir, "config.json");
+  await mkdir(configDir, { recursive: true });
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        version: 1,
+        ...config
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+};
+
+const writeRegistry = async (
+  rootDir: string,
+  homeDir: string,
+  workers: unknown[]
+): Promise<void> => {
+  const configDir = getWorkspaceStorageDir(rootDir, homeDir);
+  const registryPath = join(configDir, "workers.json");
+  await mkdir(configDir, { recursive: true });
+  await writeFile(
+    registryPath,
+    JSON.stringify({ version: 1, workers }, null, 2),
+    "utf8"
+  );
+};
+
+const createRegistration = (overrides: Record<string, unknown> = {}) => {
+  const now = new Date().toISOString();
+
+  return {
+    workerId: "mock:registered-worker",
+    provider: "mock",
+    model: "gpt-5.4-mini",
+    enabled: true,
+    tags: [],
+    createdAt: now,
+    updatedAt: now,
+    ...overrides
+  };
+};
+
+const normalizeDoctorReport = (stdout: string) => {
+  const report = JSON.parse(stdout) as {
+    checks?: Array<{
+      details?: string;
+      name: string;
+      status: string;
+      summary?: string;
+    }>;
+    nextCommand?: { command?: string; reason?: string };
+    summary?: string;
+  };
+  const findCheck = (name: string) =>
+    report.checks?.find((check) => check.name === name) ?? null;
+
+  return {
+    summary: report.summary,
+    nextCommand: report.nextCommand,
+    localClientCommand: findCheck("local-client-command"),
+    localClientCompatibility: findCheck("local-client-compatibility")
+  };
+};
+
+const normalizeWorkerInterview = (stdout: string) => {
+  const result = JSON.parse(stdout) as {
+    profile?: {
+      admission?: { passed?: boolean };
+      routingPolicy?: {
+        allowCodegen?: boolean;
+        allowPatchGeneration?: boolean;
+      };
+      status?: string;
+      supportedTaskTypes?: string[];
+      workerId?: string;
+    };
+    warnings?: string[];
+  };
+
+  return {
+    profile: {
+      admissionPassed: result.profile?.admission?.passed,
+      allowCodegen: result.profile?.routingPolicy?.allowCodegen,
+      allowPatchGeneration: result.profile?.routingPolicy?.allowPatchGeneration,
+      status: result.profile?.status,
+      supportedTaskTypes: result.profile?.supportedTaskTypes,
+      workerId: result.profile?.workerId
+    },
+    warnings: result.warnings ?? []
+  };
 };
 
 const writeCodexConfig = async (
@@ -143,6 +289,59 @@ describe("cli dist smoke", () => {
               check.name === "mcp-tool-catalog-match" && check.status === "pass"
           )
         ).toBe(true);
+      });
+    });
+  }, 20_000);
+
+  it("keeps doctor local-client resolution aligned between source and dist entrypoints", async () => {
+    await withTempCwd(async (rootDir) => {
+      await withTempHome(async (homeDir) => {
+        const env = createCommandEnv(homeDir);
+        await writeCwConfig(rootDir, homeDir, {
+          workerClientCommand: "node",
+          workerModel: {
+            provider: "client",
+            model: "qwen3-coder"
+          }
+        });
+
+        const [sourceDoctor, distDoctor] = await Promise.all([
+          runSourceCli(["doctor"], rootDir, env),
+          runDistCli(["doctor"], rootDir, env)
+        ]);
+
+        expect(normalizeDoctorReport(sourceDoctor.stdout)).toEqual(
+          normalizeDoctorReport(distDoctor.stdout)
+        );
+      });
+    });
+  }, 20_000);
+
+  it("keeps worker interview results aligned between source and dist entrypoints", async () => {
+    await withTempCwd(async (rootDir) => {
+      await withTempHome(async (homeDir) => {
+        const workerId = "parity-worker";
+        const env = createCommandEnv(homeDir);
+        await writeRegistry(
+          rootDir,
+          homeDir,
+          [
+            createRegistration({
+              workerId,
+              provider: "mock",
+              model: "gpt-5.4-mini"
+            })
+          ]
+        );
+
+        const [sourceInterview, distInterview] = await Promise.all([
+          runSourceCli(["worker", "interview", "--worker", workerId], rootDir, env),
+          runDistCli(["worker", "interview", "--worker", workerId], rootDir, env)
+        ]);
+
+        expect(normalizeWorkerInterview(sourceInterview.stdout)).toEqual(
+          normalizeWorkerInterview(distInterview.stdout)
+        );
       });
     });
   }, 20_000);

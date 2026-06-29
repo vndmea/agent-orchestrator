@@ -29,6 +29,17 @@ const defaultCheck = (
   detail
 });
 
+const needsWorkerRegistration = (
+  checks: WorkerAvailabilityChecks
+): boolean =>
+  checks.registry.status === "missing" ||
+  (
+    checks.registry.status === "unavailable" &&
+    /not found in the worker registry|not registered in the local registry/u.test(
+      checks.registry.detail
+    )
+  );
+
 const readBenchmarkCheck = async (
   context: ExecutionContext,
   workerId: string
@@ -179,7 +190,7 @@ const buildNextSteps = (input: {
 }): string[] => {
   const actions: string[] = [];
 
-  if (input.checks.registry.status === "missing") {
+  if (needsWorkerRegistration(input.checks)) {
     actions.push(
       `Register the worker first: cw worker register --worker ${input.workerId} --provider <provider> --model <model> --allow-write`
     );

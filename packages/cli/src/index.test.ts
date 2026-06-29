@@ -508,10 +508,14 @@ describe("cli parsing", () => {
       await cli.parseAsync(["node", "cw", "doctor", "--worker", "default-worker"]);
 
       const report = JSON.parse(output.join("\n")) as {
+        nextCommand?: { command?: string };
         workerAvailability?: { workerId: string };
       };
 
       expect(report.workerAvailability?.workerId).toBe("default-worker");
+      expect(report.nextCommand?.command).toContain(
+        "cw worker register --worker default-worker"
+      );
     });
   });
 
@@ -1014,6 +1018,127 @@ describe("cli parsing", () => {
       expect(output.at(-1)).toContain("probe:");
       expect(output.at(-1)).toContain("provider=mock");
       expect(output.at(-1)).toContain("model=gpt-5.4-mini");
+    });
+  });
+
+  it("recommends the shortest next command for a ready worker", async () => {
+    await withTempCwd(async (rootDir) => {
+      const workerId = "ready-worker";
+      await writeCwConfig(rootDir, {
+        workerModel: {
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        }
+      });
+      await writeRegistry(rootDir, [
+        createRegistration({
+          workerId,
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        })
+      ]);
+      await writeProfiles(
+        rootDir,
+        [
+          createProfile({
+            workerId
+          })
+        ]
+      );
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "cw", "doctor", "--worker", workerId]);
+
+      const report = parseLastJson<{
+        nextCommand?: { command?: string; reason?: string };
+      }>(output);
+
+      expect(report.nextCommand?.command).toBe(
+        `cw task start --goal "Review this repository" --worker ${workerId}`
+      );
+      expect(report.nextCommand?.reason).toContain("shortest successful path");
+    });
+  });
+
+  it("adds recommended usage summaries to worker profiles", async () => {
+    await withTempCwd(async (rootDir) => {
+      const profile = createProfile({
+        workerId: "profile-worker"
+      });
+      await writeProfiles(rootDir, [profile]);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "cw", "worker", "profile", "profile-worker"]);
+
+      const result = parseLastJson<{
+        recommendedSummary?: string;
+        recommendedUses?: string[];
+      }>(output);
+
+      expect(result.recommendedSummary).toContain("Recommended for");
+      expect(result.recommendedUses).toContain("review and code understanding");
+    });
+  });
+
+  it("surfaces denied patch reasons at the summary top level", async () => {
+    await withTempCwd(async (rootDir) => {
+      const workerId = "blocked-patch-worker";
+      await writeRegistry(rootDir, [
+        createRegistration({
+          workerId,
+          provider: "mock",
+          model: "gpt-5.4-mini"
+        })
+      ]);
+      await writeProfiles(
+        rootDir,
+        [
+          createProfile({
+            workerId,
+            supportedTaskTypes: [
+              "summarization",
+              "code-understanding",
+              "log-analysis",
+              "json-extraction",
+              "review-lite",
+              "risk-analysis",
+              "codegen",
+              "test-generation",
+              "validation-fix",
+              "doc-generation"
+            ],
+            routingPolicy: {
+              ...createProfile().routingPolicy,
+              allowPatchGeneration: false
+            }
+          })
+        ]
+      );
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "cw",
+        "patch",
+        "propose",
+        "--goal",
+        "Fix typecheck",
+        "--worker",
+        workerId,
+        "--require-profile",
+        "--summary"
+      ]);
+
+      const summary = parseLastJson<{
+        deniedReason?: string;
+        humanSummary?: string;
+      }>(output);
+
+      expect(summary.deniedReason).toContain("not qualified for patch-generation tasks");
+      expect(summary.humanSummary).toContain("Patch proposal is blocked");
     });
   });
 
@@ -1745,6 +1870,7 @@ describe("cli parsing", () => {
         artifactRefs: unknown[];
         artifactRefsStatus: string;
         finalStatus: string;
+        humanSummary: string;
         validationSummary: string;
         workerReviewStatus: string;
       }>(output);
@@ -1752,6 +1878,7 @@ describe("cli parsing", () => {
       expect(summary.finalStatus).toBeTruthy();
       expect(summary.workerReviewStatus).toBeTruthy();
       expect(summary.accepted).not.toBeNull();
+      expect(summary.humanSummary).toBeTruthy();
       expect(summary.validationSummary).toBeTruthy();
       expect(summary.artifactRefs).toEqual([]);
       expect(summary.artifactRefsStatus).toBe("suppressed-in-summary");

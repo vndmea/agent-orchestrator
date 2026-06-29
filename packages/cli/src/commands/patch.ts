@@ -92,6 +92,8 @@ const formatPatchProposalSummaryText = (summary: Record<string, unknown>): strin
   const warnings = Array.isArray(summary["warnings"])
     ? (summary["warnings"] as string[])
     : [];
+  const deniedReason = toDisplayText(summary["deniedReason"], "");
+  const humanSummary = toDisplayText(summary["humanSummary"], "");
   const proposalId = toDisplayText(summary["proposalId"], "unknown");
   const title = toDisplayText(summary["title"], "");
 
@@ -102,6 +104,14 @@ const formatPatchProposalSummaryText = (summary: Record<string, unknown>): strin
 
   if (typeof summary["summary"] === "string") {
     lines.push(summary["summary"]);
+  }
+
+  if (humanSummary) {
+    lines.push(humanSummary);
+  }
+
+  if (deniedReason) {
+    lines.push(`denied: ${deniedReason}`);
   }
 
   if (changedFiles.length > 0) {

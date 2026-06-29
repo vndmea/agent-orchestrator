@@ -24,6 +24,60 @@ const includeArtifactRefs = (
   options: WorkflowOutputOptions | undefined
 ): boolean => options?.includeArtifactRefs ?? true;
 
+const buildTaskHumanSummary = (
+  output: TaskSessionWorkflowOutput,
+  validation: ReturnType<typeof summarizeValidationReport> | null
+): string => {
+  const finalStatus = output.session.status;
+  const patchDeniedReason =
+    output.patchInspection && !output.patchInspection.ok
+      ? output.patchInspection.blockedReasons[0]
+      : output.patchApplyResult && !output.patchApplyResult.applied
+        ? output.patchApplyResult.inspection.blockedReasons[0] ??
+          output.patchApplyResult.errors?.[0] ??
+          "Patch application was denied."
+        : null;
+  const notConfiguredChecks = output.validationReport
+    ? output.validationReport.checks
+        .filter((check) => check.status === "not-configured")
+        .map((check) => check.name)
+    : [];
+
+  if (patchDeniedReason) {
+    return `Patch generation was denied: ${patchDeniedReason} The task remains ${finalStatus}.`;
+  }
+
+  if (output.validationReport && !output.validationReport.ok) {
+    if (notConfiguredChecks.length > 0) {
+      return `Review succeeded, but validation was not configured for ${notConfiguredChecks.join(", ")}, so the task remains ${finalStatus}.`;
+    }
+
+    return `Review succeeded, but deterministic validation failed, so the task remains ${finalStatus}.`;
+  }
+
+  if (output.reviewResult && !output.reviewResult.accepted) {
+    return `Worker answered successfully, but the review quality gate did not pass, so the task remains ${finalStatus}.`;
+  }
+
+  if (finalStatus === "completed") {
+    if (output.patchApplyResult?.applied) {
+      return "Review, validation, and patch application succeeded. The task is completed.";
+    }
+
+    if (output.patchProposal && output.patchInspection?.ok) {
+      return "Review succeeded and the patch proposal passed inspection. The task is completed.";
+    }
+
+    if (validation?.summary && validation.summary !== "No validation report was recorded.") {
+      return `Review completed. ${validation.summary} The task is completed.`;
+    }
+
+    return "Review completed and the task is complete.";
+  }
+
+  return `Task status is ${finalStatus}.`;
+};
+
 export const formatTaskSessionWorkflowOutput = (
   output: TaskSessionWorkflowOutput,
   options?: WorkflowOutputOptions
@@ -36,10 +90,12 @@ export const formatTaskSessionWorkflowOutput = (
     ? summarizeValidationReport(output.validationReport, options?.maxBytes)
     : null;
   const artifactRefsIncluded = includeArtifactRefs(options);
+  const humanSummary = buildTaskHumanSummary(output, validation);
 
   return {
     taskId: output.session.taskId,
     goal: output.session.goal,
+    humanSummary,
     scope: output.session.scope,
     workerId: output.workerId,
     localClientRuntime: output.localClientRuntime ?? "not-applicable",
@@ -75,6 +131,14 @@ export const formatTaskSessionWorkflowOutput = (
           proposalId: output.patchProposal?.id ?? "not-produced",
           title: output.patchProposal?.title ?? "not-produced",
           inspectionOk: output.patchInspection?.ok ?? "not-produced",
+          deniedReason:
+            output.patchInspection && !output.patchInspection.ok
+              ? output.patchInspection.blockedReasons[0] ?? "not-produced"
+              : output.patchApplyResult && !output.patchApplyResult.applied
+                ? output.patchApplyResult.inspection.blockedReasons[0] ??
+                  output.patchApplyResult.errors?.[0] ??
+                  "not-produced"
+                : "not-produced",
           applied: output.patchApplyResult?.applied ?? "not-produced"
         }
       : "not-produced",
@@ -177,13 +241,23 @@ export const formatPatchProposalWorkflowOutput = (
   const files = output.inspection.files.length > 0
     ? output.inspection.files
     : output.proposal.files;
+  const deniedReasons = output.inspection.ok
+    ? []
+    : output.inspection.blockedReasons;
+  const deniedReason = deniedReasons[0];
+  const humanSummary = output.inspection.ok
+    ? `Patch proposal ${output.proposal.id} is ready for review.`
+    : `Patch proposal is blocked: ${deniedReason ?? "inspection failed."}`;
 
   return {
     proposalId: output.proposal.id,
     title: output.proposal.title,
+    humanSummary,
     summary: truncateText(output.proposal.summary, options?.maxBytes ?? 1_500),
     workerId: output.proposal.source.workerId,
     scope: output.proposal.source.scope,
+    deniedReason,
+    deniedReasons,
     changedFiles: files.map((file) => ({
       path: file.path,
       changeType: file.changeType,

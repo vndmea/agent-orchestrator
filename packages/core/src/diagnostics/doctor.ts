@@ -45,6 +45,10 @@ export interface DoctorReport {
   capabilities: DoctorCapability[];
   checks: DoctorCheck[];
   minimalSuccessPath: string[];
+  nextCommand?: {
+    command: string;
+    reason: string;
+  };
   ok: boolean;
   recommendedActions: string[];
   recommendedEntrypoints: Array<{
@@ -617,6 +621,11 @@ export const runDoctor = async (
         toolName: "cw_get_task_report"
       }
     ],
+    nextCommand: {
+      command: "cw task start --worker <id> --goal \"Review this repository\"",
+      reason:
+        "This is the shortest default path to exercise review, validation, and session reporting."
+    },
     status,
     summary,
     workspaceBinding

@@ -126,6 +126,11 @@ const formatDoctorReport = (report: DoctorReport): string[] => {
     }
   }
   lines.push(`capabilities: ${capabilitySummary}`);
+  if (report.nextCommand) {
+    lines.push(
+      `next command: ${report.nextCommand.command} | reason=${report.nextCommand.reason}`
+    );
+  }
 
   if (failedChecks.length > 0) {
     lines.push(
