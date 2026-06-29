@@ -3,66 +3,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ZodError } from "zod";
 
 import { AgentError, resolveExecutionContext } from "@mcp-code-worker/core";
-
-import { cwBenchmarkWorkerTool } from "./tools/cw-benchmark-worker.tool.js";
-import { cwDoctorTool } from "./tools/cw-doctor.tool.js";
-import { cwApplyPatchTool } from "./tools/cw-apply-patch.tool.js";
-import { cwFixErrorTool } from "./tools/cw-fix-error.tool.js";
-import { cwGetTaskReportTool } from "./tools/cw-get-task-report.tool.js";
-import { cwGetTaskStatusTool } from "./tools/cw-get-task-status.tool.js";
-import { cwReadTaskArtifactTool } from "./tools/cw-read-task-artifact.tool.js";
-import { cwGetWorkerRegistrationTool } from "./tools/cw-get-worker-registration.tool.js";
-import { cwGetWorkerProfileTool } from "./tools/cw-get-worker-profile.tool.js";
-import { cwInspectPatchTool } from "./tools/cw-inspect-patch.tool.js";
-import { cwRunWorkerInterviewTool } from "./tools/cw-interview-worker.tool.js";
-import { cwListAuditEventsTool } from "./tools/cw-list-audit-events.tool.js";
-import { cwListModelsTool } from "./tools/cw-list-models.tool.js";
-import { cwListTasksTool } from "./tools/cw-list-tasks.tool.js";
-import { cwListToolsTool } from "./tools/cw-list-tools.tool.js";
-import { cwListWorkerRegistryTool } from "./tools/cw-list-worker-registry.tool.js";
-import { cwListWorkersTool } from "./tools/cw-list-workers.tool.js";
-import { cwListWorkflowsTool } from "./tools/cw-list-workflows.tool.js";
-import { cwProposePatchTool } from "./tools/cw-propose-patch.tool.js";
-import { cwRegisterWorkerTool } from "./tools/cw-register-worker.tool.js";
-import { cwReviewDiffTool } from "./tools/cw-review-diff.tool.js";
-import { cwReviewFilesTool } from "./tools/cw-review-files.tool.js";
-import { cwReviewRepositoryTool } from "./tools/cw-review-repository.tool.js";
-import { cwResumeTaskTool } from "./tools/cw-resume-task.tool.js";
-import { cwRunHostWorkerTool } from "./tools/cw-run-host-worker.tool.js";
-import { cwStartTaskTool } from "./tools/cw-start-task.tool.js";
-import { cwUnregisterWorkerTool } from "./tools/cw-unregister-worker.tool.js";
-import { cwValidateRepositoryTool } from "./tools/cw-validate-repository.tool.js";
-
-export const cwToolDefinitions = [
-  cwRunHostWorkerTool,
-  cwProposePatchTool,
-  cwInspectPatchTool,
-  cwApplyPatchTool,
-  cwReviewRepositoryTool,
-  cwReviewDiffTool,
-  cwReviewFilesTool,
-  cwValidateRepositoryTool,
-  cwFixErrorTool,
-  cwStartTaskTool,
-  cwResumeTaskTool,
-  cwGetTaskStatusTool,
-  cwListTasksTool,
-  cwGetTaskReportTool,
-  cwReadTaskArtifactTool,
-  cwListModelsTool,
-  cwListWorkflowsTool,
-  cwListToolsTool,
-  cwListAuditEventsTool,
-  cwRegisterWorkerTool,
-  cwUnregisterWorkerTool,
-  cwListWorkerRegistryTool,
-  cwGetWorkerRegistrationTool,
-  cwRunWorkerInterviewTool,
-  cwBenchmarkWorkerTool,
-  cwListWorkersTool,
-  cwGetWorkerProfileTool,
-  cwDoctorTool
-] as const;
+export { cwToolDefinitions } from "./tools/tool-registry.js";
+import { cwToolDefinitions } from "./tools/tool-registry.js";
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== "object" || value === null) {
