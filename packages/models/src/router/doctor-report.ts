@@ -16,20 +16,26 @@ export const buildDoctorReport = async (input: {
   context: ExecutionContext;
   probe?: boolean;
   transformReport?: (report: DoctorReport) => Promise<void> | void;
+  workerId?: string;
 }): Promise<DoctorReport> => {
   const report = await runDoctor(input.context, {
     additionalChecks: [
       ...(await createWorkerDoctorChecks(input.context, {
-        probe: input.probe
+        probe: input.probe,
+        workerId: input.workerId
       })),
       ...(input.additionalChecks ?? [])
     ]
   });
-  const workerAvailability = await buildWorkerAvailabilitySnapshot({
-    context: input.context,
-    probe: input.probe
-  });
-  applyWorkerAvailabilityToDoctorReport(report, workerAvailability);
+
+  if (input.workerId) {
+    const workerAvailability = await buildWorkerAvailabilitySnapshot({
+      context: input.context,
+      probe: input.probe,
+      workerId: input.workerId
+    });
+    applyWorkerAvailabilityToDoctorReport(report, workerAvailability);
+  }
 
   await input.transformReport?.(report);
 

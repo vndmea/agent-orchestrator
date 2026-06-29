@@ -10,7 +10,10 @@ import {
 
 import type { CwToolDefinition } from "./tool-types.js";
 
-const inputSchema = z.object({});
+const inputSchema = z.object({
+  probe: z.boolean().optional(),
+  workerId: z.string().min(1).optional()
+});
 
 export const cwDoctorTool: CwToolDefinition<
   typeof inputSchema.shape,
@@ -19,17 +22,19 @@ export const cwDoctorTool: CwToolDefinition<
   name: "cw_doctor",
   description: "Inspect resolved configuration and local workflow prerequisites.",
   inputSchema,
-  execute: async () => {
+  execute: async (args) => {
     const context = await resolveExecutionContext();
     const report = await buildDoctorReport({
-      context
+      context,
+      probe: args.probe,
+      workerId: args.workerId
     });
     await writeAuditEvent(context, {
       actor: "mcp",
       action: "tool-call",
       mode: context.dryRun ? "dry-run" : "execute",
       tool: "cw_doctor",
-      inputSummary: "cw_doctor",
+      inputSummary: `cw_doctor${args.workerId ? ` worker=${args.workerId}` : ""}${args.probe ? " probe=true" : ""}`,
       outputSummary: `Doctor completed with ok=${String(report.ok)}.`,
       warnings: report.checks
         .filter((check) => check.status === "warning")

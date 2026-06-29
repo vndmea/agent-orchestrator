@@ -531,6 +531,20 @@ describe("mcp tool registration", () => {
 
       expect(result.checks.some((check) => check.name === "worker-profile-store")).toBe(true);
       expect(result.checks.some((check) => check.name === "worker-registry")).toBe(true);
+      expect(result.workerAvailability).toBeUndefined();
+    });
+  });
+
+  it("includes worker readiness in the doctor MCP tool only when workerId is provided", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeProfiles(rootDir, [createProfile()]);
+      await writeRegistry(rootDir, [createRegistration()]);
+
+      const result = await cwDoctorTool.execute({
+        workerId: "default-worker"
+      });
+
+      expect(result.workerAvailability?.workerId).toBe("default-worker");
     });
   });
 

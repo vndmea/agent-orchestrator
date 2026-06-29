@@ -916,52 +916,64 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
       `Target host preset for --mcp checks: ${MCP_HOSTS.join(", ")}`,
       "codex"
     )
-    .action(async (options: { host?: string; mcp?: boolean; probe?: boolean }) => {
-      const requestedHost = options.host ?? "codex";
+    .option("--worker <workerId>", "Worker id to include in readiness and probe checks")
+    .action(
+      async (options: {
+        host?: string;
+        mcp?: boolean;
+        probe?: boolean;
+        worker?: string;
+      }) => {
+        const requestedHost = options.host ?? "codex";
 
-      if (!isMcpHost(requestedHost)) {
-        throw new Error(
-          `Unsupported MCP host '${requestedHost}'. Expected one of: ${MCP_HOSTS.join(", ")}.`
-        );
+        if (!isMcpHost(requestedHost)) {
+          throw new Error(
+            `Unsupported MCP host '${requestedHost}'. Expected one of: ${MCP_HOSTS.join(", ")}.`
+          );
+        }
+
+        const context = await resolveExecutionContext();
+        const hostChecks = options.mcp
+          ? await createHostMcpDoctorChecks(context, requestedHost)
+          : [];
+        const report = await buildDoctorReport({
+          additionalChecks: hostChecks,
+          context,
+          probe: options.probe,
+          transformReport: options.mcp
+            ? (currentReport) => {
+                applyHostMcpCapability(currentReport, requestedHost);
+              }
+            : undefined,
+          workerId: options.worker
+        });
+
+        const commandParts = ["cw", "doctor"];
+        if (options.probe) {
+          commandParts.push("--probe");
+        }
+        if (options.worker) {
+          commandParts.push("--worker", options.worker);
+        }
+        if (options.mcp) {
+          commandParts.push("--mcp", "--host", requestedHost);
+        }
+
+        await writeAuditEvent(context, {
+          actor: "cli",
+          action: "doctor",
+          mode: context.dryRun ? "dry-run" : "execute",
+          inputSummary: commandParts.join(" "),
+          outputSummary: `Doctor completed with ok=${String(report.ok)}.`,
+          warnings: report.checks
+            .filter((check) => check.status === "warning")
+            .map((check) => check.message),
+          errors: report.checks
+            .filter((check) => check.status === "fail")
+            .map((check) => check.message)
+        });
+
+        writeOutput(io, report, formatDoctorReport(report));
       }
-
-      const context = await resolveExecutionContext();
-      const hostChecks = options.mcp
-        ? await createHostMcpDoctorChecks(context, requestedHost)
-        : [];
-      const report = await buildDoctorReport({
-        additionalChecks: hostChecks,
-        context,
-        probe: options.probe,
-        transformReport: options.mcp
-          ? (currentReport) => {
-              applyHostMcpCapability(currentReport, requestedHost);
-            }
-          : undefined
-      });
-
-      const commandParts = ["cw", "doctor"];
-      if (options.probe) {
-        commandParts.push("--probe");
-      }
-      if (options.mcp) {
-        commandParts.push("--mcp", "--host", requestedHost);
-      }
-
-      await writeAuditEvent(context, {
-        actor: "cli",
-        action: "doctor",
-        mode: context.dryRun ? "dry-run" : "execute",
-        inputSummary: commandParts.join(" "),
-        outputSummary: `Doctor completed with ok=${String(report.ok)}.`,
-        warnings: report.checks
-          .filter((check) => check.status === "warning")
-          .map((check) => check.message),
-        errors: report.checks
-          .filter((check) => check.status === "fail")
-          .map((check) => check.message)
-      });
-
-      writeOutput(io, report, formatDoctorReport(report));
-    });
+    );
 };

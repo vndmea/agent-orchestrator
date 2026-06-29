@@ -513,9 +513,39 @@ describe("cli parsing", () => {
 
       await cli.parseAsync(["node", "cw", "doctor"]);
 
-      expect(output.join("\n")).toContain("\"checks\"");
-      expect(output.join("\n")).toContain("\"worker-profile-store\"");
+      const report = JSON.parse(output.join("\n")) as {
+        checks: Array<{ name: string }>;
+        workerAvailability?: unknown;
+      };
+
+      expect(report.checks.some((check) => check.name === "worker-profile-store")).toBe(true);
+      expect(report.checks.some((check) => check.name === "worker-registry")).toBe(true);
+      expect(report.workerAvailability).toBeUndefined();
       expect(output.join("\n")).not.toContain("\"host-config-present\"");
+    });
+  });
+
+  it("includes worker readiness in doctor only when an explicit worker is requested", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeProfiles(
+        rootDir,
+        [
+          createProfile({
+            workerId: "default-worker"
+          })
+        ]
+      );
+      await writeRegistry(rootDir, [createRegistration()]);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "cw", "doctor", "--worker", "default-worker"]);
+
+      const report = JSON.parse(output.join("\n")) as {
+        workerAvailability?: { workerId: string };
+      };
+
+      expect(report.workerAvailability?.workerId).toBe("default-worker");
     });
   });
 
