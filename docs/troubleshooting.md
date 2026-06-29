@@ -96,11 +96,13 @@ Do not treat a provider-failure interview as a completed onboarding result.
 ### Checks
 
 - Run `cw mcp list-tools` locally first
+- Treat `cw mcp list-tools` and `cw mcp config` as local-only checks; they do not prove that the host loaded the MCP snippet
 - Start the client against the correct workspace root
 - Compare the client snippet with the output of `cw mcp config`
 - Use `cw doctor --mcp --host codex` when Codex is the host and you want an end-to-end check of config presence, snippet validity, launchability, connectivity, and tool-list parity
 - Confirm the client process starts from the intended workspace root and is using the expected CW `config.json`
 - Read `root-dir`, `runtime-bootstrap`, and `worker-connectivity` from `cw doctor --probe` to verify the active root, config path, and worker wiring
+- Do not use a bare `cw mcp serve` run as the primary health check; as a stdio server it can exit once stdio closes or no client remains attached
 
 ## Patch Apply Is Blocked
 

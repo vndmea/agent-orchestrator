@@ -109,23 +109,40 @@ const buildHostMcpCapability = (
   };
 };
 
+const hasHostMcpCheckFailure = (
+  report: DoctorReport,
+  checkName: (typeof HOST_MCP_CHECK_NAMES)[number]
+): boolean =>
+  report.checks.some(
+    (check) => check.name === checkName && check.status === "fail"
+  );
+
 export const applyHostMcpCapabilityToDoctorReport = (
   report: DoctorReport,
   host: string
 ): DoctorReport => {
   const capability = buildHostMcpCapability(host, report.checks);
   const capabilities = [...report.capabilities, capability];
+  const hostConfigFailure =
+    hasHostMcpCheckFailure(report, "host-config-valid") ||
+    hasHostMcpCheckFailure(report, "mcp-server-launchable");
+  const hostConfigGuidance = hostConfigFailure
+    ? `Treat 'cw mcp list-tools' and 'cw mcp config' as local runtime checks only; they do not confirm ${host} host wiring. Fix the host snippet, then rerun 'cw doctor --mcp --host ${host}'.`
+    : null;
 
   if (capability.status === "unavailable") {
     return {
       ...report,
       capabilities,
+      recommendedActions: hostConfigGuidance
+        ? [hostConfigGuidance, ...report.recommendedActions]
+        : report.recommendedActions,
       status: "unavailable",
       ok: false,
       summary:
         report.summary.startsWith("unavailable:")
-          ? `${report.summary} Host MCP integration for ${host} also needs attention.`
-          : `unavailable: cw is bound to ${report.activeRootDir}, but host MCP integration for ${host} still needs attention before the workflow is reliable.`
+          ? `${report.summary} Host MCP integration for ${host} also needs attention.${hostConfigGuidance ? ` Local 'cw mcp list-tools' and 'cw mcp config' can still pass because they do not validate ${host} host wiring.` : ""}`
+          : `unavailable: cw is bound to ${report.activeRootDir}, but host MCP integration for ${host} still needs attention before the workflow is reliable.${hostConfigGuidance ? ` Local 'cw mcp list-tools' and 'cw mcp config' can still pass because they do not validate ${host} host wiring.` : ""}`
     };
   }
 

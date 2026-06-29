@@ -31,3 +31,5 @@ Before relying on the client integration:
 - run `cw mcp config`
 
 Keep runtime worker and safety settings in `config.json`; use the MCP snippet only for launch wiring, and make sure Codex starts it from the intended workspace root.
+
+`cw mcp list-tools` and `cw mcp config` only validate the local runtime and snippet shape. They do not prove that Codex loaded the snippet. Use `cw doctor --mcp --host codex` for the host-side check, and do not treat a bare `cw mcp serve` run as a persistent health signal because the stdio server can exit when no client remains attached.

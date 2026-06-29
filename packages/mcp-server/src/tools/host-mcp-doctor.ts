@@ -546,7 +546,7 @@ export const createHostMcpDoctorChecks = async (
       host,
       found: foundSummary,
       expected: expected.summary,
-      fix: `Replace the ${SERVER_KEY} entry with the output of 'cw mcp config --host ${host}' and move worker/provider settings back into cw config.json.`,
+      fix: `Replace the ${SERVER_KEY} entry with the output of 'cw mcp config --host ${host}' and move worker/provider settings back into cw config.json. 'cw mcp config' only prints the recommended snippet; it does not confirm the host actually loaded it.`,
       status: validHostSnippet ? "pass" : "fail"
     }
   });
@@ -574,7 +574,7 @@ export const createHostMcpDoctorChecks = async (
       expected: "An executable command that can start 'cw mcp serve'.",
       fix: launchCommand
         ? "Install the configured command on PATH, or point the host snippet at a concrete executable."
-        : `Add the ${SERVER_KEY} MCP server entry before rerunning this check.`,
+        : `Add the ${SERVER_KEY} MCP server entry before rerunning this check. Local 'cw mcp list-tools' output does not validate host config loading.`,
       status: resolvedCommand ? "pass" : "fail"
     }
   });
@@ -583,7 +583,8 @@ export const createHostMcpDoctorChecks = async (
     checks.push({
       name: "mcp-connection",
       status: "warning",
-      message: "MCP connectivity was skipped because the host command is not launchable yet.",
+      message:
+        "MCP connectivity was skipped because the host command is not launchable yet. Local 'cw mcp list-tools' results do not validate host wiring.",
       metadata: {
         host,
         found: "No live stdio connection was attempted.",

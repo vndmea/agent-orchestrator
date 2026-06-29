@@ -427,6 +427,17 @@ describe("cli parsing", () => {
     expect(output.join("\n")).toContain("\"serve\"");
   });
 
+  it("describes mcp serve as a host-connected stdio session", () => {
+    const cli = buildCli();
+    const mcpCommand = cli.commands.find((command) => command.name() === "mcp");
+    const serveCommand = mcpCommand?.commands.find(
+      (command) => command.name() === "serve"
+    );
+
+    expect(serveCommand?.description()).toContain("connected host session");
+    expect(serveCommand?.description()).toContain("stdio closes");
+  });
+
   it("prints a minimal mcp config snippet for codex", async () => {
     const { io, output } = createIo();
     const cli = buildCli(io);
@@ -1091,10 +1102,13 @@ describe("cli parsing", () => {
         const result = parseLastJson<{
           capabilities?: Array<{ name: string; status: string }>;
           checks?: Array<{ name: string; status: string }>;
+          recommendedActions?: string[];
           status?: string;
+          summary?: string;
         }>(output);
 
         expect(result.status).toBe("unavailable");
+        expect(result.summary).toContain("do not validate codex host wiring");
         expect(
           result.checks?.some(
             (check) => check.name === "host-config-present" && check.status === "fail"
@@ -1105,6 +1119,11 @@ describe("cli parsing", () => {
             (capability) =>
               capability.name === "host-mcp-integration" &&
               capability.status === "unavailable"
+          )
+        ).toBe(true);
+        expect(
+          result.recommendedActions?.some((action) =>
+            action.includes("Treat 'cw mcp list-tools' and 'cw mcp config' as local runtime checks only")
           )
         ).toBe(true);
       });

@@ -63,6 +63,8 @@ cw mcp config
 
 Use `cw doctor --mcp --host codex` when you want cw to inspect the Codex host config, compare it with the recommended snippet, launch the configured server command, and confirm that the host-visible tool list matches `cw mcp list-tools`.
 
+Treat `cw mcp list-tools` and `cw mcp config` as local checks only. They confirm the local runtime and the recommended snippet shape, but they do not prove that the host already loaded that snippet or is launching the right command.
+
 If you are using a repository checkout instead of the public install path, read every `cw ...` example in this document as `pnpm exec cw ...` from the repository root.
 
 ## Root And Storage Notes
@@ -70,6 +72,8 @@ If you are using a repository checkout instead of the public install path, read 
 - By default, CW-managed state is stored under `~/.cw/workspaces/<workspace-id>/`.
 
 For workspace-scoped editor use, launch `cw mcp serve` from the intended workspace root. If that is not possible, rewire the client launch path instead of injecting workspace overrides through environment variables.
+
+A bare `cw mcp serve` run is also not the best health check. It is a stdio server, so a manual run can exit once stdio closes or no client remains attached.
 
 ## Local Client Provider Note
 

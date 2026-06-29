@@ -19,7 +19,9 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
 
   mcp
     .command("serve")
-    .description("Start the stdio MCP server.")
+    .description(
+      "Start the stdio MCP server for a connected host session. Manual runs can exit once stdio closes."
+    )
     .action(async () => {
       await serveCwMcpServer();
     });

@@ -28,6 +28,9 @@ Notes:
 - Use `cw init` as the default onboarding path. Run it interactively by default, or use presets such as `--preset mock`, `--preset deepseek`, or `--preset opencode` with `--allow-write` when you need the lower-level scripted setup flow.
 - Persist worker, validation, safety, local client defaults, and optional provider API keys in `config.json`.
 - `cw mcp serve` resolves the workspace from the current directory by default.
+- `cw mcp list-tools` and `cw mcp config` only validate the local runtime and recommended snippet shape.
+- Use `cw doctor --mcp --host codex` when you need the host-side wiring check.
+- A bare `cw mcp serve` run can exit when stdio closes; that alone does not mean the server is unhealthy.
 - Launch MCP clients from the target repository checkout so cwd-based root resolution stays correct.
 - Repository-local legacy `.cw/` directories are unsupported and ignored by current builds.
 
@@ -81,6 +84,7 @@ pnpm exec cw mcp serve
 
 - MCP clients should launch the server from the repository root.
 - Use `pnpm exec cw mcp config` to print a stdio config snippet.
+- Use `pnpm exec cw doctor --mcp --host codex` when you need to verify that a Codex host config actually loaded the snippet.
 - The MCP snippet should only describe how to launch `cw`; runtime worker and safety settings should come from `config.json`.
 - For workspace-scoped IDE use, start `pnpm exec cw mcp serve` from the target repository root.
 - For local client providers, `opencode` is the default command. Persist a different compatible local wrapper with `cw init --worker-client-command <command> --allow-write`.

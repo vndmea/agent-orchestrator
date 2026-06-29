@@ -51,6 +51,8 @@ Writes remain in dry-run mode unless a command explicitly enables repository wri
 
 For MCP clients, `cw mcp serve` does not take `--root`. Launch it from the intended repository root so the active workspace binding is unambiguous.
 
+Treat `cw mcp serve` as a stdio endpoint for a connected host session, not as a standalone health check. A manual run can exit once stdin/stdout closes without implying that the MCP server is broken.
+
 Treat `config.json` as the primary runtime config surface for worker, validation, safety, and local client defaults. Treat the MCP host snippet as launch-only: command and args only.
 
 For local client providers, `opencode` is the default command. Start with `cw init --preset opencode --allow-write`, then persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command <command> --allow-write` or a manual edit when needed.
@@ -101,6 +103,7 @@ cw task resume <taskId> --apply-patch --allow-write --confirm-apply
 - `cw task start` requires an explicit named worker via `--worker <workerId>`.
 - `cw init` and `cw doctor` verify setup, while `cw worker readiness` gives the single task-readiness answer for one worker.
 - `cw doctor --mcp` adds host-level MCP checks for config presence, snippet validity, launchability, live stdio connectivity, and tool-list matching.
+- `cw mcp list-tools` and `cw mcp config` are local runtime checks only. They do not prove that a host already loaded the snippet or is launching the intended server command.
 - `patch apply` stays explicitly gated even inside task sessions.
 - `task start`, `task status`, `task resume`, `task list`, `review`, `fix`, and `validate` accept summary-oriented flags such as `--summary` and `--max-bytes`.
 
