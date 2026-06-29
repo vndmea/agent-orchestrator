@@ -21,15 +21,15 @@ export const assessWorkerTaskEligibility = (
     };
   }
 
-  const repoGrounding = profile.portrait?.repoGrounding ?? 0;
-  const scopeDiscipline = profile.portrait?.scopeDiscipline ?? 0;
-  const answerDirectness = profile.portrait?.answerDirectness ?? 0;
-  const codeUnderstandingScore = profile.taskScores?.codeUnderstanding ?? 0;
-  const riskAnalysisScore = profile.taskScores?.riskAnalysis ?? 0;
-  const reviewLiteScore = profile.taskScores?.reviewLite ?? 0;
-  const summarizationScore = profile.taskScores?.summarization ?? 0;
-  const validationFixScore = profile.taskScores?.validationFix ?? 0;
-  const docGenerationScore = profile.taskScores?.docGeneration ?? 0;
+  const repoGrounding = profile.portrait?.repoGrounding;
+  const scopeDiscipline = profile.portrait?.scopeDiscipline;
+  const answerDirectness = profile.portrait?.answerDirectness;
+  const codeUnderstandingScore = profile.taskScores?.codeUnderstanding;
+  const riskAnalysisScore = profile.taskScores?.riskAnalysis;
+  const reviewLiteScore = profile.taskScores?.reviewLite;
+  const summarizationScore = profile.taskScores?.summarization;
+  const validationFixScore = profile.taskScores?.validationFix;
+  const docGenerationScore = profile.taskScores?.docGeneration;
   const hasGenericAnswerEvidence =
     (profile.evidence?.genericAnswerCases.length ?? 0) > 0;
   const hasFallbackPatternEvidence =
@@ -38,10 +38,10 @@ export const assessWorkerTaskEligibility = (
   if (
     (taskType === "review-lite" || taskType === "risk-analysis") &&
     (
-      (taskType === "review-lite" ? reviewLiteScore : riskAnalysisScore) < 0.76 ||
-      repoGrounding < 0.72 ||
-      scopeDiscipline < 0.76 ||
-      answerDirectness < 0.72 ||
+      ((taskType === "review-lite" ? reviewLiteScore : riskAnalysisScore) ?? 1) < 0.76 ||
+      (repoGrounding ?? 1) < 0.72 ||
+      (scopeDiscipline ?? 1) < 0.76 ||
+      (answerDirectness ?? 1) < 0.72 ||
       hasGenericAnswerEvidence ||
       hasFallbackPatternEvidence
     )
@@ -60,9 +60,9 @@ export const assessWorkerTaskEligibility = (
       taskType === "json-extraction" ||
       taskType === "doc-generation") &&
     (
-      (taskType === "doc-generation" ? docGenerationScore : summarizationScore) < 0.74 ||
-      repoGrounding < 0.7 ||
-      scopeDiscipline < 0.72 ||
+      ((taskType === "doc-generation" ? docGenerationScore : summarizationScore) ?? 1) < 0.74 ||
+      (repoGrounding ?? 1) < 0.7 ||
+      (scopeDiscipline ?? 1) < 0.72 ||
       hasGenericAnswerEvidence ||
       hasFallbackPatternEvidence
     )
@@ -78,9 +78,9 @@ export const assessWorkerTaskEligibility = (
   if (
     taskType === "code-understanding" &&
     (
-      codeUnderstandingScore < 0.72 ||
-      (profile.portrait?.codeUnderstanding ?? 0) < 0.7 ||
-      repoGrounding < 0.68 ||
+      (codeUnderstandingScore ?? 1) < 0.72 ||
+      (profile.portrait?.codeUnderstanding ?? 1) < 0.7 ||
+      (repoGrounding ?? 1) < 0.68 ||
       hasGenericAnswerEvidence
     )
   ) {
@@ -104,10 +104,10 @@ export const assessWorkerTaskEligibility = (
     taskType === "validation-fix" &&
     (
       !profile.routingPolicy.allowCodegen ||
-      (profile.taskScores?.codegen ?? 0) < 0.76 ||
-      (profile.score.codeQuality ?? 0) < 0.74 ||
-      (profile.portrait?.implementationPlanning ?? 0) < 0.72 ||
-      validationFixScore < 0.76
+      (profile.taskScores?.codegen ?? 1) < 0.76 ||
+      profile.score.codeQuality < 0.74 ||
+      (profile.portrait?.implementationPlanning ?? 1) < 0.72 ||
+      (validationFixScore ?? 1) < 0.76
     )
   ) {
     return {

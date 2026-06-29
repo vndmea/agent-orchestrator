@@ -7,7 +7,6 @@ import { delimiter, isAbsolute, join } from "node:path";
 
 import type { DoctorCheck, ExecutionContext } from "@mcp-code-worker/core";
 
-import { buildMcpToolCatalogView } from "./mcp-tool-catalog.js";
 import {
   buildMcpConfigSnippet,
   type McpHost
@@ -314,7 +313,8 @@ const withTimeout = async <T>(
   }
 };
 
-const flattenToolNames = (): string[] => {
+const flattenToolNames = async (): Promise<string[]> => {
+  const { buildMcpToolCatalogView } = await import("./mcp-tool-catalog.js");
   const catalog = buildMcpToolCatalogView();
 
   return catalog.groups
@@ -429,6 +429,7 @@ export const createHostMcpDoctorChecks = async (
 ): Promise<DoctorCheck[]> => {
   const inspection = await inspectHostMcpConfig(host, process.env);
   const expected = buildExpectedServerSummary(host);
+  const expectedToolNames = await flattenToolNames();
   const checks: DoctorCheck[] = [];
 
   if (!inspection.pathDiscoverySupported) {
@@ -484,13 +485,13 @@ export const createHostMcpDoctorChecks = async (
       name: "mcp-tool-catalog-match",
       status: "warning",
       message: `Tool catalog matching was skipped because the host MCP connection could not be exercised for '${host}'.`,
-      metadata: {
-        host,
-        found: "No host-visible tool catalog was collected.",
-        expected: `${flattenToolNames().length} tool(s) from 'cw mcp list-tools'.`,
-        fix: `Get a successful MCP connection first, then rerun 'cw doctor --mcp --host ${host}'.`,
-        status: "warning"
-      }
+        metadata: {
+          host,
+          found: "No host-visible tool catalog was collected.",
+          expected: `${expectedToolNames.length} tool(s) from 'cw mcp list-tools'.`,
+          fix: `Get a successful MCP connection first, then rerun 'cw doctor --mcp --host ${host}'.`,
+          status: "warning"
+        }
     });
 
     return checks;
@@ -598,7 +599,7 @@ export const createHostMcpDoctorChecks = async (
       metadata: {
         host,
         found: "No host-visible tool catalog was collected.",
-        expected: `${flattenToolNames().length} tool(s) from 'cw mcp list-tools'.`,
+        expected: `${expectedToolNames.length} tool(s) from 'cw mcp list-tools'.`,
         fix: "Get a successful MCP connection first, then rerun 'cw doctor --mcp'.",
         status: "warning"
       }
@@ -627,7 +628,6 @@ export const createHostMcpDoctorChecks = async (
     }
   });
 
-  const expectedToolNames = flattenToolNames();
   const catalogsMatch =
     !connection.error &&
     connection.toolNames.length === expectedToolNames.length &&

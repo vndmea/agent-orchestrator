@@ -46,6 +46,7 @@ export const runRepositoryScopedWorkerTask = async (input: {
   additionalTaskInput?: Record<string, unknown>;
   context: ExecutionContext;
   files?: string[];
+  forceExecution?: boolean;
   goal: string;
   repositoryContext: RepositoryContextPack;
   requireProfile?: boolean;
@@ -57,6 +58,7 @@ export const runRepositoryScopedWorkerTask = async (input: {
     additionalTaskInput: input.additionalTaskInput,
     context: input.context,
     files: input.files,
+    forceExecution: input.forceExecution,
     goal: input.goal,
     repositoryContext: input.repositoryContext,
     requireProfile: input.requireProfile,

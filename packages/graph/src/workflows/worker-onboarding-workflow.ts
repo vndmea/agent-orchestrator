@@ -226,22 +226,25 @@ export const runWorkerBenchmarkOnboarding = async (input: {
   workerId: string;
 }): Promise<WorkerBenchmarkOnboardingResult> => {
   const suite = input.suite ?? "coding-v1";
-  const resolvedWorker = await resolveWorkflowWorkerContext({
-    activity: "worker benchmark onboarding",
-    context: input.context,
-    baseURL: input.baseURL,
-    model: input.model,
-    provider: input.provider,
-    workerId: input.workerId
-  });
   const benchmarkResult =
     input.benchmarkResult ??
-    (await runWorkerBenchmarkWorkflow({
-      context: input.context,
-      suite,
-      workerId: resolvedWorker.workerId,
-      modelConfig: resolvedWorker.context.workerModel
-    }));
+    (await (async () => {
+      const resolvedWorker = await resolveWorkflowWorkerContext({
+        activity: "worker benchmark onboarding",
+        context: input.context,
+        baseURL: input.baseURL,
+        model: input.model,
+        provider: input.provider,
+        workerId: input.workerId
+      });
+
+      return runWorkerBenchmarkWorkflow({
+        context: input.context,
+        suite,
+        workerId: resolvedWorker.workerId,
+        modelConfig: resolvedWorker.context.workerModel
+      });
+    })());
   const persistence = input.persistArtifact
     ? await saveWorkerBenchmarkArtifact(input.context, benchmarkResult, true)
     : null;

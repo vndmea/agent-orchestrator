@@ -40,10 +40,12 @@ export const cwRunHostWorkerTool: CwToolDefinition<
   inputSchema,
   execute: async (args) => {
     const context = await resolveToolContext();
+    const forceExecution =
+      args.forceExecution ?? (args.requireProfile !== true && context.dryRun);
     const result = await runHostWorkerWorkflow({
       context,
       files: args.files,
-      forceExecution: args.forceExecution,
+      forceExecution,
       goal: args.goal,
       requireProfile: args.requireProfile,
       scope: args.scope,
@@ -60,7 +62,7 @@ export const cwRunHostWorkerTool: CwToolDefinition<
       errors: result.errors,
       metadata: {
         files: args.files,
-        forceExecution: args.forceExecution,
+        forceExecution,
         requireProfile: args.requireProfile,
         scope: args.scope,
         strictFiles: args.strictFiles,

@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import {
   getCwWorkspaceFilePath,
@@ -11,7 +11,7 @@ import type {
   WorkerCapabilityProfile
 } from "@mcp-code-worker/core";
 
-const inMemoryProfiles = new Map<string, WorkerCapabilityProfile>();
+const inMemoryProfiles = new Map<string, Map<string, WorkerCapabilityProfile>>();
 export interface PersistedWorkerProfilesReadResult {
   error?: string;
   exists: boolean;
@@ -26,6 +26,22 @@ export const getWorkerProfileStorePath = (
   cwStorageDir
     ? getCwWorkspaceFilePathFromStorageDir(cwStorageDir, "worker-profiles.json")
     : getCwWorkspaceFilePath(rootDir, "worker-profiles.json");
+
+const getInMemoryWorkspaceProfiles = (
+  rootDir: string,
+  cwStorageDir?: string
+): Map<string, WorkerCapabilityProfile> => {
+  const storeKey = resolve(getWorkerProfileStorePath(rootDir, cwStorageDir));
+  const existing = inMemoryProfiles.get(storeKey);
+
+  if (existing) {
+    return existing;
+  }
+
+  const created = new Map<string, WorkerCapabilityProfile>();
+  inMemoryProfiles.set(storeKey, created);
+  return created;
+};
 
 const safeParseProfiles = (value: string): WorkerCapabilityProfile[] => {
   try {
@@ -88,11 +104,12 @@ export const listWorkerProfiles = async (
 ): Promise<WorkerCapabilityProfile[]> => {
   const persisted = await listPersistedWorkerProfiles(rootDir, cwStorageDir);
   const merged = new Map<string, WorkerCapabilityProfile>();
+  const workspaceProfiles = getInMemoryWorkspaceProfiles(rootDir, cwStorageDir);
 
   persisted.forEach((profile) => {
     merged.set(profile.workerId, profile);
   });
-  inMemoryProfiles.forEach((profile, workerId) => {
+  workspaceProfiles.forEach((profile, workerId) => {
     merged.set(workerId, profile);
   });
 
@@ -104,7 +121,7 @@ export const getWorkerProfile = async (
   workerId: string,
   cwStorageDir?: string
 ): Promise<WorkerCapabilityProfile | null> => {
-  const inMemory = inMemoryProfiles.get(workerId);
+  const inMemory = getInMemoryWorkspaceProfiles(rootDir, cwStorageDir).get(workerId);
   if (inMemory) {
     return inMemory;
   }
@@ -118,7 +135,10 @@ export const saveWorkerProfile = async (
   profile: WorkerCapabilityProfile,
   explicitAllowWrite = false
 ): Promise<{ mode: "execute" | "dry-run"; path: string }> => {
-  inMemoryProfiles.set(profile.workerId, profile);
+  getInMemoryWorkspaceProfiles(context.rootDir, context.cwStorageDir).set(
+    profile.workerId,
+    profile
+  );
 
   const storePath = getWorkerProfileStorePath(
     context.rootDir,

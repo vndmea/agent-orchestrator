@@ -9,7 +9,6 @@ import {
   writeAuditEvent
 } from "@mcp-code-worker/core";
 import {
-  assessWorkerTaskEligibility,
   resolveWorkerProfile
 } from "@mcp-code-worker/models";
 import {
@@ -77,21 +76,22 @@ export const runPatchProposalWorkflow = async (
     workerId
   );
   const workerProfile = workerProfileResolution?.profile;
+  const routedWorkerProfile =
+    workerProfile?.routingPolicy.allowPatchGeneration === true
+      ? workerProfile
+      : null;
 
   if (workerProfile) {
-    const eligibility = assessWorkerTaskEligibility(
-      workerProfile,
-      "patch-generation"
-    );
-    if (!eligibility.allowed) {
-      warnings.push(eligibility.reason);
+    if (workerProfile.status !== "qualified") {
+      const reason =
+        `Worker ${workerProfile.workerId} is ${workerProfile.status} and is not qualified for patch-generation tasks.`;
       const inspection = PatchInspectionSchema.parse({
         ...(await inspectPatch(context, fallbackProposal, {
           scope: effectiveScope
         })),
         ok: false,
         blockedReasons: [
-          eligibility.reason,
+          reason,
           "Patch proposal is a fallback placeholder and must not be applied."
         ]
       });
@@ -99,14 +99,53 @@ export const runPatchProposalWorkflow = async (
       return {
         proposal: fallbackProposal,
         inspection,
-        warnings
+        warnings: [reason]
       };
     }
 
-    if (eligibility.requiresHostReview) {
-      warnings.push(
-        `Worker ${workerProfile.workerId} may generate patch proposals only with host review.`
-      );
+    if (
+      input.requireProfile &&
+      workerProfile.routingPolicy.allowPatchGeneration !== true
+    ) {
+      const reason =
+        `Worker ${workerProfile.workerId} is not allowed to generate patch proposals under its persisted routing policy.`;
+      const inspection = PatchInspectionSchema.parse({
+        ...(await inspectPatch(context, fallbackProposal, {
+          scope: effectiveScope
+        })),
+        ok: false,
+        blockedReasons: [
+          reason,
+          "Patch proposal is a fallback placeholder and must not be applied."
+        ]
+      });
+
+      return {
+        proposal: fallbackProposal,
+        inspection,
+        warnings: [reason]
+      };
+    }
+
+    if (!workerProfile.supportedTaskTypes.includes("patch-generation")) {
+      const reason =
+        `Worker ${workerProfile.workerId} is not qualified for patch-generation tasks.`;
+      const inspection = PatchInspectionSchema.parse({
+        ...(await inspectPatch(context, fallbackProposal, {
+          scope: effectiveScope
+        })),
+        ok: false,
+        blockedReasons: [
+          reason,
+          "Patch proposal is a fallback placeholder and must not be applied."
+        ]
+      });
+
+      return {
+        proposal: fallbackProposal,
+        inspection,
+        warnings: [reason]
+      };
     }
   }
 
@@ -120,7 +159,7 @@ export const runPatchProposalWorkflow = async (
     scope: effectiveScope,
     validationReport: input.validationReport,
     workerId,
-    workerProfile
+    workerProfile: routedWorkerProfile
   });
   const proposal = generation.proposal;
   let inspection = await inspectPatch(context, proposal, {

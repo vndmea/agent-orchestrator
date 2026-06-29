@@ -142,6 +142,7 @@ export const runReviewWorkflow = async (
   const workerRun = await runRepositoryScopedWorkerTask({
     context,
     files: input.files,
+    forceExecution: input.requireProfile !== true && context.dryRun,
     goal: "Review the selected repository context for concrete implementation and validation risks.",
     repositoryContext: runtime.repositoryContext,
     requireProfile: input.requireProfile,

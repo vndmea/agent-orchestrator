@@ -122,6 +122,7 @@ export const runFixErrorWorkflow = async (
   };
   const analysisResult = await runRepositoryScopedWorkerTask({
     context,
+    forceExecution: input.requireProfile !== true && context.dryRun,
     goal: "Analyze the supplied error log and summarize the likely root cause using the scoped repository context.",
     repositoryContext: runtime.repositoryContext,
     requireProfile: input.requireProfile,
@@ -131,6 +132,7 @@ export const runFixErrorWorkflow = async (
   });
   const planResult = await runRepositoryScopedWorkerTask({
     context,
+    forceExecution: input.requireProfile !== true && context.dryRun,
     goal: "Produce a safe candidate fix plan for the supplied error log using only the scoped repository context.",
     repositoryContext: runtime.repositoryContext,
     requireProfile: input.requireProfile,
