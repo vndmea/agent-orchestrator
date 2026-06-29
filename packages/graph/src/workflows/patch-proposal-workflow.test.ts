@@ -294,7 +294,7 @@ describe("patch proposal workflow", () => {
     );
   });
 
-  it("accepts legacy qualified profiles that allow patch generation even without the supported task tag", async () => {
+  it("blocks profiles that are missing the patch-generation support tag", async () => {
     const rootDir = await createWorkspace();
     await saveWorkerRegistration(
       createWriteContext(rootDir),
@@ -340,8 +340,9 @@ describe("patch proposal workflow", () => {
       requireProfile: true
     });
 
-    expect(result.proposal.title).not.toContain("[PLACEHOLDER]");
-    expect(result.inspection.ok).toBe(true);
+    expect(result.proposal.title).toContain("[PLACEHOLDER]");
+    expect(result.inspection.ok).toBe(false);
+    expect(result.warnings.join("\n")).toContain("not qualified for patch-generation tasks");
   });
 });
 

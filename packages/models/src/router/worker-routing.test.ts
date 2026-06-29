@@ -81,15 +81,13 @@ const createProfile = (
 });
 
 describe("assessWorkerTaskEligibility", () => {
-  it("allows patch-generation for legacy qualified profiles when routing policy allows it", () => {
-    const result = assessWorkerTaskEligibility(createProfile(), "patch-generation");
-
-    expect(result.allowed).toBe(true);
-  });
-
   it("blocks patch-generation when the routing policy disallows it", () => {
     const result = assessWorkerTaskEligibility(
       createProfile({
+        supportedTaskTypes: [
+          ...createProfile().supportedTaskTypes,
+          "patch-generation"
+        ],
         routingPolicy: {
           ...createProfile().routingPolicy,
           allowPatchGeneration: false
@@ -100,6 +98,13 @@ describe("assessWorkerTaskEligibility", () => {
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain("not allowed to generate patch proposals");
+  });
+
+  it("blocks patch-generation when the supported task tag is missing even if routing allows it", () => {
+    const result = assessWorkerTaskEligibility(createProfile(), "patch-generation");
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain("not qualified for patch-generation tasks");
   });
 
   it("allows repo-grounded review when the portrait is strong enough", () => {
