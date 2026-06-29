@@ -106,11 +106,11 @@ cw task resume <taskId> --apply-patch --allow-write --confirm-apply
 
 ## Worker Evaluation
 
-- `cw init` is the default onboarding path; `cw worker register` and `cw worker interview --save` remain the explicit advanced flow.
+- `cw init` is the default onboarding path; `cw worker register` and `cw worker interview --worker <workerId> --save` remain the explicit advanced flow.
 - `cw worker readiness --worker <workerId>` is the single answer for "can this worker run formal tasks right now?"
-- `cw worker benchmark --suite coding-v1 --save` measures coding-oriented behavior separately from onboarding.
+- `cw worker benchmark --suite coding-v1 --worker <workerId> --save` measures coding-oriented behavior separately from onboarding.
 - `--update-profile-capabilities` is the explicit capability reconciliation switch. It updates persisted `supportedTaskTypes` and `routingPolicy.allowPatchGeneration` only when the benchmark qualifies the worker for `patch-generation`.
-- Run `cw worker interview --save` before trying to update profile capabilities from benchmark results.
+- Run `cw worker interview --worker <workerId> --save` before trying to update profile capabilities from benchmark results.
 - Run `cw worker readiness --worker <workerId> --probe` when you want the readiness answer to include a live connectivity check instead of only persisted evidence.
 - Benchmark results alone do not bypass patch inspection, dry-run apply, `allowWrite`, or `confirmApply`.
 - If interview output contains provider invocation failures, `--save` is skipped on purpose and the command returns re-interview guidance instead of persisting a misleading non-qualification result.

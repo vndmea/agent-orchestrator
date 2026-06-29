@@ -130,7 +130,7 @@ cw review files --worker qwen-local --file packages/graph/src/index.ts --strict-
 cw validate --all
 cw validate --all --stop-on-failure --execute
 cw fix error --worker qwen-local --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
-cw task start --goal "Fix failing typecheck" --scope packages/core --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
+cw task start --goal "Fix failing typecheck" --scope packages/core --worker qwen-local --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
 cw task report <taskId>
 cw cleanup runs
 cw cleanup audit

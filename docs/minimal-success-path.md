@@ -26,7 +26,7 @@ cw init --preset opencode --allow-write
 3. Start a dry-run task first.
 
 ```bash
-cw task start --goal "Review this repository"
+cw task start --goal "Review this repository" --worker <workerId>
 ```
 
 4. Read the report before taking the next step.

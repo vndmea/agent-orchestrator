@@ -321,7 +321,7 @@ Use these signals to narrow provider issues quickly:
 
 - `cw doctor` reports missing or inconsistent worker model settings.
 - `cw doctor --probe` shows whether the resolved worker can answer with the current runtime wiring.
-- `cw worker interview --save` returns provider invocation failures.
+- `cw worker interview --worker <workerId> --save` returns provider invocation failures.
 - `cw mcp serve` works but worker-routed tasks fail because the MCP server environment does not contain the same provider variables as your shell.
 - A local client provider fails because `workerClientCommand` or `CW_WORKER_CLIENT_COMMAND` points to the wrong executable, or an override is unnecessary.
 

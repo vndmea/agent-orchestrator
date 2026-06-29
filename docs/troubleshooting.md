@@ -62,7 +62,7 @@ Different absolute repository roots produce different workspace ids, so a root m
 
 ### Symptoms
 
-- `cw worker interview --save` returns provider invocation failures
+- `cw worker interview --worker <workerId> --save` returns provider invocation failures
 - the worker remains unavailable at readiness time for provider/configuration reasons
 
 ### Checks
