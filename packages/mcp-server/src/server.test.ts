@@ -506,6 +506,7 @@ describe("mcp tool registration", () => {
     await withTempCwd(async (rootDir) => {
       await writeWorkspaceFixture(rootDir);
       await writeRegistry(rootDir, [createRegistration()]);
+      await writeProfiles(rootDir, [createProfile()]);
 
       const result = await cwRunHostWorkerTool.execute({
         goal: "Review the selected repository files for direct implementation risks",
