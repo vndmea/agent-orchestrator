@@ -350,17 +350,11 @@ cw mcp list-tools
 
 参见 [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.example)。
 
-- `WORKER_MODEL_PROVIDER`
-- `WORKER_MODEL_NAME`
-- `WORKER_MODEL_BASE_URL`
-- `WORKER_MODEL_API_KEY`
-- `LITELLM_BASE_URL`
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
 - `CW_WORKSPACE_DIR`
 - `CW_STORAGE_DIR`
-- `CW_WORKER_CLIENT_COMMAND`
 - `CW_DRY_RUN`
 - `CW_ALLOW_WRITE`
 - `CW_ALLOWED_COMMANDS`
@@ -371,10 +365,10 @@ cw mcp list-tools
 
 1. CLI flags
 2. `~/.cw/workspaces/<workspace-id>/config.json`
-3. 环境变量
+3. Bootstrap / safety environment variables
 4. 内置默认值
 
-`config.json` 应作为 worker、validation、安全策略和 MCP 相关运行时默认值的主配置面；如果你希望把 provider API key 也统一收口到本地配置，也可以持久化在用户级 `config.json`。`CW_WORKSPACE_DIR`、`CW_STORAGE_DIR` 这类启动定位变量仍通过环境变量提供，且真实密钥不应提交或写入日志。
+`config.json` 应作为 worker、validation、安全策略和 MCP 相关运行时默认值的主配置面，包括 provider API key 和本地 client command。`CW_WORKSPACE_DIR`、`CW_STORAGE_DIR` 这类启动定位变量仍通过环境变量提供，且真实密钥不应提交或写入日志。
 
 用户级 CW `config.json` 里的 repository context 配置用于控制 review、fix、patch 和 task workflow 的默认 `ignoredPaths` 与 `strictFiles` 行为。
 
@@ -416,11 +410,19 @@ cw mcp list-tools
 
 ## 如何配置 LiteLLM
 
-将 `WORKER_MODEL_PROVIDER=litellm`，并提供：
+将 LiteLLM worker 配置持久化到 `config.json`，例如：
 
-- `LITELLM_BASE_URL`
-
-如果你希望 worker 走非默认 endpoint，也可以改用 `WORKER_MODEL_BASE_URL`。
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "litellm",
+    "model": "<model>",
+    "baseURL": "https://litellm.example.com",
+    "apiKey": "<secret>"
+  }
+}
+```
 
 ## 安全模型
 

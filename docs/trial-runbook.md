@@ -85,9 +85,16 @@ Compatibility path worth testing in some SDKs:
 
 - `https://api.deepseek.com/v1`
 
-```powershell
-$env:WORKER_MODEL_API_KEY="..."
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "apiKey": "<secret>"
+  }
+}
+```
 
+```powershell
 cw worker register `
   --worker deepseek-flash `
   --provider openai-compatible `
@@ -112,12 +119,12 @@ DeepSeek troubleshooting:
 Invoke-RestMethod `
   -Method Get `
   -Uri "https://api.deepseek.com/models" `
-  -Headers @{ Authorization = "Bearer $env:WORKER_MODEL_API_KEY" }
+  -Headers @{ Authorization = "Bearer <api-key>" }
 ```
 
 ```bash
 curl https://api.deepseek.com/chat/completions \
-  -H "Authorization: Bearer $WORKER_MODEL_API_KEY" \
+  -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "deepseek-v4-flash",
@@ -125,7 +132,7 @@ curl https://api.deepseek.com/chat/completions \
   }'
 ```
 
-If you get `Not Found`, test both base URLs, verify the model name, and confirm that `WORKER_MODEL_API_KEY` is populated in the current runtime.
+If you get `Not Found`, test both base URLs, verify the model name, and confirm that `workerModel.apiKey` is persisted in `config.json`.
 
 If interview output reports provider invocation failures, do not treat the resulting unavailable status as a completed onboarding result. `cw worker interview --worker <workerId> --save` now skips persistence in that case and returns recovery actions instead.
 

@@ -67,7 +67,7 @@ Different absolute repository roots produce different workspace ids, so a root m
 
 ### Checks
 
-- Confirm `WORKER_MODEL_API_KEY` is set in the same runtime that launches `cw`
+- Confirm `workerModel.apiKey` is persisted in the active CW `config.json`
 - Confirm the provider name, model name, and base URL are correct
 - For DeepSeek-compatible workers, test both documented base URLs if needed
 - Re-run the health checks in [docs/provider-contracts/deepseek.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/deepseek.md)
@@ -85,7 +85,7 @@ Do not treat a provider-failure interview as a completed onboarding result.
 
 - If you use the local client provider, remember that `opencode` is the default compatible command
 - Prefer persisting `workerClientCommand` in `config.json` or via `cw init --worker-client-command <command> --allow-write`
-- Use `CW_WORKER_CLIENT_COMMAND` only as a runtime override when you do not want to persist `workerClientCommand` in `config.json`
+- Persist `workerClientCommand` in `config.json` when the local client executable differs from `opencode`
 - Re-run `cw doctor`
 - Use `cw doctor --probe` when you also want a live connectivity probe
 - Read `local-client-command`, `local-client-compatibility`, `runtime-bootstrap`, and `worker-connectivity` together before changing paths blindly

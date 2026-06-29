@@ -582,30 +582,20 @@ describe("cli parsing", () => {
 
   it("reports local client compatibility warnings when the resolved command is not opencode-compatible", async () => {
     await withTempCwd(async (rootDir) => {
-      const originalCommand = process.env.CW_WORKER_CLIENT_COMMAND;
-      process.env.CW_WORKER_CLIENT_COMMAND = "node";
-
-      try {
-        await writeCwConfig(rootDir, {
-          workerModel: {
-            provider: "client",
-            model: "qwen3-coder"
-          }
-        });
-        const { io, output } = createIo();
-        const cli = buildCli(io);
-
-        await cli.parseAsync(["node", "cw", "doctor"]);
-
-        expect(output.at(-1)).toContain("\"local-client-compatibility\"");
-        expect(output.at(-1)).toContain("missing expected flags");
-      } finally {
-        if (originalCommand === undefined) {
-          delete process.env.CW_WORKER_CLIENT_COMMAND;
-        } else {
-          process.env.CW_WORKER_CLIENT_COMMAND = originalCommand;
+      await writeCwConfig(rootDir, {
+        workerClientCommand: "node",
+        workerModel: {
+          provider: "client",
+          model: "qwen3-coder"
         }
-      }
+      });
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync(["node", "cw", "doctor"]);
+
+      expect(output.at(-1)).toContain("\"local-client-compatibility\"");
+      expect(output.at(-1)).toContain("missing expected flags");
     });
   });
 

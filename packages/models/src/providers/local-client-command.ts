@@ -84,13 +84,10 @@ const buildCommandCandidates = (
 };
 
 export const resolveLocalClientCommand = (
-  config: Pick<ModelConfig, "clientCommand">,
-  env: NodeJS.ProcessEnv = process.env
+  config: Pick<ModelConfig, "clientCommand">
 ): string =>
   normalizeCommandInput(
-    env.CW_WORKER_CLIENT_COMMAND?.trim() ||
-      config.clientCommand?.trim() ||
-      "opencode"
+    config.clientCommand?.trim() || "opencode"
   );
 
 export const resolveCommandOnPath = async (

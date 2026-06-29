@@ -101,13 +101,11 @@ export const createExecutionContextFromEnv = (
 
   const workerModel = mergeModelConfig(
     {
-      provider: env.WORKER_MODEL_PROVIDER ?? "mock",
-      model: env.WORKER_MODEL_NAME ?? "gpt-5.4-mini",
-      baseURL: env.WORKER_MODEL_BASE_URL || undefined,
-      apiKey: env.WORKER_MODEL_API_KEY || undefined,
-      clientCommand: env.CW_WORKER_CLIENT_COMMAND
-        ? normalizeCommandInput(env.CW_WORKER_CLIENT_COMMAND)
-        : undefined,
+      provider: "mock",
+      model: "gpt-5.4-mini",
+      baseURL: undefined,
+      apiKey: undefined,
+      clientCommand: undefined,
       temperature: 0.1
     },
     overrides.workerModel

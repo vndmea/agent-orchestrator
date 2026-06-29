@@ -1,20 +1,19 @@
 # Provider Configuration
 
-`mcp-code-worker` keeps provider configuration explicit across persisted config and environment overrides. This document explains how to configure worker models safely and how to validate the result.
+`mcp-code-worker` keeps provider configuration explicit in persisted `config.json`. This document explains how to configure worker models safely and how to validate the result.
 
 ## Configuration Surfaces
 
-The main worker model settings are:
+The main worker model settings live in `config.json` under `workerModel`:
 
-- `WORKER_MODEL_PROVIDER`
-- `WORKER_MODEL_NAME`
-- `WORKER_MODEL_BASE_URL`
-- `WORKER_MODEL_API_KEY`
+- `provider`
+- `model`
+- `baseURL`
+- `apiKey`
 
 Additional related settings include:
 
-- `LITELLM_BASE_URL`
-- `CW_WORKER_CLIENT_COMMAND`
+- `workerClientCommand`
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
@@ -28,10 +27,10 @@ Runtime configuration resolves in this order:
 
 1. CLI flags
 2. `~/.cw/workspaces/<workspace-id>/config.json`
-3. Environment variables
+3. Bootstrap / safety environment variables
 4. Built-in defaults
 
-Treat `config.json` as the primary source for persisted worker settings used by both CLI and MCP flows. API keys can live either in the user-scoped `config.json` or in environment variables such as `WORKER_MODEL_API_KEY`; prefer the user-scoped config when you want one local config surface, and never commit real keys into repository files or logs.
+Treat `config.json` as the primary source for persisted worker settings used by both CLI and MCP flows. Persist API keys and local client commands there, and never commit real keys into repository files or logs.
 
 ## 3-Minute Quickstarts
 
@@ -97,16 +96,15 @@ cw init --preset deepseek --allow-write
 
 3. If you prefer environment variables instead, set the secret in the same runtime that will launch `cw`:
 
-PowerShell:
+Add the key directly to `config.json`:
 
-```powershell
-$env:WORKER_MODEL_API_KEY="sk-..."
-```
-
-bash:
-
-```bash
-export WORKER_MODEL_API_KEY="sk-..."
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "apiKey": "sk-..."
+  }
+}
 ```
 
 4. Verify the resolved runtime:
@@ -145,16 +143,15 @@ cw init --preset opencode --allow-write
 
 3. If you prefer environment variables instead, set the secret in the same runtime that will launch `cw`:
 
-PowerShell:
+Add the key directly to `config.json`:
 
-```powershell
-$env:WORKER_MODEL_API_KEY="sk-ant-..."
-```
-
-bash:
-
-```bash
-export WORKER_MODEL_API_KEY="sk-ant-..."
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "apiKey": "sk-ant-..."
+  }
+}
 ```
 
 4. Verify the resolved runtime:
@@ -216,11 +213,16 @@ Use `openai-compatible` for providers that expose an OpenAI-compatible API surfa
 
 Typical settings:
 
-```bash
-WORKER_MODEL_PROVIDER=openai-compatible
-WORKER_MODEL_NAME=<model>
-WORKER_MODEL_BASE_URL=<base-url>
-WORKER_MODEL_API_KEY=<secret>
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "openai-compatible",
+    "model": "<model>",
+    "baseURL": "<base-url>",
+    "apiKey": "<secret>"
+  }
+}
 ```
 
 Contracts:
@@ -236,11 +238,16 @@ Use `claude-compatible` when the upstream API is Claude / Anthropic native rathe
 
 Typical settings:
 
-```bash
-WORKER_MODEL_PROVIDER=claude-compatible
-WORKER_MODEL_NAME=<model>
-WORKER_MODEL_BASE_URL=https://api.anthropic.com
-WORKER_MODEL_API_KEY=<secret>
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "claude-compatible",
+    "model": "<model>",
+    "baseURL": "https://api.anthropic.com",
+    "apiKey": "<secret>"
+  }
+}
 ```
 
 Contract:
@@ -253,13 +260,17 @@ Use `litellm` when worker traffic should go through a LiteLLM gateway.
 
 Typical settings:
 
-```bash
-WORKER_MODEL_PROVIDER=litellm
-WORKER_MODEL_NAME=<model>
-LITELLM_BASE_URL=<gateway-base-url>
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "litellm",
+    "model": "<model>",
+    "baseURL": "<gateway-base-url>",
+    "apiKey": "<secret>"
+  }
+}
 ```
-
-If the worker should target a non-default endpoint, `WORKER_MODEL_BASE_URL` can still be used as the effective worker endpoint.
 
 Contract:
 
@@ -270,8 +281,7 @@ Contract:
 Use a local client provider when a compatible local CLI bridges the model calls.
 
 - `opencode` is the default compatible command.
-- Persist `workerClientCommand` in `config.json` when the executable name or path differs.
-- Use `CW_WORKER_CLIENT_COMMAND` only as a runtime override when you intentionally do not want to persist `workerClientCommand` in `config.json`.
+- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `opencode`.
 
 Example:
 
@@ -322,8 +332,8 @@ Use these signals to narrow provider issues quickly:
 - `cw doctor` reports missing or inconsistent worker model settings.
 - `cw doctor --probe` shows whether the resolved worker can answer with the current runtime wiring.
 - `cw worker interview --worker <workerId> --save` returns provider invocation failures.
-- `cw mcp serve` works but worker-routed tasks fail because the MCP server environment does not contain the same provider variables as your shell.
-- A local client provider fails because `workerClientCommand` or `CW_WORKER_CLIENT_COMMAND` points to the wrong executable, or an override is unnecessary.
+- `cw mcp serve` works but worker-routed tasks fail because the persisted worker config does not match the repo's active CW workspace.
+- A local client provider fails because `workerClientCommand` points to the wrong executable.
 
 If provider invocation fails during interview, do not treat the resulting unavailable outcome as a completed onboarding result. Fix connectivity or auth first, then rerun the interview.
 

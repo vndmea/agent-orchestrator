@@ -8,24 +8,12 @@ Runtime configuration resolves in this order:
 
 1. CLI flags
 2. `~/.cw/workspaces/<workspace-id>/config.json`
-3. Environment variables
+3. Bootstrap / safety environment variables
 4. built-in defaults
 
-This means a CLI override wins over persisted user-scoped CW config, and persisted CW config wins over environment defaults for runtime settings.
+This means a CLI override wins over persisted user-scoped CW config, and persisted CW config wins over bootstrap/safety environment defaults for runtime settings.
 
-## Core Environment Variables
-
-### Worker model
-
-- `WORKER_MODEL_PROVIDER`
-- `WORKER_MODEL_NAME`
-- `WORKER_MODEL_BASE_URL`
-- `WORKER_MODEL_API_KEY`
-
-### Optional provider helpers
-
-- `LITELLM_BASE_URL`
-- `CW_WORKER_CLIENT_COMMAND`
+## Supported Environment Variables
 
 ### MCP / runtime identity
 
@@ -37,6 +25,12 @@ This means a CLI override wins over persisted user-scoped CW config, and persist
 
 - `CW_WORKSPACE_DIR`
 - `CW_STORAGE_DIR`
+
+### Safety defaults
+
+- `CW_DRY_RUN`
+- `CW_ALLOW_WRITE`
+- `CW_ALLOWED_COMMANDS`
 
 ### Safety defaults
 

@@ -28,19 +28,18 @@ Persist the non-secret defaults in `config.json`:
 
 Set the secret in the same runtime that launches `cw`:
 
-PowerShell:
+Persist the provider key in `config.json`:
 
-```powershell
-$env:WORKER_MODEL_API_KEY="sk-ant-..."
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "apiKey": "sk-ant-..."
+  }
+}
 ```
 
-bash:
-
-```bash
-export WORKER_MODEL_API_KEY="sk-ant-..."
-```
-
-`cw` keeps using the generic `WORKER_MODEL_API_KEY` env surface even though the upstream Anthropic SDK often defaults to `ANTHROPIC_API_KEY`.
+`cw` stores the Anthropic-compatible key in the generic `workerModel.apiKey` field even though upstream tooling may document `ANTHROPIC_API_KEY`.
 
 ## Minimal Health Checks
 

@@ -38,16 +38,15 @@ Supported shape:
 
 Set the secret in the same runtime that launches `cw`:
 
-PowerShell:
+Persist the provider key in `config.json`:
 
-```powershell
-$env:WORKER_MODEL_API_KEY="sk-..."
-```
-
-bash:
-
-```bash
-export WORKER_MODEL_API_KEY="sk-..."
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "apiKey": "sk-..."
+  }
+}
 ```
 
 ## Minimal Health Checks
@@ -67,14 +66,14 @@ PowerShell:
 Invoke-RestMethod `
   -Method Get `
   -Uri "https://api.deepseek.com/models" `
-  -Headers @{ Authorization = "Bearer $env:WORKER_MODEL_API_KEY" }
+  -Headers @{ Authorization = "Bearer <api-key>" }
 ```
 
 curl:
 
 ```bash
 curl https://api.deepseek.com/chat/completions \
-  -H "Authorization: Bearer $WORKER_MODEL_API_KEY" \
+  -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "deepseek-v4-flash",
@@ -126,7 +125,7 @@ Qualification sequence:
   - test both documented base URLs
   - confirm the exact model name
 - auth failures
-  - verify `WORKER_MODEL_API_KEY` is actually present in the same runtime that launches `cw`
+  - verify `workerModel.apiKey` is persisted in the active CW `config.json`
 - provider invocation failures during interview
   - do not treat the unavailable result as a completed qualification
   - fix connectivity or auth first, then rerun

@@ -126,7 +126,7 @@ The persisted directory name uses a filesystem-safe worker id. Example:
 
 ## DeepSeek / OpenAI-Compatible Notes
 
-You can persist worker API keys in the user-scoped CW `config.json` or provide them through `WORKER_MODEL_API_KEY`. Never commit real keys into repository files or include them in logs.
+Persist worker API keys in the user-scoped CW `config.json`. Never commit real keys into repository files or include them in logs.
 
 For DeepSeek-compatible workers:
 
@@ -135,18 +135,25 @@ For DeepSeek-compatible workers:
 
 Suggested troubleshooting flow:
 
-```powershell
-$env:WORKER_MODEL_API_KEY="..."
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "apiKey": "<secret>"
+  }
+}
+```
 
+```powershell
 Invoke-RestMethod `
   -Method Get `
   -Uri "https://api.deepseek.com/models" `
-  -Headers @{ Authorization = "Bearer $env:WORKER_MODEL_API_KEY" }
+  -Headers @{ Authorization = "Bearer <api-key>" }
 ```
 
 ```bash
 curl https://api.deepseek.com/chat/completions \
-  -H "Authorization: Bearer $WORKER_MODEL_API_KEY" \
+  -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "deepseek-v4-flash",
@@ -154,4 +161,4 @@ curl https://api.deepseek.com/chat/completions \
   }'
 ```
 
-If `Not Found` occurs, test both `https://api.deepseek.com` and `https://api.deepseek.com/v1` and confirm the model name, network access, and `WORKER_MODEL_API_KEY` runtime wiring.
+If `Not Found` occurs, test both `https://api.deepseek.com` and `https://api.deepseek.com/v1` and confirm the model name, network access, and persisted `workerModel.apiKey`.

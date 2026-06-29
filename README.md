@@ -353,17 +353,13 @@ cw mcp list-tools
 
 See [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.example).
 
-- `WORKER_MODEL_PROVIDER`
-- `WORKER_MODEL_NAME`
-- `WORKER_MODEL_BASE_URL`
-- `WORKER_MODEL_API_KEY`
-- `LITELLM_BASE_URL`
+Supported environment variables are limited to launch bootstrap and safety defaults:
+
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
 - `CW_WORKSPACE_DIR`
 - `CW_STORAGE_DIR`
-- `CW_WORKER_CLIENT_COMMAND`
 - `CW_DRY_RUN`
 - `CW_ALLOW_WRITE`
 - `CW_ALLOWED_COMMANDS`
@@ -374,10 +370,10 @@ Runtime configuration resolves in this order:
 
 1. CLI flags
 2. `~/.cw/workspaces/<workspace-id>/config.json`
-3. Environment variables
+3. Bootstrap / safety environment variables
 4. built-in defaults
 
-Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults, including provider API keys when you intentionally want one local config surface. Keep launch-location bootstrap values such as `CW_WORKSPACE_DIR` and `CW_STORAGE_DIR` in environment variables, and never commit real keys or include them in logs.
+Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults, including provider API keys and local client commands. Keep launch-location bootstrap values such as `CW_WORKSPACE_DIR` and `CW_STORAGE_DIR` in environment variables, and never commit real keys or include them in logs.
 
 Repository context settings in the user-scoped CW `config.json` control default `ignoredPaths` and `strictFiles` behavior for review, fix, patch, and task workflows.
 
@@ -419,10 +415,19 @@ Run `pnpm exec tsx examples/host-worker-basic/src/index.ts` to inspect the host-
 
 ## How to configure LiteLLM
 
-Set `WORKER_MODEL_PROVIDER=litellm`, then provide:
+Persist the worker settings in `config.json`, for example:
 
-- `LITELLM_BASE_URL`
-  Use `WORKER_MODEL_BASE_URL` when worker traffic should target a non-default endpoint.
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "litellm",
+    "model": "<model>",
+    "baseURL": "https://litellm.example.com",
+    "apiKey": "<secret>"
+  }
+}
+```
 
 ## Safety model
 

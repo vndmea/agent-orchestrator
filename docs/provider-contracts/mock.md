@@ -28,7 +28,7 @@ Persist:
 
 None.
 
-`mock` does not require `WORKER_MODEL_API_KEY`.
+`mock` does not require `workerModel.apiKey`.
 
 ## Minimal Health Checks
 

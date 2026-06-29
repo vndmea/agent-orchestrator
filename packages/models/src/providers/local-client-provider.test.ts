@@ -46,7 +46,6 @@ const config: ModelConfig = {
 describe("LocalClientProvider", () => {
   beforeEach(() => {
     spawnMock.mockReset();
-    delete process.env.CW_WORKER_CLIENT_COMMAND;
   });
 
   it("returns text results from client json output", async () => {
@@ -186,14 +185,19 @@ describe("LocalClientProvider", () => {
   });
 
   it("uses the configured client command override when provided", async () => {
-    process.env.CW_WORKER_CLIENT_COMMAND = "custom-client";
     const child = createMockChildProcess();
     spawnMock.mockReturnValue(child);
 
     const provider = new LocalClientProvider();
-    const pending = provider.invoke(config, {
-      prompt: "Reply with exactly hello"
-    });
+    const pending = provider.invoke(
+      {
+        ...config,
+        clientCommand: "custom-client"
+      },
+      {
+        prompt: "Reply with exactly hello"
+      }
+    );
 
     expect(spawnMock.mock.calls[0]?.[0]).toBe("custom-client");
 
@@ -211,7 +215,7 @@ describe("LocalClientProvider", () => {
     await pending;
   });
 
-  it("uses the model config client command when env override is absent", async () => {
+  it("uses the model config client command when configured", async () => {
     const child = createMockChildProcess();
     spawnMock.mockReturnValue(child);
 

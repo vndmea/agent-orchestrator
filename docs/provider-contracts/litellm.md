@@ -26,24 +26,24 @@ Persist the non-secret defaults in `config.json`:
 
 Then provide the gateway URL:
 
-PowerShell:
+Persist the LiteLLM gateway settings in `config.json`:
 
-```powershell
-$env:LITELLM_BASE_URL="https://litellm.example.com"
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "litellm",
+    "model": "<gateway-model-name>",
+    "baseURL": "https://litellm.example.com",
+    "apiKey": "<secret>"
+  }
+}
 ```
 
-bash:
+## Required Config Fields
 
-```bash
-export LITELLM_BASE_URL="https://litellm.example.com"
-```
-
-If you use `WORKER_MODEL_BASE_URL`, it becomes the effective worker endpoint instead of the default LiteLLM base URL.
-
-## Required Environment Variables
-
-- `LITELLM_BASE_URL`
-- any gateway-side secret that the LiteLLM deployment expects in the same runtime as `cw`
+- `workerModel.baseURL`
+- any gateway-side secret mirrored into `workerModel.apiKey`
 
 ## Minimal Health Checks
 
@@ -85,7 +85,7 @@ Benchmark only after interview succeeds.
 ## Common Failure Signatures
 
 - gateway `404`
-  - wrong `LITELLM_BASE_URL`
+  - wrong `workerModel.baseURL`
 - gateway model not found
   - wrong LiteLLM routing model name
 - probe fails intermittently

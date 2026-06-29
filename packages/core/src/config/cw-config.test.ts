@@ -105,7 +105,7 @@ describe("cw config", () => {
     expect(result.config.safety.dryRun).toBe(true);
   });
 
-  it("applies precedence cli overrides > config > env > defaults for persisted runtime settings", async () => {
+  it("applies precedence cli overrides > config > defaults for persisted runtime settings", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
       version: 1,
@@ -125,9 +125,6 @@ describe("cw config", () => {
     const context = await resolveExecutionContext({
       rootDir,
       env: {
-        WORKER_MODEL_PROVIDER: "env-provider",
-        WORKER_MODEL_NAME: "env-worker",
-        WORKER_MODEL_API_KEY: "env-secret",
         CW_DRY_RUN: "true"
       },
       cliOverrides: {
@@ -149,22 +146,20 @@ describe("cw config", () => {
     expect(context.allowedCommands).toEqual(["git"]);
   });
 
-  it("uses env fallbacks when persisted config does not exist", async () => {
+  it("uses built-in worker defaults when persisted config does not exist", async () => {
     const rootDir = await createWorkspace();
 
     const context = await resolveExecutionContext({
       rootDir,
       env: {
-        WORKER_MODEL_PROVIDER: "openai-compatible",
-        WORKER_MODEL_NAME: "env-worker",
         CW_DRY_RUN: "false",
         CW_ALLOW_WRITE: "true",
         CW_ALLOWED_COMMANDS: "git,node"
       }
     });
 
-    expect(context.workerModel.provider).toBe("openai-compatible");
-    expect(context.workerModel.model).toBe("env-worker");
+    expect(context.workerModel.provider).toBe("mock");
+    expect(context.workerModel.model).toBe("gpt-5.4-mini");
     expect(context.dryRun).toBe(false);
     expect(context.allowWrite).toBe(true);
     expect(context.allowedCommands).toEqual(["git", "node"]);

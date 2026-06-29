@@ -100,7 +100,7 @@ export interface SetupResult {
     description: string;
     toolName?: string;
   }>;
-  recommendedEnv: string[];
+  recommendedConfig: string[];
   readiness: Awaited<ReturnType<typeof buildWorkerAvailabilitySnapshot>>;
   rootDir: string;
   status: AvailabilityStatus;
@@ -798,8 +798,8 @@ export const formatSetupResult = (result: SetupResult): string[] => {
     );
   }
 
-  if (result.recommendedEnv.length > 0) {
-    lines.push(`env: ${result.recommendedEnv.join(", ")}`);
+  if (result.recommendedConfig.length > 0) {
+    lines.push(`config: ${result.recommendedConfig.join(", ")}`);
   }
 
   if (result.recommendedActions.length > 0) {
@@ -1108,15 +1108,15 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
     status: resultStatus,
     summary: readinessSummary,
     steps,
-    recommendedEnv: unique([
+    recommendedConfig: unique([
       configToWrite.workerModel &&
       !configToWrite.workerModel.apiKey &&
       !["mock", "client"].includes(
         configToWrite.workerModel.provider
       )
-        ? "WORKER_MODEL_API_KEY"
+        ? "Persist workerModel.apiKey in config.json before running the worker."
         : undefined
-    ]).map((name) => `export ${name}=...`),
+    ]),
     minimalSuccessPath,
     recommendedEntrypoints,
     recommendedActions: unique([

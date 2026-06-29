@@ -31,20 +31,17 @@ Expected shape:
 - model: upstream model name
 - base URL: the provider's OpenAI-compatible API root
 
-## Required Environment Variables
+## Required Config Fields
 
-- `WORKER_MODEL_API_KEY`
+Persist the provider key in `config.json`:
 
-PowerShell:
-
-```powershell
-$env:WORKER_MODEL_API_KEY="sk-..."
-```
-
-bash:
-
-```bash
-export WORKER_MODEL_API_KEY="sk-..."
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "apiKey": "sk-..."
+  }
+}
 ```
 
 ## Minimal Health Checks
@@ -95,7 +92,7 @@ cw worker benchmark --suite coding-v1 --worker openai-compatible:<model-name> --
 ## Common Failure Signatures
 
 - `401` / `403`
-  - invalid or missing `WORKER_MODEL_API_KEY`
+  - invalid or missing `workerModel.apiKey`
 - `404` / `Not Found`
   - wrong base URL or wrong model name
 - probe fails but direct shell API call works

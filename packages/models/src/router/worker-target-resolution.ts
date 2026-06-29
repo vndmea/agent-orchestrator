@@ -55,8 +55,8 @@ const assertApiKeyIfNeeded = (
 ): void => {
   if (requiresApiKey(modelConfig) && !modelConfig.apiKey) {
     throw new AgentError(
-      "WORKER_MODEL_API_KEY_MISSING",
-      `Worker ${workerId ?? "the selected worker"} requires WORKER_MODEL_API_KEY to be set before it can run.`,
+      "WORKER_API_KEY_MISSING",
+      `Worker ${workerId ?? "the selected worker"} requires workerModel.apiKey in config.json before it can run.`,
       workerId ? { workerId } : undefined
     );
   }

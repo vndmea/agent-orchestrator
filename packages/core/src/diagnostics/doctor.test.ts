@@ -129,33 +129,23 @@ describe("doctor", () => {
 
   it("checks the local client command when client providers are configured", async () => {
     const rootDir = await createWorkspace();
-    const originalCommand = process.env.CW_WORKER_CLIENT_COMMAND;
-    process.env.CW_WORKER_CLIENT_COMMAND = "node";
+    const report = await runDoctor(
+      createExecutionContextFromEnv(undefined, {
+        rootDir,
+        workerModel: {
+          provider: "client",
+          model: "qwen3-coder",
+          clientCommand: "node"
+        }
+      })
+    );
 
-    try {
-      const report = await runDoctor(
-        createExecutionContextFromEnv(undefined, {
-          rootDir,
-          workerModel: {
-            provider: "client",
-            model: "qwen3-coder"
-          }
-        })
-      );
-
-      expect(
-        report.checks.find((check) => check.name === "local-client-command")?.status
-      ).toBe("pass");
-      expect(
-        report.checks.find((check) => check.name === "worker-api-key")?.status
-      ).toBe("pass");
-    } finally {
-      if (originalCommand === undefined) {
-        delete process.env.CW_WORKER_CLIENT_COMMAND;
-      } else {
-        process.env.CW_WORKER_CLIENT_COMMAND = originalCommand;
-      }
-    }
+    expect(
+      report.checks.find((check) => check.name === "local-client-command")?.status
+    ).toBe("pass");
+    expect(
+      report.checks.find((check) => check.name === "worker-api-key")?.status
+    ).toBe("pass");
   });
 
   it("records bootstrap source details when CW_WORKSPACE_DIR and CW_STORAGE_DIR are set", async () => {

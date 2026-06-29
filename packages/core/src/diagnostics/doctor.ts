@@ -372,7 +372,6 @@ export const runDoctor = async (
       metadata: {
         command: localClientCommand,
         resolvedPath: localClientPath,
-        configuredByEnv: Boolean(process.env.CW_WORKER_CLIENT_COMMAND?.trim()),
         configuredInConfig: Boolean(context.workerModel.clientCommand?.trim())
       }
     });
@@ -435,14 +434,7 @@ export const runDoctor = async (
       cwStorageDir: context.cwStorageDir,
       env: {
         CW_STORAGE_DIR: env.CW_STORAGE_DIR,
-        CW_WORKSPACE_DIR: env.CW_WORKSPACE_DIR,
-        CW_WORKER_CLIENT_COMMAND: env.CW_WORKER_CLIENT_COMMAND,
-        WORKER_MODEL_API_KEY: hasEnvValue(env.WORKER_MODEL_API_KEY)
-          ? "[set]"
-          : undefined,
-        WORKER_MODEL_BASE_URL: env.WORKER_MODEL_BASE_URL,
-        WORKER_MODEL_NAME: env.WORKER_MODEL_NAME,
-        WORKER_MODEL_PROVIDER: env.WORKER_MODEL_PROVIDER
+        CW_WORKSPACE_DIR: env.CW_WORKSPACE_DIR
       },
       rootDir: context.rootDir,
       rootSource,
@@ -452,27 +444,22 @@ export const runDoctor = async (
   addCheck(checks, {
     name: "cw-config",
     status: config.error ? "fail" : config.exists ? "pass" : "warning",
-    message: config.error
-      ? `cw workspace config is invalid: ${config.error}`
-      : config.exists
-        ? "cw workspace config is present and readable."
-        : "cw workspace config is missing. Defaults and environment variables will still work.",
-    metadata: {
-      path: config.path
-    }
-  });
+      message: config.error
+        ? `cw workspace config is invalid: ${config.error}`
+        : config.exists
+          ? "cw workspace config is present and readable."
+          : "cw workspace config is missing. Built-in defaults will still work until config.json is written.",
+      metadata: {
+        path: config.path
+      }
+    });
 
   const apiKeyChecks = [
     {
       name: "worker-api-key",
       provider: context.workerModel.provider,
-      envVar: "WORKER_MODEL_API_KEY",
       hasKey: Boolean(context.workerModel.apiKey),
-      source: hasEnvValue(env.WORKER_MODEL_API_KEY)
-        ? "WORKER_MODEL_API_KEY"
-        : config.config.workerModel?.apiKey
-          ? "config.json"
-          : undefined
+      source: config.config.workerModel?.apiKey ? "config.json" : undefined
     }
   ];
 
@@ -496,9 +483,8 @@ export const runDoctor = async (
             ? `${entry.name} is using a local client provider and does not require an API key.`
           : entry.hasKey
             ? `${entry.name} resolved successfully from ${entry.source ?? "runtime config"}.`
-            : `${entry.name} is not set. Expected workerModel.apiKey in config.json or ${entry.envVar} for provider ${entry.provider}.`,
+            : `${entry.name} is not set. Expected workerModel.apiKey in config.json for provider ${entry.provider}.`,
       metadata: {
-        envVar: entry.envVar,
         provider: entry.provider,
         source: entry.source
       }
