@@ -5,7 +5,6 @@ import type {
 } from "@mcp-code-worker/core";
 import {
   getWorkerProfile,
-  resolveWorkerTarget,
   saveWorkerProfile
 } from "@mcp-code-worker/models";
 
@@ -14,6 +13,7 @@ import {
   runWorkerBenchmarkWorkflow,
   saveWorkerBenchmarkArtifact
 } from "./worker-benchmark-workflow.js";
+import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
 import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 
 type SavedArtifact = Awaited<ReturnType<typeof saveWorkerBenchmarkArtifact>>;
@@ -72,17 +72,18 @@ export const runWorkerInterviewOnboarding = async (input: {
   provider?: string;
   workerId: string;
 }): Promise<WorkerInterviewOnboardingResult> => {
-  const resolvedTarget = await resolveWorkerTarget({
+  const resolvedWorker = await resolveWorkflowWorkerContext({
+    activity: "worker interview onboarding",
     context: input.context,
-    workerId: input.workerId,
-    provider: input.provider,
+    baseURL: input.baseURL,
     model: input.model,
-    baseURL: input.baseURL
+    provider: input.provider,
+    workerId: input.workerId,
   });
   const result = await runWorkerInterviewWorkflow({
     context: input.context,
-    workerId: resolvedTarget.workerId,
-    modelConfig: resolvedTarget.modelConfig
+    workerId: resolvedWorker.workerId,
+    modelConfig: resolvedWorker.context.workerModel
   });
   const persistence = await persistInterviewProfile({
     context: input.context,
@@ -109,20 +110,21 @@ export const runWorkerBenchmarkOnboarding = async (input: {
   workerId: string;
 }): Promise<WorkerBenchmarkOnboardingResult> => {
   const suite = input.suite ?? "coding-v1";
-  const resolvedTarget = await resolveWorkerTarget({
+  const resolvedWorker = await resolveWorkflowWorkerContext({
+    activity: "worker benchmark onboarding",
     context: input.context,
-    workerId: input.workerId,
-    provider: input.provider,
+    baseURL: input.baseURL,
     model: input.model,
-    baseURL: input.baseURL
+    provider: input.provider,
+    workerId: input.workerId,
   });
   const benchmarkResult =
     input.benchmarkResult ??
     (await runWorkerBenchmarkWorkflow({
       context: input.context,
       suite,
-      workerId: resolvedTarget.workerId,
-      modelConfig: resolvedTarget.modelConfig
+      workerId: resolvedWorker.workerId,
+      modelConfig: resolvedWorker.context.workerModel
     }));
   const persistence = input.persistArtifact
     ? await saveWorkerBenchmarkArtifact(input.context, benchmarkResult, true)

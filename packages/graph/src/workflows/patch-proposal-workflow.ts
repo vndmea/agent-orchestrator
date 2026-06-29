@@ -1,5 +1,4 @@
 import {
-  createExecutionContextWithWorkerModel,
   PatchInspectionSchema,
   type ExecutionContext,
   type PatchInspection,
@@ -11,8 +10,6 @@ import {
 } from "@mcp-code-worker/core";
 import {
   assessWorkerTaskEligibility,
-  requireConfiguredWorkerId,
-  resolveWorkerTarget,
   resolveWorkerProfile
 } from "@mcp-code-worker/models";
 import {
@@ -24,6 +21,7 @@ import {
   buildFallbackPatchProposal,
   PatchGenerationWorker
 } from "../workers/patch-generation-worker.js";
+import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
 
 export interface PatchProposalWorkflowInput {
   context?: ExecutionContext;
@@ -57,20 +55,13 @@ export const runPatchProposalWorkflow = async (
     });
   const effectiveScope = repositoryContext.scope ?? input.scope;
   const warnings: string[] = [];
-  const requestedWorkerId = requireConfiguredWorkerId(
+  const resolvedWorker = await resolveWorkflowWorkerContext({
+    activity: "patch proposal generation",
     context,
-    input.workerId,
-    "patch proposal generation"
-  );
-  const workerModelResolution = await resolveWorkerTarget({
-    context,
-    workerId: requestedWorkerId
+    workerId: input.workerId
   });
-  const workerContext = createExecutionContextWithWorkerModel(
-    context,
-    workerModelResolution.modelConfig
-  );
-  const workerId = workerModelResolution.workerId ?? requestedWorkerId;
+  const workerContext = resolvedWorker.context;
+  const workerId = resolvedWorker.workerId;
   const workerProfileResolution = await resolveWorkerProfile({
     context: workerContext,
     modelConfig: workerContext.workerModel,

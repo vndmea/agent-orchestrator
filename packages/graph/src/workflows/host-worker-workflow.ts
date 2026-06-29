@@ -11,14 +11,11 @@ import type {
 } from "@mcp-code-worker/core";
 import {
   resolveExecutionContext,
-  createExecutionContextWithWorkerModel,
   writeAuditEvent
 } from "@mcp-code-worker/core";
 import {
   assessWorkerTaskEligibility,
-  requireConfiguredWorkerId,
-  resolveWorkerProfile,
-  resolveWorkerTarget
+  resolveWorkerProfile
 } from "@mcp-code-worker/models";
 import { buildRepositoryContextPack } from "@mcp-code-worker/tools";
 
@@ -26,6 +23,7 @@ import { CodegenWorker } from "../workers/codegen-worker.js";
 import { ReviewWorker } from "../workers/review-worker.js";
 import { SummarizeWorker } from "../workers/summarize-worker.js";
 import { TestWorker } from "../workers/test-worker.js";
+import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
 import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 
 export interface HostWorkerWorkflowInput {
@@ -502,20 +500,14 @@ export const runHostWorkerWorkflow = async (
   input: HostWorkerWorkflowInput
 ): Promise<HostWorkerWorkflowOutput> => {
   const context = input.context ?? await resolveExecutionContext();
-  const requestedWorkerId = requireConfiguredWorkerId(
+  const resolvedWorker = await resolveWorkflowWorkerContext({
+    activity: "host-managed worker execution",
     context,
-    input.workerId,
-    "host-managed worker execution"
-  );
-  const workerModelResolution = await resolveWorkerTarget({
-    context,
-    workerId: requestedWorkerId
+    requireProfile: input.requireProfile,
+    workerId: input.workerId
   });
-  const resolvedWorkerId = workerModelResolution.workerId ?? requestedWorkerId;
-  const workerContext = createExecutionContextWithWorkerModel(
-    context,
-    workerModelResolution.modelConfig
-  );
+  const resolvedWorkerId = resolvedWorker.workerId;
+  const workerContext = resolvedWorker.context;
   const repositoryContext =
     input.repositoryContext ??
     await buildRepositoryContextPack(context, {

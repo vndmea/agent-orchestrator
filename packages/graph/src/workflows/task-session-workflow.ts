@@ -3,7 +3,6 @@ import {
   buildWorkspaceBindingSummary,
   resolveExecutionContext,
   summarizeValidationOutcome,
-  createExecutionContextWithWorkerModel,
   createTaskSession,
   getTaskSessionPath,
   listTaskSessions,
@@ -23,11 +22,6 @@ import {
   updateTaskSession,
   writeTaskArtifact
 } from "@mcp-code-worker/core";
-import {
-  requireConfiguredWorkerId,
-  resolveWorkerProfile,
-  resolveWorkerTarget
-} from "@mcp-code-worker/models";
 import { applyPatchProposal } from "@mcp-code-worker/tools";
 
 import {
@@ -42,6 +36,7 @@ import {
   runReviewWorkflow,
   type ReviewWorkflowOutput
 } from "./review-workflow.js";
+import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
 
 export interface TaskSessionValidationOptions {
   lint?: boolean;
@@ -129,12 +124,6 @@ export interface TaskSessionPersistenceState {
   resumable: boolean;
   sessionPersisted: boolean;
   storageKind: "persisted" | "temporary";
-}
-
-interface ResolvedTaskContext {
-  context: ExecutionContext;
-  requestedWorkerId?: string;
-  workerId: string;
 }
 
 const STEP_IDS = [
@@ -273,42 +262,6 @@ const persistArtifact = async (
   );
   session.artifacts[artifactName] = result.path;
   return result.path;
-};
-
-const resolveTaskContext = async (
-  context: ExecutionContext,
-  workerId: string | undefined,
-  requireProfile: boolean | undefined
-): Promise<ResolvedTaskContext> => {
-  const requestedWorkerId = requireConfiguredWorkerId(
-    context,
-    workerId,
-    "task session execution"
-  );
-  const workerModelResolution = await resolveWorkerTarget({
-    context,
-    workerId: requestedWorkerId
-  });
-  const resolvedWorkerId = workerModelResolution.workerId ?? requestedWorkerId;
-  const workerContext = createExecutionContextWithWorkerModel(
-    context,
-    workerModelResolution.modelConfig
-  );
-
-  if (requireProfile) {
-    await resolveWorkerProfile({
-      context: workerContext,
-      workerId: resolvedWorkerId,
-      modelConfig: workerContext.workerModel,
-      requireProfile
-    });
-  }
-
-  return {
-    context: workerContext,
-    requestedWorkerId,
-    workerId: resolvedWorkerId
-  };
 };
 
 const buildSessionMetadata = (input: {
@@ -1227,17 +1180,251 @@ const finalizeTaskWorkflowOutput = async (input: {
   };
 };
 
+interface TaskSessionExecutionState {
+  fixResult?: FixErrorWorkflowOutput;
+  patchApplyResult?: PatchApplyResult;
+  patchInspection?: PatchInspection;
+  patchProposal?: PatchProposal;
+  repositoryContext?: RepositoryContextPack;
+  reviewResult?: ReviewWorkflowOutput;
+  validationReport?: ValidationReport;
+}
+
+interface TaskSessionExecutionInput {
+  allowDirtyWorktree?: boolean;
+  allowWrite?: boolean;
+  allowWriteSession: boolean;
+  applyPatch?: boolean;
+  confirmApply?: boolean;
+  context: ExecutionContext;
+  errorLog?: string;
+  errorLogFile?: string;
+  fromStep?: TaskStepId;
+  goal: string;
+  inspectPatch?: boolean;
+  proposePatch?: boolean;
+  runFix?: boolean;
+  scope?: string;
+  session: TaskSession;
+  state: TaskSessionExecutionState;
+  validate: Required<TaskSessionValidationOptions>;
+  workerId: string;
+  requestedWorkerId?: string;
+}
+
+const buildReviewBlockReason = (
+  reviewResult: ReviewWorkflowOutput
+): string | undefined =>
+  reviewResult.accepted
+    ? undefined
+    : `Review quality gate failed: ${reviewResult.qualityGate.reasons.join(" | ")}`;
+
+const buildFixBlockReason = (
+  fixResult: FixErrorWorkflowOutput | undefined
+): string | undefined =>
+  fixResult && !fixResult.accepted
+    ? `Fix planning quality gate failed: ${[
+        ...fixResult.analysisResult.qualityGate.reasons,
+        ...fixResult.planResult.qualityGate.reasons
+      ].join(" | ")}`
+    : undefined;
+
+const shouldExecuteTaskStep = (
+  session: TaskSession,
+  stepId: TaskStepId,
+  fromStep: TaskStepId | undefined,
+  existingValue: unknown
+): boolean =>
+  existingValue === undefined || (fromStep ? shouldRunStep(session, stepId, fromStep) : true);
+
+const runTaskSessionExecution = async (
+  input: TaskSessionExecutionInput
+): Promise<{
+  fixResult?: FixErrorWorkflowOutput;
+  patchApplyResult?: PatchApplyResult;
+  patchInspection?: PatchInspection;
+  patchProposal?: PatchProposal;
+  repositoryContext?: RepositoryContextPack;
+  reviewResult: ReviewWorkflowOutput;
+  validationReport?: ValidationReport;
+}> => {
+  let repositoryContext = input.state.repositoryContext;
+  let reviewResult = input.state.reviewResult;
+  let validationReport = input.state.validationReport;
+  let fixResult = input.state.fixResult;
+  let patchProposal = input.state.patchProposal;
+  let patchInspection = input.state.patchInspection;
+  let patchApplyResult = input.state.patchApplyResult;
+
+  if (
+    shouldExecuteTaskStep(
+      input.session,
+      "reviewed",
+      input.fromStep,
+      reviewResult
+    )
+  ) {
+    reviewResult = await executeReviewStep({
+      context: input.context,
+      session: input.session,
+      scope: input.scope,
+      validate: input.validate,
+      allowWriteSession: input.allowWriteSession,
+      workerId: input.workerId
+    });
+    repositoryContext = reviewResult.repositoryContext;
+    validationReport = reviewResult.validationReport;
+  }
+
+  if (!reviewResult) {
+    throw new AgentError(
+      "TASK_REVIEW_ARTIFACT_MISSING",
+      `Review artifact is missing for task ${input.session.taskId}.`,
+      { taskId: input.session.taskId }
+    );
+  }
+
+  const reviewBlockReason = buildReviewBlockReason(reviewResult);
+  const wantsFixStep = shouldRunFixStep(input);
+
+  if (
+    reviewResult.accepted &&
+    wantsFixStep &&
+    shouldExecuteTaskStep(
+      input.session,
+      "fix-planned",
+      input.fromStep,
+      fixResult
+    )
+  ) {
+    fixResult = await executeFixStep({
+      context: input.context,
+      session: input.session,
+      scope: input.scope,
+      validate: input.validate,
+      errorLog: input.errorLog,
+      errorLogFile: input.errorLogFile,
+      allowWriteSession: input.allowWriteSession,
+      workerId: input.workerId
+    });
+    repositoryContext = fixResult.repositoryContext;
+    validationReport = fixResult.validationReport;
+  } else if (reviewBlockReason) {
+    await denyRemainingExecutionSteps({
+      allowWriteSession: input.allowWriteSession,
+      context: input.context,
+      reason: reviewBlockReason,
+      session: input.session,
+      steps: ["fix-planned", "patch-proposed", "patch-inspected", "patch-applied"]
+    });
+  } else if (!wantsFixStep && !fixResult) {
+    finalizeStep(getStep(input.session, "fix-planned"), "skipped");
+  }
+
+  const fixBlockReason = buildFixBlockReason(fixResult);
+  const wantsPatchProposal = input.proposePatch || input.inspectPatch;
+
+  if (
+    reviewResult.accepted &&
+    !fixBlockReason &&
+    wantsPatchProposal &&
+    (shouldExecuteTaskStep(
+      input.session,
+      "patch-proposed",
+      input.fromStep,
+      patchProposal
+    ) ||
+      shouldExecuteTaskStep(
+        input.session,
+        "patch-inspected",
+        input.fromStep,
+        patchInspection
+      ))
+  ) {
+    const patchResult = await executePatchProposalStep({
+      context: input.context,
+      session: input.session,
+      reviewResult,
+      fixResult,
+      goal: input.goal,
+      errorLog: input.errorLog,
+      validationReport,
+      workerId: input.requestedWorkerId,
+      allowWriteSession: input.allowWriteSession
+    });
+    patchProposal = patchResult.proposal;
+    patchInspection = patchResult.inspection;
+  } else if (fixBlockReason) {
+    await denyRemainingExecutionSteps({
+      allowWriteSession: input.allowWriteSession,
+      context: input.context,
+      reason: fixBlockReason,
+      session: input.session,
+      steps: ["patch-proposed", "patch-inspected", "patch-applied"]
+    });
+  } else if (!wantsPatchProposal && !patchProposal && !patchInspection) {
+    finalizeStep(getStep(input.session, "patch-proposed"), "skipped");
+    finalizeStep(getStep(input.session, "patch-inspected"), "skipped");
+  }
+
+  if (
+    reviewResult.accepted &&
+    !fixBlockReason &&
+    input.applyPatch &&
+    shouldExecuteTaskStep(
+      input.session,
+      "patch-applied",
+      input.fromStep,
+      patchApplyResult
+    )
+  ) {
+    if (!patchProposal) {
+      throw new AgentError(
+        "TASK_PATCH_PROPOSAL_MISSING",
+        input.fromStep
+          ? "Patch application requires a previously stored patch proposal."
+          : "Patch application requires a patch proposal artifact.",
+        { taskId: input.session.taskId }
+      );
+    }
+
+    patchApplyResult = await executePatchApplyStep({
+      allowDirtyWorktree: input.allowDirtyWorktree,
+      context: input.context,
+      session: input.session,
+      patchProposal,
+      validate: input.validate,
+      allowWrite: input.allowWrite,
+      confirmApply: input.confirmApply,
+      allowWriteSession: input.allowWriteSession
+    });
+  } else if (!input.applyPatch && !patchApplyResult) {
+    finalizeStep(getStep(input.session, "patch-applied"), "skipped");
+  }
+
+  return {
+    reviewResult,
+    repositoryContext: repositoryContext ?? reviewResult.repositoryContext,
+    validationReport: validationReport ?? reviewResult.validationReport,
+    fixResult,
+    patchProposal,
+    patchInspection,
+    patchApplyResult
+  };
+};
+
 export const runTaskSessionWorkflow = async (
   input: TaskSessionWorkflowInput
 ): Promise<TaskSessionWorkflowOutput> => {
   const baseContext = await createBaseContext(input.context, {
     allowWrite: input.allowWrite
   });
-  const resolved = await resolveTaskContext(
-    baseContext,
-    input.workerId,
-    input.requireProfile
-  );
+  const resolved = await resolveWorkflowWorkerContext({
+    activity: "task session execution",
+    context: baseContext,
+    requireProfile: input.requireProfile,
+    workerId: input.workerId
+  });
   const allowWriteSession = input.allowWriteSession ?? false;
   const sessionCreate = await createTaskSession(
     resolved.context,
@@ -1262,129 +1449,49 @@ export const runTaskSessionWorkflow = async (
     allowWriteSession
   );
   const session = sessionCreate.session;
-  const validation = buildDefaultValidation(input.validate);
-  const reviewResult = await executeReviewStep({
-    context: resolved.context,
-    session,
-    scope: input.scope,
-    validate: validation,
+  const execution = await runTaskSessionExecution({
+    allowDirtyWorktree: input.allowDirtyWorktree,
+    allowWrite: input.allowWrite,
     allowWriteSession,
-    workerId: resolved.workerId
+    applyPatch: input.applyPatch,
+    confirmApply: input.confirmApply,
+    context: resolved.context,
+    errorLog: input.errorLog,
+    errorLogFile: input.errorLogFile,
+    goal: input.goal,
+    inspectPatch: input.inspectPatch,
+    proposePatch: input.proposePatch,
+    runFix: input.runFix,
+    scope: input.scope,
+    session,
+    state: {},
+    validate: buildDefaultValidation(input.validate),
+    workerId: resolved.workerId,
+    requestedWorkerId: resolved.requestedWorkerId
   });
-  let fixResult: FixErrorWorkflowOutput | undefined;
-  let patchResult: PatchProposalWorkflowOutput | undefined;
-  let patchApplyResult: PatchApplyResult | undefined;
-  const reviewBlockReason = reviewResult.accepted
-    ? undefined
-    : `Review quality gate failed: ${reviewResult.qualityGate.reasons.join(" | ")}`;
-
-  if (reviewResult.accepted && shouldRunFixStep(input)) {
-    fixResult = await executeFixStep({
-      context: resolved.context,
-      session,
-      scope: input.scope,
-      validate: validation,
-      errorLog: input.errorLog,
-      errorLogFile: input.errorLogFile,
-      allowWriteSession,
-      workerId: resolved.workerId
-    });
-  } else if (reviewBlockReason) {
-    await denyRemainingExecutionSteps({
-      allowWriteSession,
-      context: resolved.context,
-      reason: reviewBlockReason,
-      session,
-      steps: ["fix-planned", "patch-proposed", "patch-inspected", "patch-applied"]
-    });
-  } else {
-    finalizeStep(getStep(session, "fix-planned"), "skipped");
-  }
-
-  const repositoryContext =
-    fixResult?.repositoryContext ?? reviewResult.repositoryContext;
-  const validationReport =
-    fixResult?.validationReport ?? reviewResult.validationReport;
-
-  const fixBlockReason =
-    fixResult && !fixResult.accepted
-      ? `Fix planning quality gate failed: ${[
-          ...fixResult.analysisResult.qualityGate.reasons,
-          ...fixResult.planResult.qualityGate.reasons
-        ].join(" | ")}`
-      : undefined;
-
-  if (reviewResult.accepted && !fixBlockReason && (input.proposePatch || input.inspectPatch)) {
-    patchResult = await executePatchProposalStep({
-      context: resolved.context,
-      session,
-      reviewResult,
-      fixResult,
-      goal: input.goal,
-      errorLog: input.errorLog,
-      validationReport,
-      workerId: resolved.requestedWorkerId,
-      allowWriteSession
-    });
-  } else if (fixBlockReason) {
-    await denyRemainingExecutionSteps({
-      allowWriteSession,
-      context: resolved.context,
-      reason: fixBlockReason,
-      session,
-      steps: ["patch-proposed", "patch-inspected", "patch-applied"]
-    });
-  } else {
-    finalizeStep(getStep(session, "patch-proposed"), "skipped");
-    finalizeStep(getStep(session, "patch-inspected"), "skipped");
-  }
-
-  if (reviewResult.accepted && !fixBlockReason && input.applyPatch) {
-    const proposal = patchResult?.proposal;
-    if (!proposal) {
-      throw new AgentError(
-        "TASK_PATCH_PROPOSAL_MISSING",
-        "Patch application requires a patch proposal artifact.",
-        { taskId: session.taskId }
-      );
-    }
-
-    patchApplyResult = await executePatchApplyStep({
-      allowDirtyWorktree: input.allowDirtyWorktree,
-      context: resolved.context,
-      session,
-      patchProposal: proposal,
-      validate: validation,
-      allowWrite: input.allowWrite,
-      confirmApply: input.confirmApply,
-      allowWriteSession
-    });
-  } else {
-    finalizeStep(getStep(session, "patch-applied"), "skipped");
-  }
   const finalStatus = resolveFinalStatus({
     applyPatchRequested: input.applyPatch ?? false,
-    patchApplyResult,
-    patchInspection: patchResult?.inspection,
-    reviewAccepted: reviewResult.accepted,
-    fixAccepted: fixResult?.accepted,
-    validationReport
+    patchApplyResult: execution.patchApplyResult,
+    patchInspection: execution.patchInspection,
+    reviewAccepted: execution.reviewResult.accepted,
+    fixAccepted: execution.fixResult?.accepted,
+    validationReport: execution.validationReport
   });
   return finalizeTaskWorkflowOutput({
     allowWriteSession,
     applyPatchRequested: input.applyPatch ?? false,
     context: resolved.context,
     finalStatus,
-    fixResult,
-    patchApplyResult,
-    patchInspection: patchResult?.inspection,
-    patchProposal: patchResult?.proposal,
-    repositoryContext,
-    reviewResult,
+    fixResult: execution.fixResult,
+    patchApplyResult: execution.patchApplyResult,
+    patchInspection: execution.patchInspection,
+    patchProposal: execution.patchProposal,
+    repositoryContext: execution.repositoryContext,
+    reviewResult: execution.reviewResult,
     session,
     sessionPath: sessionCreate.path,
     sessionWriteMode: sessionCreate.mode,
-    validationReport,
+    validationReport: execution.validationReport,
     workerId: resolved.workerId
   });
 };
@@ -1410,191 +1517,63 @@ export const resumeTaskSessionWorkflow = async (
   const metadata = session.metadata as {
     requestedWorkerId?: string;
   };
-  const resolved = await resolveTaskContext(
-    baseContext,
-    metadata.requestedWorkerId,
-    session.requireProfile
-  );
+  const resolved = await resolveWorkflowWorkerContext({
+    activity: "task session execution",
+    context: baseContext,
+    requireProfile: session.requireProfile,
+    workerId: metadata.requestedWorkerId
+  });
   const options = deriveResumeOptions(session, input);
   const fromStep = normalizeStepId(input.fromStep);
-  let repositoryContext = await loadArtifact<RepositoryContextPack>(
+  const hydrated = await hydrateWorkflowOutput(
     resolved.context.rootDir,
-    session.taskId,
-    ARTIFACT_NAMES.repositoryContext,
+    session,
     resolved.context.cwStorageDir
   );
-  let reviewResult = await loadArtifact<ReviewWorkflowOutput>(
-    resolved.context.rootDir,
-    session.taskId,
-    ARTIFACT_NAMES.reviewResult,
-    resolved.context.cwStorageDir
-  );
-  let validationReport = await loadArtifact<ValidationReport>(
-    resolved.context.rootDir,
-    session.taskId,
-    ARTIFACT_NAMES.validationReport,
-    resolved.context.cwStorageDir
-  );
-  let fixResult = await loadArtifact<FixErrorWorkflowOutput>(
-    resolved.context.rootDir,
-    session.taskId,
-    ARTIFACT_NAMES.fixResult,
-    resolved.context.cwStorageDir
-  );
-  let patchProposal = await loadArtifact<PatchProposal>(
-    resolved.context.rootDir,
-    session.taskId,
-    ARTIFACT_NAMES.patchProposal,
-    resolved.context.cwStorageDir
-  );
-  let patchInspection = await loadArtifact<PatchInspection>(
-    resolved.context.rootDir,
-    session.taskId,
-    ARTIFACT_NAMES.patchInspection,
-    resolved.context.cwStorageDir
-  );
-  let patchApplyResult = await loadArtifact<PatchApplyResult>(
-    resolved.context.rootDir,
-    session.taskId,
-    ARTIFACT_NAMES.patchApplyResult,
-    resolved.context.cwStorageDir
-  );
+  const allowWriteSession = input.allowWriteSession ?? false;
+  const execution = await runTaskSessionExecution({
+    allowDirtyWorktree: input.allowDirtyWorktree,
+    allowWrite: input.allowWrite,
+    allowWriteSession,
+    applyPatch: options.applyPatch,
+    confirmApply: input.confirmApply,
+    context: resolved.context,
+    errorLog: options.errorLog,
+    errorLogFile: options.errorLogFile,
+    fromStep,
+    goal: session.goal,
+    inspectPatch: options.inspectPatch,
+    proposePatch: options.proposePatch,
+    runFix: options.runFix,
+    scope: session.scope,
+    session,
+    state: hydrated,
+    validate: options.validate,
+    workerId: resolved.workerId,
+    requestedWorkerId: options.requestedWorkerId
+  });
 
-  if (shouldRunStep(session, "reviewed", fromStep)) {
-    reviewResult = await executeReviewStep({
-      context: resolved.context,
-      session,
-      scope: session.scope,
-      validate: options.validate,
-      allowWriteSession: input.allowWriteSession ?? false,
-      workerId: resolved.workerId
-    });
-    repositoryContext = reviewResult.repositoryContext;
-    validationReport = reviewResult.validationReport;
-  }
-
-  if (!reviewResult) {
-    throw new AgentError(
-      "TASK_REVIEW_ARTIFACT_MISSING",
-      `Review artifact is missing for task ${session.taskId}.`,
-      { taskId: session.taskId }
-    );
-  }
-  const reviewBlockReason = reviewResult.accepted
-    ? undefined
-    : `Review quality gate failed: ${reviewResult.qualityGate.reasons.join(" | ")}`;
-
-  if (
-    reviewResult.accepted &&
-    shouldRunFixStep(options) &&
-    shouldRunStep(session, "fix-planned", fromStep)
-  ) {
-    fixResult = await executeFixStep({
-      context: resolved.context,
-      session,
-      scope: session.scope,
-      validate: options.validate,
-      errorLog: options.errorLog,
-      errorLogFile: options.errorLogFile,
-      allowWriteSession: input.allowWriteSession ?? false,
-      workerId: resolved.workerId
-    });
-    repositoryContext = fixResult.repositoryContext;
-    validationReport = fixResult.validationReport;
-  } else if (reviewBlockReason) {
-    await denyRemainingExecutionSteps({
-      allowWriteSession: input.allowWriteSession ?? false,
-      context: resolved.context,
-      reason: reviewBlockReason,
-      session,
-      steps: ["fix-planned", "patch-proposed", "patch-inspected", "patch-applied"]
-    });
-  }
-
-  const fixBlockReason =
-    fixResult && !fixResult.accepted
-      ? `Fix planning quality gate failed: ${[
-          ...fixResult.analysisResult.qualityGate.reasons,
-          ...fixResult.planResult.qualityGate.reasons
-        ].join(" | ")}`
-      : undefined;
-
-  if (
-    reviewResult.accepted &&
-    !fixBlockReason &&
-    (options.proposePatch || options.inspectPatch) &&
-    shouldRunStep(session, "patch-proposed", fromStep)
-  ) {
-    const patchResult = await executePatchProposalStep({
-      context: resolved.context,
-      session,
-      reviewResult,
-      fixResult,
-      goal: session.goal,
-      errorLog: options.errorLog,
-      validationReport,
-      workerId: options.requestedWorkerId,
-      allowWriteSession: input.allowWriteSession ?? false
-    });
-    patchProposal = patchResult.proposal;
-    patchInspection = patchResult.inspection;
-  } else if (fixBlockReason) {
-    await denyRemainingExecutionSteps({
-      allowWriteSession: input.allowWriteSession ?? false,
-      context: resolved.context,
-      reason: fixBlockReason,
-      session,
-      steps: ["patch-proposed", "patch-inspected", "patch-applied"]
-    });
-  }
-
-  if (
-    reviewResult.accepted &&
-    !fixBlockReason &&
-    options.applyPatch &&
-    shouldRunStep(session, "patch-applied", fromStep)
-  ) {
-    if (!patchProposal) {
-      throw new AgentError(
-        "TASK_PATCH_PROPOSAL_MISSING",
-        "Patch application requires a previously stored patch proposal.",
-        { taskId: session.taskId }
-      );
-    }
-
-    patchApplyResult = await executePatchApplyStep({
-      allowDirtyWorktree: input.allowDirtyWorktree,
-      context: resolved.context,
-      session,
-      patchProposal,
-      validate: options.validate,
-      allowWrite: input.allowWrite,
-      confirmApply: input.confirmApply,
-      allowWriteSession: input.allowWriteSession ?? false
-    });
-  }
-
-  const sessionWriteMode = getSessionWriteMode(input.allowWriteSession ?? false);
+  const sessionWriteMode = getSessionWriteMode(allowWriteSession);
   const finalStatus = resolveFinalStatus({
     applyPatchRequested: options.applyPatch,
-    patchApplyResult,
-    patchInspection,
-    reviewAccepted: reviewResult.accepted,
-    fixAccepted: fixResult?.accepted,
-    validationReport: validationReport ?? reviewResult.validationReport
+    patchApplyResult: execution.patchApplyResult,
+    patchInspection: execution.patchInspection,
+    reviewAccepted: execution.reviewResult.accepted,
+    fixAccepted: execution.fixResult?.accepted,
+    validationReport: execution.validationReport
   });
 
   return finalizeTaskWorkflowOutput({
-    allowWriteSession: input.allowWriteSession ?? false,
+    allowWriteSession,
     applyPatchRequested: options.applyPatch,
     context: resolved.context,
     finalStatus,
-    fixResult,
-    patchApplyResult,
-    patchInspection,
-    patchProposal,
-    repositoryContext: repositoryContext ?? reviewResult.repositoryContext,
-    reviewResult,
+    fixResult: execution.fixResult,
+    patchApplyResult: execution.patchApplyResult,
+    patchInspection: execution.patchInspection,
+    patchProposal: execution.patchProposal,
+    repositoryContext: execution.repositoryContext,
+    reviewResult: execution.reviewResult,
     session,
     sessionPath: getTaskSessionPath(
       resolved.context.rootDir,
@@ -1602,7 +1581,7 @@ export const resumeTaskSessionWorkflow = async (
       resolved.context.cwStorageDir
     ),
     sessionWriteMode,
-    validationReport: validationReport ?? reviewResult.validationReport,
+    validationReport: execution.validationReport,
     workerId: resolved.workerId
   });
 };
