@@ -57,7 +57,7 @@ export const WorkerAvailabilitySnapshotSchema = z.object({
   status: AvailabilityStatusSchema,
   summary: z.string().min(1),
   unavailableReasonType: WorkerAvailabilityReasonCodeSchema,
-  workerId: z.string().min(1)
+  workerId: z.string().min(1).optional()
 });
 
 export type WorkerAvailabilityReasonCode = z.infer<

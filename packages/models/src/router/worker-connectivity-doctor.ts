@@ -103,7 +103,7 @@ export const createWorkerConnectivityDoctorChecks = async (
           model: probeConfig.model,
           provider: probeConfig.provider,
           responsePreview: summarizeWorkerResponse(result.text),
-          source: resolvedWorker?.source ?? "ad-hoc",
+          source: resolvedWorker?.source ?? "active-runtime",
           workerId: resolvedWorker?.workerId ?? options.workerId
         }
       }
@@ -126,7 +126,7 @@ export const createWorkerConnectivityDoctorChecks = async (
           provider:
             resolvedWorker?.modelConfig.provider ?? context.workerModel.provider,
           rootDir: context.rootDir,
-          source: resolvedWorker?.source ?? "ad-hoc",
+          source: resolvedWorker?.source ?? "active-runtime",
           workerId: resolvedWorker?.workerId ?? options.workerId
         }
       }

@@ -854,7 +854,7 @@ const formatDoctorReport = (report: DoctorReport): string[] => {
   }
   if (workerConnectivity?.metadata) {
     lines.push(
-      `probe: worker=${readMetadataString(workerConnectivity.metadata, "workerId", "(default-worker)")} | source=${readMetadataString(workerConnectivity.metadata, "source", "default")} | provider=${readMetadataString(workerConnectivity.metadata, "provider", "unknown")} | model=${readMetadataString(workerConnectivity.metadata, "model", "unknown")} | baseURL=${readMetadataString(workerConnectivity.metadata, "baseURL", "(default)")} | client=${readMetadataString(workerConnectivity.metadata, "clientCommand", "(default)")}`
+      `probe: worker=${readMetadataString(workerConnectivity.metadata, "workerId", "(not-specified)")} | source=${readMetadataString(workerConnectivity.metadata, "source", "active-runtime")} | provider=${readMetadataString(workerConnectivity.metadata, "provider", "unknown")} | model=${readMetadataString(workerConnectivity.metadata, "model", "unknown")} | baseURL=${readMetadataString(workerConnectivity.metadata, "baseURL", "(default)")} | client=${readMetadataString(workerConnectivity.metadata, "clientCommand", "(default)")}`
     );
   }
   if (hostMcpChecks.length > 0) {

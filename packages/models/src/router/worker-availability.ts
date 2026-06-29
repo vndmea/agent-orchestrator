@@ -139,35 +139,39 @@ const buildSummary = (input: {
   canRunPatchGeneration: boolean;
   status: WorkerAvailabilitySnapshot["status"];
   unavailableReasonType: WorkerAvailabilityReasonCode;
-  workerId: string;
+  workerId?: string;
 }): string => {
+  const workerLabel = input.workerId
+    ? `Worker ${input.workerId}`
+    : "The selected worker";
+
   if (input.status === "ready") {
     return input.canRunPatchGeneration
-      ? `Worker ${input.workerId} is ready for formal tasks, and patch-generation is allowed.`
-      : `Worker ${input.workerId} is ready for formal non-patch tasks. Patch-generation is not allowed yet.`;
+      ? `${workerLabel} is ready for formal tasks, and patch-generation is allowed.`
+      : `${workerLabel} is ready for formal non-patch tasks. Patch-generation is not allowed yet.`;
   }
 
   switch (input.unavailableReasonType) {
     case "config-invalid":
-      return `Worker ${input.workerId} is unavailable for formal tasks because config.json is invalid.`;
+      return `${workerLabel} is unavailable for formal tasks because config.json is invalid.`;
     case "worker-id-required":
       return "Formal worker readiness requires an explicit worker id.";
     case "worker-resolution-failed":
-      return `Worker ${input.workerId} is unavailable for formal tasks because worker resolution failed.`;
+      return `${workerLabel} is unavailable for formal tasks because worker resolution failed.`;
     case "profile-missing":
-      return `Worker ${input.workerId} is unavailable for formal tasks until a persisted worker profile exists.`;
+      return `${workerLabel} is unavailable for formal tasks until a persisted worker profile exists.`;
     case "profile-stale":
-      return `Worker ${input.workerId} is unavailable for formal tasks until the persisted worker profile is refreshed.`;
+      return `${workerLabel} is unavailable for formal tasks until the persisted worker profile is refreshed.`;
     case "profile-incompatible":
-      return `Worker ${input.workerId} is unavailable for formal tasks because the persisted worker profile does not match the current worker configuration.`;
+      return `${workerLabel} is unavailable for formal tasks because the persisted worker profile does not match the current worker configuration.`;
     case "profile-provider-error":
-      return `Worker ${input.workerId} is unavailable for formal tasks because the persisted worker profile reflects provider/configuration failure evidence rather than a usable onboarding result.`;
+      return `${workerLabel} is unavailable for formal tasks because the persisted worker profile reflects provider/configuration failure evidence rather than a usable onboarding result.`;
     case "probe-failed":
-      return `Worker ${input.workerId} is unavailable for formal tasks because the live connectivity probe failed.`;
+      return `${workerLabel} is unavailable for formal tasks because the live connectivity probe failed.`;
     case "worker-not-qualified":
-      return `Worker ${input.workerId} completed onboarding evidence, but it is not qualified for formal tasks.`;
+      return `${workerLabel} completed onboarding evidence, but it is not qualified for formal tasks.`;
     default:
-      return `Worker ${input.workerId} is unavailable for formal tasks until registry, profile, or connectivity prerequisites are repaired.`;
+      return `${workerLabel} is unavailable for formal tasks until registry, profile, or connectivity prerequisites are repaired.`;
   }
 };
 
@@ -175,7 +179,7 @@ const buildNextSteps = (input: {
   checks: WorkerAvailabilityChecks;
   status: WorkerAvailabilitySnapshot["status"];
   unavailableReasonType: WorkerAvailabilityReasonCode;
-  workerId: string;
+  workerId?: string;
 }): string[] => {
   const actions: string[] = [];
 
@@ -185,13 +189,14 @@ const buildNextSteps = (input: {
     );
   }
 
-  if (input.checks.registry.status === "missing") {
+  if (input.workerId && input.checks.registry.status === "missing") {
     actions.push(
       `Register the worker first: cw worker register --worker ${input.workerId} --provider <provider> --model <model> --allow-write`
     );
   }
 
   if (
+    input.workerId &&
     ["missing", "stale", "incompatible", "provider-error"].includes(
       input.checks.profile.status
     )
@@ -201,19 +206,20 @@ const buildNextSteps = (input: {
     );
   }
 
-  if (input.checks.probe.status === "failed") {
+  if (input.workerId && input.checks.probe.status === "failed") {
     actions.push(
       `Fix connectivity, then rerun: cw worker readiness --worker ${input.workerId} --probe`
     );
   }
 
-  if (input.unavailableReasonType === "worker-not-qualified") {
+  if (input.workerId && input.unavailableReasonType === "worker-not-qualified") {
     actions.push(
       `Keep this worker out of formal tasks until it qualifies. Re-run onboarding after fixing the weak capability areas: cw worker interview --worker ${input.workerId} --save`
     );
   }
 
   if (
+    input.workerId &&
     input.status === "ready" &&
     ["missing", "not-qualified"].includes(input.checks.benchmark.status)
   ) {
@@ -222,7 +228,11 @@ const buildNextSteps = (input: {
     );
   }
 
-  if (actions.length === 0 && input.checks.probe.status === "not-run") {
+  if (
+    input.workerId &&
+    actions.length === 0 &&
+    input.checks.probe.status === "not-run"
+  ) {
     actions.push(
       `Optionally confirm live connectivity now: cw worker readiness --worker ${input.workerId} --probe`
     );
@@ -238,7 +248,6 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
 }): Promise<WorkerAvailabilitySnapshot> => {
   const configResult = await loadCwConfig(input.context.rootDir);
   const requestedWorkerId = input.workerId;
-  const resolvedRequestWorkerId = requestedWorkerId ?? "worker-id-required";
   const checks: WorkerAvailabilityChecks = {
     config: configResult.error
       ? defaultCheck("invalid", `cw config is invalid: ${configResult.error}`)
@@ -251,7 +260,7 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
     registry: requestedWorkerId
       ? defaultCheck(
           "missing",
-          `Worker ${resolvedRequestWorkerId} has not been resolved yet.`
+          `Worker ${requestedWorkerId} has not been resolved yet.`
         )
       : defaultCheck(
           "unavailable",
@@ -269,7 +278,7 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
     )
   };
 
-  let resolvedWorkerId = resolvedRequestWorkerId;
+  let resolvedWorkerId = requestedWorkerId;
   let resolvedContext = input.context;
   let resolvedWorkerModelError: string | null = null;
 
