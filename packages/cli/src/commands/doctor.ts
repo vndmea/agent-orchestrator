@@ -818,13 +818,6 @@ const formatDoctorReport = (report: DoctorReport): string[] => {
     lines.push(
       `paths: config=${readMetadataString(runtimeBootstrap.metadata, "configPath", "unknown")} | storage=${readMetadataString(runtimeBootstrap.metadata, "cwStorageDir", "unknown")} | home=${readMetadataString(runtimeBootstrap.metadata, "cwHomeDir", "unknown")}`
     );
-    const env = runtimeBootstrap.metadata["env"];
-    if (env && typeof env === "object") {
-      const runtimeEnv = env as Record<string, unknown>;
-      lines.push(
-        `env: CW_WORKSPACE_DIR=${readMetadataString(runtimeEnv, "CW_WORKSPACE_DIR", "(default)")} | CW_STORAGE_DIR=${readMetadataString(runtimeEnv, "CW_STORAGE_DIR", "(default)")}`
-      );
-    }
   }
   if (workerModel?.metadata) {
     lines.push(

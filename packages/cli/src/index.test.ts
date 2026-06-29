@@ -560,7 +560,6 @@ describe("cli parsing", () => {
       expect(output.at(-1)).toContain("cw doctor:");
       expect(output.at(-1)).toContain("binding:");
       expect(output.at(-1)).toContain("paths:");
-      expect(output.at(-1)).toContain("env:");
       expect(output.at(-1)).toContain("worker:");
       expect(output.at(-1)).toContain("\u001b[");
       expect(output.at(-1)).not.toContain("\"checks\"");
