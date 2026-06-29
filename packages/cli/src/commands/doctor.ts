@@ -5,7 +5,7 @@ import {
   writeAuditEvent,
   type DoctorReport
 } from "@mcp-code-worker/core";
-import { buildDoctorReport } from "@mcp-code-worker/models";
+import { buildDoctorReport, HOST_MCP_CHECK_NAMES } from "@mcp-code-worker/models";
 import {
   createHostMcpDoctorChecks,
   isMcpHost,
@@ -14,14 +14,6 @@ import {
 
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
-
-const HOST_MCP_CHECK_NAMES = [
-  "host-config-present",
-  "host-config-valid",
-  "mcp-server-launchable",
-  "mcp-connection",
-  "mcp-tool-catalog-match"
-] as const;
 
 const HOST_MCP_CHECK_NAME_SET = new Set<string>(HOST_MCP_CHECK_NAMES);
 

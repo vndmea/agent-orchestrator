@@ -13,13 +13,15 @@ import {
 } from "./worker-availability.js";
 import { createWorkerDoctorChecks } from "./worker-doctor.js";
 
-const HOST_MCP_CHECK_NAME_SET = new Set([
+export const HOST_MCP_CHECK_NAMES = [
   "host-config-present",
   "host-config-valid",
   "mcp-server-launchable",
   "mcp-connection",
   "mcp-tool-catalog-match"
-]);
+] as const;
+
+const HOST_MCP_CHECK_NAME_SET = new Set<string>(HOST_MCP_CHECK_NAMES);
 
 const buildHostMcpCapability = (
   host: string,
