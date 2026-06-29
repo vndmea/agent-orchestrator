@@ -11,9 +11,7 @@ import {
   getCwHomeDir,
   getCwWorkspaceDir,
   normalizeFileSystemPath,
-  resolveExecutionContext,
-  type DoctorStatus,
-  type WorkerAvailabilityReasonCode
+  resolveExecutionContext
 } from "@mcp-code-worker/core";
 import { getWorkerRegistration } from "@mcp-code-worker/models";
 
@@ -64,32 +62,6 @@ interface InitOptions extends Omit<SetupOptions, "repositoryWriteMode"> {
 
 type InitWorkerPlan = SetupWorkerPlan;
 
-type InitWorkerStepStatus =
-  | "unavailable"
-  | "completed"
-  | "dry-run"
-  | "not-requested"
-  | "skipped";
-
-interface InitWorkerSummary {
-  benchmarkStatus?: InitWorkerStepStatus;
-  benchmarkWorker: boolean;
-  configured: boolean;
-  interviewWorker: boolean;
-  interviewStatus?: InitWorkerStepStatus;
-  isDefault: boolean;
-  probeStatus?: InitWorkerStepStatus;
-  probeWorker: boolean;
-  readinessUnavailableReasonType?: WorkerAvailabilityReasonCode;
-  readinessStatus?: DoctorStatus | "dry-run" | "skipped";
-  registerWorker: boolean;
-  registerStatus?: InitWorkerStepStatus;
-  workerId?: string;
-  workerMode?: "api" | "client";
-  workerModel?: string;
-  workerProvider?: string;
-}
-
 interface InitResult {
   advanced: boolean;
   applied: boolean;
@@ -108,10 +80,10 @@ interface InitResult {
   rootDir: string;
   setup: SetupResult;
   tips: string[];
-  worker: InitWorkerSummary & {
-    additionalWorkers: InitWorkerSummary[];
+  worker: SetupWorkerSummary & {
+    additionalWorkers: SetupWorkerSummary[];
   };
-  workers: InitWorkerSummary[];
+  workers: SetupWorkerSummary[];
 }
 
 const toYesNoSuffix = (defaultValue: boolean): string =>
@@ -329,16 +301,33 @@ const buildInitTips = (result: Pick<InitResult, "enableMcp" | "paths">): string[
   "Use `cw init` again when you want to revisit worker verification depth or onboarding defaults."
 ];
 
+const DEFAULT_INIT_WORKER: SetupWorkerSummary = {
+  benchmarkWorker: false,
+  configured: false,
+  interviewWorker: false,
+  isDefault: false,
+  probeWorker: false,
+  registerWorker: false,
+  workerId: "",
+  workerMode: undefined,
+  workerModel: "",
+  workerProvider: ""
+};
+
+const formatWorkerStepStatus = (
+  status: SetupStepStatus | undefined,
+  enabled: boolean
+): string =>
+  status === "needs-input"
+    ? "unavailable"
+    : status ?? (enabled ? "planned" : "skipped");
+
 const formatWorkerSummary = (result: InitResult["worker"]): string => {
   const workers = [
     result,
     ...result.additionalWorkers
   ].filter(
-    (worker): worker is InitWorkerSummary & {
-      workerId: string;
-      workerModel: string;
-      workerProvider: string;
-    } => Boolean(worker.workerId) && Boolean(worker.workerProvider) && Boolean(worker.workerModel)
+    (worker): worker is SetupWorkerSummary => Boolean(worker.workerId) && Boolean(worker.workerProvider) && Boolean(worker.workerModel)
   );
 
   if (workers.length === 0) {
@@ -351,10 +340,10 @@ const formatWorkerSummary = (result: InitResult["worker"]): string => {
         worker.isDefault ? "primary" : "extra",
         `${worker.workerId} (${worker.workerProvider}/${worker.workerModel})`,
         `configured=${worker.configured ? "yes" : "no"}`,
-        `registered=${worker.registerStatus ?? (worker.registerWorker ? "planned" : "skipped")}`,
-        `probed=${worker.probeStatus ?? (worker.probeWorker ? "planned" : "skipped")}`,
-        `interviewed=${worker.interviewStatus ?? (worker.interviewWorker ? "planned" : "skipped")}`,
-        `benchmarked=${worker.benchmarkStatus ?? (worker.benchmarkWorker ? "planned" : "skipped")}`,
+        `registered=${formatWorkerStepStatus(worker.registerStatus, worker.registerWorker)}`,
+        `probed=${formatWorkerStepStatus(worker.probeStatus, worker.probeWorker)}`,
+        `interviewed=${formatWorkerStepStatus(worker.interviewStatus, worker.interviewWorker)}`,
+        `benchmarked=${formatWorkerStepStatus(worker.benchmarkStatus, worker.benchmarkWorker)}`,
         worker.readinessStatus
           ? [
               `readiness=${worker.readinessStatus}`,
@@ -409,39 +398,6 @@ const formatInitResult = (result: InitResult): string[] => {
   return lines;
 };
 
-const mapSetupWorkerSummary = (
-  worker: SetupWorkerSummary
-): InitWorkerSummary => ({
-  benchmarkStatus:
-    worker.benchmarkStatus === "needs-input"
-      ? "unavailable"
-      : worker.benchmarkStatus,
-  benchmarkWorker: worker.benchmarkWorker,
-  configured: worker.configured,
-  interviewStatus:
-    worker.interviewStatus === "needs-input"
-      ? "unavailable"
-      : worker.interviewStatus,
-  interviewWorker: worker.interviewWorker,
-  isDefault: worker.isDefault,
-  probeStatus:
-    worker.probeStatus === "needs-input"
-      ? "unavailable"
-      : worker.probeStatus,
-  probeWorker: worker.probeWorker,
-  readinessStatus: worker.readinessStatus,
-  readinessUnavailableReasonType: worker.readinessUnavailableReasonType,
-  registerStatus:
-    worker.registerStatus === "needs-input"
-      ? "unavailable"
-      : worker.registerStatus,
-  registerWorker: worker.registerWorker,
-  workerId: worker.workerId,
-  workerMode: worker.workerMode,
-  workerModel: worker.workerModel,
-  workerProvider: worker.workerProvider
-});
-
 const hasScriptedSetupInputs = (options: InitOptions): boolean =>
   options.allowWrite ||
   options.benchmarkWorker ||
@@ -468,10 +424,6 @@ const collectInitSetupOptions = async (
   additionalWorkers: InitWorkerPlan[];
   enableMcp: boolean;
   setup: SetupOptions;
-  worker: InitWorkerSummary & {
-    additionalWorkers: InitWorkerSummary[];
-  };
-  workers: InitWorkerSummary[];
 }> => {
   const initialRoot = normalizeFileSystemPath(options.root ?? process.cwd());
   const rootDir = normalizeFileSystemPath(
@@ -512,7 +464,6 @@ const collectInitSetupOptions = async (
     workerProvider: undefined
   };
   const additionalWorkers: InitWorkerPlan[] = [];
-  const workerSummaries: InitWorkerSummary[] = [];
   const reservedWorkerIds = new Set<string>();
 
   const promptWorkerPlan = async (
@@ -642,7 +593,7 @@ const collectInitSetupOptions = async (
       : "Additional worker name?";
     const suggestedWorkerId = isDefault
       ? "primary-worker"
-      : `worker-${workerSummaries.length + 1}`;
+      : `worker-${additionalWorkers.length + 1}`;
     let workerId = "";
 
     while (workerId.length === 0) {
@@ -717,18 +668,6 @@ const collectInitSetupOptions = async (
     setup.workerModel = defaultWorker.workerModel;
     setup.workerProvider = defaultWorker.workerProvider;
     reservedWorkerIds.add(defaultWorker.workerId);
-    workerSummaries.push({
-      benchmarkWorker: defaultWorker.benchmarkWorker,
-      configured: true,
-      interviewWorker: defaultWorker.interviewWorker,
-      isDefault: true,
-      probeWorker: defaultWorker.probeWorker,
-      registerWorker: true,
-      workerId: defaultWorker.workerId,
-      workerMode: defaultWorker.workerMode,
-      workerModel: defaultWorker.workerModel,
-      workerProvider: defaultWorker.workerProvider
-    });
 
     while (
       await prompter.confirm(
@@ -739,18 +678,6 @@ const collectInitSetupOptions = async (
       const nextWorker = await promptWorkerPlan(false);
       additionalWorkers.push(nextWorker);
       reservedWorkerIds.add(nextWorker.workerId);
-      workerSummaries.push({
-        benchmarkWorker: nextWorker.benchmarkWorker,
-        configured: true,
-        interviewWorker: nextWorker.interviewWorker,
-        isDefault: false,
-        probeWorker: nextWorker.probeWorker,
-        registerWorker: true,
-        workerId: nextWorker.workerId,
-        workerMode: nextWorker.workerMode,
-        workerModel: nextWorker.workerModel,
-        workerProvider: nextWorker.workerProvider
-      });
     }
   }
 
@@ -792,19 +719,7 @@ const collectInitSetupOptions = async (
   return {
     additionalWorkers,
     enableMcp,
-    setup,
-    worker: {
-      ...(workerSummaries[0] ?? {
-        benchmarkWorker: false,
-        configured: false,
-        interviewWorker: false,
-        isDefault: false,
-        probeWorker: false,
-        registerWorker: false
-      }),
-      additionalWorkers: workerSummaries.slice(1)
-    },
-    workers: workerSummaries
+    setup
   };
 };
 
@@ -922,17 +837,11 @@ export const registerInitCommand = (
           ...collected.setup,
           allowWrite: applyNow
         });
-        const initWorkers = setup.workers.map(mapSetupWorkerSummary);
+        const initWorkers = setup.workers;
         const primaryWorker =
           initWorkers.find((worker) => worker.isDefault) ??
-          initWorkers[0] ?? {
-            benchmarkWorker: false,
-            configured: false,
-            interviewWorker: false,
-            isDefault: false,
-            probeWorker: false,
-            registerWorker: false
-          };
+          initWorkers[0] ??
+          DEFAULT_INIT_WORKER;
         const additionalWorkerSummaries = initWorkers.filter(
           (worker) => !worker.isDefault
         );
