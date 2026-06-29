@@ -14,7 +14,10 @@ import {
   runWorkerBenchmarkWorkflow,
   saveWorkerBenchmarkArtifact
 } from "./worker-benchmark-workflow.js";
-import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
+import {
+  resolveWorkflowWorkerContext,
+  type LocalClientRuntimeSummary
+} from "./worker-context-resolution.js";
 import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 
 type SavedArtifact = Awaited<ReturnType<typeof saveWorkerBenchmarkArtifact>>;
@@ -35,11 +38,13 @@ export interface SavedWorkerProfileResult {
 
 export interface WorkerInterviewOnboardingResult
   extends Awaited<ReturnType<typeof runWorkerInterviewWorkflow>> {
+  localClientRuntime?: LocalClientRuntimeSummary;
   persistence: SavedWorkerProfileResult | null;
 }
 
 export interface WorkerBenchmarkOnboardingResult {
   benchmarkResult: Awaited<ReturnType<typeof runWorkerBenchmarkWorkflow>>;
+  localClientRuntime?: LocalClientRuntimeSummary;
   persistence: SavedArtifact | null;
   profilePersistence: { mode: "dry-run" | "execute"; path: string } | null;
   profileUpdate:
@@ -210,6 +215,7 @@ export const runWorkerInterviewOnboarding = async (input: {
 
   return {
     ...result,
+    localClientRuntime: resolvedWorker.localClientRuntime,
     persistence
   };
 };
@@ -226,10 +232,9 @@ export const runWorkerBenchmarkOnboarding = async (input: {
   workerId: string;
 }): Promise<WorkerBenchmarkOnboardingResult> => {
   const suite = input.suite ?? "coding-v1";
-  const benchmarkResult =
-    input.benchmarkResult ??
-    (await (async () => {
-      const resolvedWorker = await resolveWorkflowWorkerContext({
+  const resolvedWorker = input.benchmarkResult
+    ? undefined
+    : await resolveWorkflowWorkerContext({
         activity: "worker benchmark onboarding",
         context: input.context,
         baseURL: input.baseURL,
@@ -237,14 +242,14 @@ export const runWorkerBenchmarkOnboarding = async (input: {
         provider: input.provider,
         workerId: input.workerId
       });
-
-      return runWorkerBenchmarkWorkflow({
-        context: input.context,
-        suite,
-        workerId: resolvedWorker.workerId,
-        modelConfig: resolvedWorker.context.workerModel
-      });
-    })());
+  const benchmarkResult =
+    input.benchmarkResult ??
+    (await runWorkerBenchmarkWorkflow({
+      context: input.context,
+      suite,
+      workerId: resolvedWorker!.workerId,
+      modelConfig: resolvedWorker!.context.workerModel
+    }));
   const persistence = input.persistArtifact
     ? await saveWorkerBenchmarkArtifact(input.context, benchmarkResult, true)
     : null;
@@ -275,6 +280,7 @@ export const runWorkerBenchmarkOnboarding = async (input: {
 
   return {
     benchmarkResult,
+    localClientRuntime: resolvedWorker?.localClientRuntime,
     persistence,
     profilePersistence,
     profileUpdate

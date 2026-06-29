@@ -109,7 +109,9 @@ describe("runRepositoryValidation", () => {
         name: "typecheck",
         status: "dry-run",
         scriptName: "check-types",
-        resolutionSource: "configured"
+        packageJsonPath: "package.json",
+        resolutionSource: "configured",
+        scriptSourceScope: "scoped"
       })
     ]);
   });
@@ -193,19 +195,25 @@ describe("runRepositoryValidation", () => {
           status: "success",
           scriptName: "typecheck",
           resolutionSource: "canonical",
+          packageJsonPath: "package.json",
+          scriptSourceScope: "workspace-root",
           stdout: expect.stringContaining(rootDir)
         }),
         expect.objectContaining({
           name: "lint",
           status: "success",
           scriptName: "lint",
-          resolutionSource: "canonical"
+          resolutionSource: "canonical",
+          packageJsonPath: "package.json",
+          scriptSourceScope: "workspace-root"
         }),
         expect.objectContaining({
           name: "test",
           status: "success",
           scriptName: "test",
-          resolutionSource: "canonical"
+          resolutionSource: "canonical",
+          packageJsonPath: "package.json",
+          scriptSourceScope: "workspace-root"
         })
       ])
     );

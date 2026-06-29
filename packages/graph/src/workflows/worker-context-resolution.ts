@@ -1,18 +1,47 @@
 import {
   createExecutionContextWithWorkerModel,
+  type ModelConfig,
   type ExecutionContext
 } from "@mcp-code-worker/core";
 import {
+  inspectConfiguredLocalClientCommand,
   requireConfiguredWorkerId,
   resolveWorkerProfile,
   resolveWorkerTarget
 } from "@mcp-code-worker/models";
 
+export interface LocalClientRuntimeSummary {
+  configuredCommand: string | null;
+  resolvedCommand: string;
+  resolvedPath: string | null;
+  source: "configured" | "default";
+}
+
 export interface ResolvedWorkflowWorkerContext {
   context: ExecutionContext;
+  localClientRuntime?: LocalClientRuntimeSummary;
   requestedWorkerId: string;
   workerId: string;
 }
+
+const resolveLocalClientRuntime = async (
+  modelConfig: ModelConfig
+): Promise<LocalClientRuntimeSummary | undefined> => {
+  if (modelConfig.provider !== "client") {
+    return undefined;
+  }
+
+  const inspection = await inspectConfiguredLocalClientCommand(modelConfig, {
+    checkCompatibility: false
+  });
+
+  return {
+    configuredCommand: inspection.configuredCommand,
+    resolvedCommand: inspection.resolvedPath ?? inspection.command,
+    resolvedPath: inspection.resolvedPath,
+    source: inspection.source
+  };
+};
 
 export const resolveWorkflowWorkerContext = async (input: {
   activity: string;
@@ -51,6 +80,7 @@ export const resolveWorkflowWorkerContext = async (input: {
 
   return {
     context: workerContext,
+    localClientRuntime: await resolveLocalClientRuntime(workerContext.workerModel),
     requestedWorkerId,
     workerId: resolvedTarget.workerId
   };

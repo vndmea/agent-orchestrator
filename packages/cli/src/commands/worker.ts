@@ -67,6 +67,11 @@ const formatWorkerUnregisterResult = (result: {
 ];
 
 const formatWorkerInterviewResult = (result: {
+  localClientRuntime?: {
+    configuredCommand: string | null;
+    resolvedCommand: string;
+    source: string;
+  };
   persistence?: { mode?: string; path?: string; reason?: string } | null;
   profile: {
     admission?: { blockingReasons: string[]; passed: boolean };
@@ -116,6 +121,12 @@ const formatWorkerInterviewResult = (result: {
     );
   }
 
+  if (result.localClientRuntime) {
+    lines.push(
+      `local client: configured=${result.localClientRuntime.configuredCommand ?? "(default)"} | resolved=${result.localClientRuntime.resolvedCommand} | source=${result.localClientRuntime.source}`
+    );
+  }
+
   if (result.persistence) {
     if (result.persistence.mode === "execute") {
       lines.push(`profile saved: ${result.persistence.path ?? "persisted"}`);
@@ -141,6 +152,11 @@ const formatWorkerInterviewResult = (result: {
 
 const formatWorkerBenchmarkResult = (result: {
   capabilityUpdateApplied?: boolean;
+  localClientRuntime?: {
+    configuredCommand: string | null;
+    resolvedCommand: string;
+    source: string;
+  };
   patchGenerationQualified?: boolean;
   persistence?: { mode?: string; path?: string } | null;
   profilePersistence?: { mode?: string; path?: string } | null;
@@ -156,6 +172,12 @@ const formatWorkerBenchmarkResult = (result: {
 
   if (result.suiteName) {
     lines.push(`suite: ${result.suiteName}`);
+  }
+
+  if (result.localClientRuntime) {
+    lines.push(
+      `local client: configured=${result.localClientRuntime.configuredCommand ?? "(default)"} | resolved=${result.localClientRuntime.resolvedCommand} | source=${result.localClientRuntime.source}`
+    );
   }
 
   if (result.persistence) {
@@ -383,6 +405,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
             ...benchmarkUpdate.benchmarkResult,
             capabilityUpdateApplied:
               benchmarkUpdate.profileUpdate?.capabilityUpdateApplied ?? false,
+            localClientRuntime: benchmarkUpdate.localClientRuntime,
             patchGenerationQualified:
               benchmarkUpdate.profileUpdate?.patchGenerationQualified ?? false,
             persistence: benchmarkUpdate.persistence,
@@ -392,6 +415,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
             ...benchmarkUpdate.benchmarkResult,
             capabilityUpdateApplied:
               benchmarkUpdate.profileUpdate?.capabilityUpdateApplied ?? false,
+            localClientRuntime: benchmarkUpdate.localClientRuntime,
             patchGenerationQualified:
               benchmarkUpdate.profileUpdate?.patchGenerationQualified ?? false,
             persistence: benchmarkUpdate.persistence,

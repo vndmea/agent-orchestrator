@@ -17,9 +17,11 @@ export const ValidationCheckSchema = z.object({
     "not-run"
   ]),
   scriptName: z.string().optional(),
+  packageJsonPath: z.string().optional(),
   resolutionSource: z
     .enum(["canonical", "configured", "auto-discovered", "missing"])
     .optional(),
+  scriptSourceScope: z.enum(["scoped", "workspace-root"]).optional(),
   exitCode: z.number().nullable().optional(),
   stdout: z.string().optional(),
   stderr: z.string().optional(),

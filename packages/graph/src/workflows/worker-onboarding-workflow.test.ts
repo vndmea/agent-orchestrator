@@ -6,6 +6,23 @@ vi.mock("@mcp-code-worker/models", () => ({
   getWorkerProfile: vi.fn(() => ({
     workerId: "mock:worker"
   })),
+  inspectConfiguredLocalClientCommand: vi.fn(() => ({
+    command: "node",
+    compatibility: {
+      checked: false,
+      message: "Command resolution passed.",
+      status: "pass"
+    },
+    configuredCommand: "node",
+    isPathLike: false,
+    resolvedPath: "C:/Program Files/nodejs/node.exe",
+    source: "configured",
+    status: "pass"
+  })),
+  requireConfiguredWorkerId: vi.fn((context, workerId) => {
+    void context;
+    return workerId;
+  }),
   resolveWorkerProfile: vi.fn(() => ({
     workerId: "mock:worker",
     source: "persisted",
@@ -18,8 +35,9 @@ vi.mock("@mcp-code-worker/models", () => ({
   })),
   resolveWorkerTarget: vi.fn(() => ({
     modelConfig: {
+      clientCommand: "node",
       model: "worker-model",
-      provider: "mock"
+      provider: "client"
     },
     source: "registry",
     warnings: [],
@@ -49,13 +67,60 @@ vi.mock("./worker-benchmark-workflow.js", () => ({
 }));
 
 vi.mock("./worker-interview-workflow.js", () => ({
-  runWorkerInterviewWorkflow: vi.fn()
+  runWorkerInterviewWorkflow: vi.fn(() => ({
+    workerId: "mock:worker",
+    profile: {
+      workerId: "mock:worker",
+      provider: "client",
+      model: "worker-model",
+      status: "qualified",
+      supportedTaskTypes: [],
+      unsupportedTaskTypes: [],
+      score: {
+        instructionFollowing: 1,
+        structuredOutput: 1,
+        reasoning: 1,
+        codeQuality: 1,
+        domainKnowledge: 1,
+        reliability: 1
+      },
+      risks: [],
+      warnings: [],
+      routingPolicy: {
+        maxTaskComplexity: "medium",
+        requiresHostReview: false,
+        allowCodegen: true,
+        allowPatchGeneration: true,
+        allowDomainTasks: true
+      },
+      evaluatedAt: new Date().toISOString()
+    },
+    status: "qualified",
+    taskResults: [],
+    warnings: [],
+    interviewDiagnostics: {
+      outcome: "completed",
+      providerInvocationFailures: 0,
+      failedTaskCount: 0,
+      recommendedActions: []
+    },
+    persistenceAdvice: {
+      canPersist: true,
+      reason: "ok",
+      recommendedActions: []
+    },
+    suite: {
+      name: "default-worker-onboarding-suite",
+      tasks: []
+    }
+  }))
 }));
 
 import { runWorkerBenchmarkWorkflow } from "./worker-benchmark-workflow.js";
 import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 import {
   resolveWorkerCapabilityProfileForExecution,
+  runWorkerInterviewOnboarding,
   runWorkerBenchmarkOnboarding
 } from "./worker-onboarding-workflow.js";
 
@@ -113,5 +178,58 @@ describe("worker onboarding workflow", () => {
     expect(runWorkerBenchmarkWorkflow).not.toHaveBeenCalled();
     expect(result.benchmarkResult).toBe(benchmarkResult);
     expect(result.profileUpdate?.capabilityUpdateApplied).toBe(true);
+  });
+
+  it("surfaces resolved local client details for worker interview onboarding", async () => {
+    const result = await runWorkerInterviewOnboarding({
+      context: {
+        cwStorageDir: "/tmp/cw",
+        rootDir: "/tmp/repo"
+      } as ExecutionContext,
+      persistProfile: false,
+      workerId: "mock:worker"
+    });
+
+    expect(result.localClientRuntime).toEqual({
+      configuredCommand: "node",
+      resolvedCommand: "C:/Program Files/nodejs/node.exe",
+      resolvedPath: "C:/Program Files/nodejs/node.exe",
+      source: "configured"
+    });
+  });
+
+  it("surfaces resolved local client details for worker benchmark onboarding", async () => {
+    vi.mocked(runWorkerBenchmarkWorkflow).mockResolvedValueOnce({
+      suiteName: "coding-v1",
+      suiteVersion: "2",
+      workerId: "mock:worker",
+      fixtureResults: [],
+      evaluationSummary: {
+        suiteName: "coding-v1",
+        suiteVersion: "2",
+        sampleCount: 0,
+        passedCount: 0,
+        failedCount: 0,
+        confidenceBand: "low",
+        knownFailureModes: []
+      }
+    });
+
+    const result = await runWorkerBenchmarkOnboarding({
+      context: {
+        cwStorageDir: "/tmp/cw",
+        rootDir: "/tmp/repo"
+      } as ExecutionContext,
+      persistArtifact: false,
+      updateProfileCapabilities: false,
+      workerId: "mock:worker"
+    });
+
+    expect(result.localClientRuntime).toEqual({
+      configuredCommand: "node",
+      resolvedCommand: "C:/Program Files/nodejs/node.exe",
+      resolvedPath: "C:/Program Files/nodejs/node.exe",
+      source: "configured"
+    });
   });
 });

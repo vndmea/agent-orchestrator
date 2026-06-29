@@ -42,6 +42,7 @@ export const formatTaskSessionWorkflowOutput = (
     goal: output.session.goal,
     scope: output.session.scope,
     workerId: output.workerId,
+    localClientRuntime: output.localClientRuntime ?? "not-applicable",
     finalStatus: output.session.status,
     workerReviewStatus: output.reviewResult?.workerReviewResult?.status ?? "not-produced",
     accepted: output.reviewResult?.accepted ?? "not-produced",

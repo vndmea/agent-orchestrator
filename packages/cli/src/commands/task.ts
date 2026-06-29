@@ -94,6 +94,15 @@ const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[
     typeof summary["validation"] === "object" && summary["validation"] !== null
       ? (summary["validation"] as { summary?: string })
       : null;
+  const localClientRuntime =
+    typeof summary["localClientRuntime"] === "object" &&
+    summary["localClientRuntime"] !== null
+      ? (summary["localClientRuntime"] as {
+          configuredCommand?: unknown;
+          resolvedCommand?: unknown;
+          source?: unknown;
+        })
+      : null;
 
   const lines: string[] = [`task ${taskId}: ${status}`];
 
@@ -119,6 +128,12 @@ const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[
 
   if (fixSummary) {
     lines.push(`fix: ${fixSummary}`);
+  }
+
+  if (localClientRuntime) {
+    lines.push(
+      `local client: configured=${typeof localClientRuntime.configuredCommand === "string" ? localClientRuntime.configuredCommand : "(default)"} | resolved=${typeof localClientRuntime.resolvedCommand === "string" ? localClientRuntime.resolvedCommand : "(unknown)"} | source=${typeof localClientRuntime.source === "string" ? localClientRuntime.source : "unknown"}`
+    );
   }
 
   if (validationSummary) {

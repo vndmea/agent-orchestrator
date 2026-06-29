@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 import type {
   ExecutionContext,
@@ -35,6 +35,15 @@ interface ValidationScriptExecutionPlan {
   scopeSource: "scoped" | "workspace-root";
 }
 
+const buildPackageJsonPath = (
+  workspaceRootDir: string,
+  packageRootDir: string
+): string => {
+  const relativeDir = relative(workspaceRootDir, packageRootDir).replaceAll("\\", "/");
+
+  return relativeDir.length > 0 ? `${relativeDir}/package.json` : "package.json";
+};
+
 const appendNotRunChecks = (
   checks: ValidationCheck[],
   context: ExecutionContext,
@@ -59,9 +68,14 @@ const appendNotRunChecks = (
     checks.push({
       name: checkName,
       command: plan.resolution.command ?? `pnpm run ${checkName}`,
+      packageJsonPath: buildPackageJsonPath(
+        context.rootDir,
+        plan.executionContext.rootDir
+      ),
       status: "not-run",
       scriptName: plan.resolution.scriptName,
-      resolutionSource: plan.resolution.source
+      resolutionSource: plan.resolution.source,
+      scriptSourceScope: plan.scopeSource
     });
   }
 };
@@ -130,8 +144,10 @@ const buildUnconfiguredCheck = (
 ): ValidationCheck => ({
   name,
   command: `pnpm run ${name}`,
+  packageJsonPath: undefined,
   status: "not-configured",
   resolutionSource: "missing",
+  scriptSourceScope: undefined,
   diagnosticSummary: {
     affectedPaths: [],
     previewLines: [
@@ -265,8 +281,13 @@ export const runRepositoryValidation = async (
     checks.push({
       name: check.name,
       command: resolution.command,
+      packageJsonPath: buildPackageJsonPath(
+        context.rootDir,
+        plan.executionContext.rootDir
+      ),
       scriptName: resolution.scriptName,
       resolutionSource: resolution.source,
+      scriptSourceScope: plan.scopeSource,
       status:
         result.mode === "dry-run"
           ? "dry-run"

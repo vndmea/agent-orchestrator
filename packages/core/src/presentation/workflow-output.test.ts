@@ -13,6 +13,8 @@ describe("summarizeValidationReport", () => {
           name: "build",
           command: "pnpm run build",
           status: "failure",
+          packageJsonPath: "package.json",
+          scriptSourceScope: "workspace-root",
           diagnosticSummary: {
             affectedPaths: ["packages/core/src/index.ts"],
             previewLines: ["build failed"]
@@ -64,6 +66,8 @@ describe("summarizeValidationReport", () => {
 
     expect(summary.checks[0]).toMatchObject({
       name: "build",
+      packageJsonPath: "package.json",
+      scriptSourceScope: "workspace-root",
       firstErrorFile: "packages/core/src/index.ts",
       buildErrorFiles: ["packages/core/src/index.ts"]
     });

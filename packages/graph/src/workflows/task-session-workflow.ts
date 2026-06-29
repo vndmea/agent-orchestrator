@@ -36,7 +36,10 @@ import {
   runReviewWorkflow,
   type ReviewWorkflowOutput
 } from "./review-workflow.js";
-import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
+import {
+  resolveWorkflowWorkerContext,
+  type LocalClientRuntimeSummary
+} from "./worker-context-resolution.js";
 
 export interface TaskSessionValidationOptions {
   lint?: boolean;
@@ -81,6 +84,7 @@ export interface ResumeTaskSessionWorkflowInput {
 
 export interface TaskSessionWorkflowOutput {
   fixResult?: FixErrorWorkflowOutput;
+  localClientRuntime?: LocalClientRuntimeSummary;
   mode: "execute" | "dry-run";
   nextRecommendedActions: NextRecommendedAction[];
   patchApplyResult?: PatchApplyResult;
@@ -1060,6 +1064,7 @@ const finalizeTaskWorkflowOutput = async (input: {
   context: ExecutionContext;
   finalStatus: TaskSessionStatus;
   fixResult?: FixErrorWorkflowOutput;
+  localClientRuntime?: LocalClientRuntimeSummary;
   patchApplyResult?: PatchApplyResult;
   patchInspection?: PatchInspection;
   patchProposal?: PatchProposal;
@@ -1155,6 +1160,7 @@ const finalizeTaskWorkflowOutput = async (input: {
   });
 
   return {
+    localClientRuntime: input.localClientRuntime,
     mode: input.sessionWriteMode,
     nextRecommendedActions,
     persistence,
@@ -1483,6 +1489,7 @@ export const runTaskSessionWorkflow = async (
     context: resolved.context,
     finalStatus,
     fixResult: execution.fixResult,
+    localClientRuntime: resolved.localClientRuntime,
     patchApplyResult: execution.patchApplyResult,
     patchInspection: execution.patchInspection,
     patchProposal: execution.patchProposal,
@@ -1569,6 +1576,7 @@ export const resumeTaskSessionWorkflow = async (
     context: resolved.context,
     finalStatus,
     fixResult: execution.fixResult,
+    localClientRuntime: resolved.localClientRuntime,
     patchApplyResult: execution.patchApplyResult,
     patchInspection: execution.patchInspection,
     patchProposal: execution.patchProposal,
