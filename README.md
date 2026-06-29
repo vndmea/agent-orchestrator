@@ -367,7 +367,7 @@ Runtime configuration resolves in this order:
 2. `~/.cw/workspaces/<workspace-id>/config.json`
 3. built-in defaults
 
-Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults, including provider API keys and local client commands. Launch `cw` from the intended workspace root instead of relying on environment-based root or storage overrides, and never commit real keys or include them in logs.
+Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults, including provider API keys and local client commands. Launch `cw` from the intended workspace root, and never commit real keys or include them in logs.
 
 Repository context settings in the user-scoped CW `config.json` control default `ignoredPaths` and `strictFiles` behavior for review, fix, patch, and task workflows.
 

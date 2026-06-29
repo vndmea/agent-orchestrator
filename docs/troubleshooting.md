@@ -99,7 +99,7 @@ Do not treat a provider-failure interview as a completed onboarding result.
 - Start the client against the correct workspace root
 - Compare the client snippet with the output of `cw mcp config`
 - Use `cw doctor --mcp --host codex` when Codex is the host and you want an end-to-end check of config presence, snippet validity, launchability, connectivity, and tool-list parity
-- Confirm the client process sees the same environment variables as your shell
+- Confirm the client process starts from the intended workspace root and is using the expected CW `config.json`
 - Read `root-dir`, `runtime-bootstrap`, and `worker-connectivity` from `cw doctor --probe` to verify the active root, config path, and worker wiring
 
 ## Patch Apply Is Blocked
