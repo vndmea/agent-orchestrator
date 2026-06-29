@@ -391,26 +391,37 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
 export const applyWorkerAvailabilityToDoctorReport = (
   report: DoctorReport,
   snapshot: WorkerAvailabilitySnapshot
-): void => {
-  report.workerAvailability = snapshot;
-  report.capabilities = report.capabilities.filter(
+): DoctorReport => {
+  const capabilities = report.capabilities.filter(
     (capability) => capability.name !== "worker-availability"
   );
-  report.capabilities.push({
+  capabilities.push({
     name: "worker-availability",
     available: snapshot.status === "ready",
     status: snapshot.status,
     summary: snapshot.summary
   });
-  report.recommendedActions = Array.from(
+  const recommendedActions = Array.from(
     new Set([...snapshot.nextSteps, ...report.recommendedActions])
   );
 
   if (snapshot.status === "unavailable") {
-    report.status = "unavailable";
-    report.ok = false;
-    report.summary = snapshot.summary;
-  } else if (report.status === "ready") {
-    report.summary = snapshot.summary;
+    return {
+      ...report,
+      workerAvailability: snapshot,
+      capabilities,
+      recommendedActions,
+      status: "unavailable",
+      ok: false,
+      summary: snapshot.summary
+    };
   }
+
+  return {
+    ...report,
+    workerAvailability: snapshot,
+    capabilities,
+    recommendedActions,
+    summary: report.status === "ready" ? snapshot.summary : report.summary
+  };
 };

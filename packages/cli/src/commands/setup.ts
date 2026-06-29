@@ -24,9 +24,9 @@ import {
   runWorkerInterviewOnboarding,
 } from "@mcp-code-worker/graph";
 import {
-  applyWorkerAvailabilityToDoctorReport,
   buildWorkerAvailabilitySnapshot,
   createWorkerDoctorChecks,
+  finalizeDoctorReport,
   getWorkerProfileStorePath,
   getWorkerRegistryPath,
   getWorkerRegistration,
@@ -1080,20 +1080,23 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
         workerId: readinessWorkerPlan.workerId
       })
     : null;
-  if (readiness) {
-    applyWorkerAvailabilityToDoctorReport(finalDoctor, readiness);
-  }
-  const readinessSummary: string = finalDoctor.summary;
+  const finalDoctorWithReadiness = readiness
+    ? finalizeDoctorReport({
+        report: finalDoctor,
+        workerAvailability: readiness
+      })
+    : finalDoctor;
+  const readinessSummary: string = finalDoctorWithReadiness.summary;
   const readinessCapabilities: SetupStepResult["details"] = {
-    capabilities: finalDoctor.capabilities,
-    workerAvailability: finalDoctor.workerAvailability
+    capabilities: finalDoctorWithReadiness.capabilities,
+    workerAvailability: finalDoctorWithReadiness.workerAvailability
   };
-  const resultStatus: SetupResult["status"] = finalDoctor.status;
+  const resultStatus: SetupResult["status"] = finalDoctorWithReadiness.status;
   const minimalSuccessPath: SetupResult["minimalSuccessPath"] = [
-    ...finalDoctor.minimalSuccessPath
+    ...finalDoctorWithReadiness.minimalSuccessPath
   ];
   const recommendedEntrypoints: SetupResult["recommendedEntrypoints"] = [
-    ...finalDoctor.recommendedEntrypoints
+    ...finalDoctorWithReadiness.recommendedEntrypoints
   ];
 
   steps.push({

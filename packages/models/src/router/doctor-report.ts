@@ -41,23 +41,55 @@ const buildHostMcpCapability = (
   };
 };
 
-const applyHostMcpCapability = (
+export const applyHostMcpCapabilityToDoctorReport = (
   report: DoctorReport,
   host: string
-): void => {
+): DoctorReport => {
   const capability = buildHostMcpCapability(host, report.checks);
-  report.capabilities.push(capability);
+  const capabilities = [...report.capabilities, capability];
 
   if (capability.status === "unavailable") {
-    report.status = "unavailable";
-    report.ok = false;
-    report.summary =
-      report.summary.startsWith("unavailable:")
-        ? `${report.summary} Host MCP integration for ${host} also needs attention.`
-        : `unavailable: cw is bound to ${report.activeRootDir}, but host MCP integration for ${host} still needs attention before the workflow is reliable.`;
-  } else if (report.status === "ready") {
-    report.summary = `ready: cw is bound to ${report.activeRootDir}, core task workflows are available, and host MCP integration for ${host} is ready.`;
+    return {
+      ...report,
+      capabilities,
+      status: "unavailable",
+      ok: false,
+      summary:
+        report.summary.startsWith("unavailable:")
+          ? `${report.summary} Host MCP integration for ${host} also needs attention.`
+          : `unavailable: cw is bound to ${report.activeRootDir}, but host MCP integration for ${host} still needs attention before the workflow is reliable.`
+    };
   }
+
+  return {
+    ...report,
+    capabilities,
+    summary:
+      report.status === "ready"
+        ? `ready: cw is bound to ${report.activeRootDir}, core task workflows are available, and host MCP integration for ${host} is ready.`
+        : report.summary
+  };
+};
+
+export const finalizeDoctorReport = (input: {
+  hostMcpHost?: string;
+  report: DoctorReport;
+  workerAvailability?: Awaited<ReturnType<typeof buildWorkerAvailabilitySnapshot>>;
+}): DoctorReport => {
+  let report = input.report;
+
+  if (input.workerAvailability) {
+    report = applyWorkerAvailabilityToDoctorReport(
+      report,
+      input.workerAvailability
+    );
+  }
+
+  if (input.hostMcpHost) {
+    report = applyHostMcpCapabilityToDoctorReport(report, input.hostMcpHost);
+  }
+
+  return report;
 };
 
 export const buildDoctorReport = async (input: {
@@ -76,19 +108,17 @@ export const buildDoctorReport = async (input: {
       ...(input.additionalChecks ?? [])
     ]
   });
+  const workerAvailability = input.workerId
+    ? await buildWorkerAvailabilitySnapshot({
+        context: input.context,
+        probe: input.probe,
+        workerId: input.workerId
+      })
+    : undefined;
 
-  if (input.workerId) {
-    const workerAvailability = await buildWorkerAvailabilitySnapshot({
-      context: input.context,
-      probe: input.probe,
-      workerId: input.workerId
-    });
-    applyWorkerAvailabilityToDoctorReport(report, workerAvailability);
-  }
-
-  if (input.hostMcpHost) {
-    applyHostMcpCapability(report, input.hostMcpHost);
-  }
-
-  return report;
+  return finalizeDoctorReport({
+    report,
+    hostMcpHost: input.hostMcpHost,
+    workerAvailability
+  });
 };
