@@ -703,6 +703,53 @@ describe("cli parsing", () => {
     });
   });
 
+  it("uses the configured local client path during init probe workflows", async () => {
+    await withTempCwd(async () => {
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+      const clientCommand = process.execPath;
+
+      await cli.parseAsync([
+        "node",
+        "cw",
+        "init",
+        "--worker-provider",
+        "client",
+        "--worker-model",
+        "deepseek-v4-flash",
+        "--worker-id",
+        "local-worker",
+        "--worker-client-command",
+        clientCommand,
+        "--register-worker",
+        "--probe-worker",
+        "--allow-write"
+      ]);
+
+      const result = parseLastJson<{
+        readiness?: {
+          checks?: {
+            probe?: {
+              detail?: string;
+            };
+          };
+        };
+        steps: Array<{
+          id: string;
+          details?: {
+            clientCommand?: string;
+            configuredCommand?: string;
+            resolvedCommand?: string;
+            resolvedPath?: string | null;
+          };
+        }>;
+      }>(output);
+
+      expect(result.readiness?.checks?.probe?.detail).toContain(clientCommand);
+      expect(result.readiness?.checks?.probe?.detail).not.toContain("opencode ENOENT");
+    });
+  });
+
   it("rejects scripted init when an explicit local client path does not exist", async () => {
     await withTempCwd(async () => {
       const { io } = createIo();

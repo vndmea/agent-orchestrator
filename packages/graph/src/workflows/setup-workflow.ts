@@ -57,6 +57,7 @@ export interface SetupWorkerPlan {
   apiKey?: string;
   baseUrl?: string;
   benchmarkWorker: boolean;
+  clientCommand?: string;
   interviewWorker: boolean;
   isDefault: boolean;
   probeWorker: boolean;
@@ -341,6 +342,11 @@ const resolveSetupWorkerModel = (
   desiredConfig: CwConfig
 ): ModelConfig => ({
   ...context.workerModel,
+  ...(desiredConfig.workerClientCommand
+    ? {
+        clientCommand: desiredConfig.workerClientCommand
+      }
+    : {}),
   ...(desiredConfig.workerModel ?? {})
 });
 
@@ -371,6 +377,7 @@ const buildPrimaryWorkerPlan = (
     apiKey: options.workerApiKey,
     baseUrl: options.workerBaseUrl,
     benchmarkWorker: options.benchmarkWorker,
+    clientCommand: modelConfig.clientCommand,
     interviewWorker: options.interviewWorker,
     isDefault: true,
     probeWorker: options.probeWorker,
@@ -422,6 +429,7 @@ const buildPlannedWorkerModel = (
   ...context.workerModel,
   provider: plan.workerProvider,
   model: plan.workerModel,
+  ...(plan.clientCommand ? { clientCommand: plan.clientCommand } : {}),
   ...(plan.baseUrl ? { baseURL: plan.baseUrl } : {}),
   ...(plan.apiKey ? { apiKey: plan.apiKey } : {})
 });
