@@ -21,7 +21,7 @@ cw init --preset opencode --allow-write
 
 - Confirm the active `rootDir` matches your repository.
 - Confirm the resolved worker model is the one you expect.
-- If a non-mock provider is configured, make sure the expected API key is available either in the user-scoped `config.json` or through environment variables.
+- If a non-mock provider is configured, make sure the expected API key is persisted in the user-scoped `config.json`.
 
 3. Start a dry-run task first.
 

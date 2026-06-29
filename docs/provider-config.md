@@ -94,9 +94,7 @@ cw init --preset deepseek --allow-write
 }
 ```
 
-3. If you prefer environment variables instead, set the secret in the same runtime that will launch `cw`:
-
-Add the key directly to `config.json`:
+3. Persist the worker secret in `config.json`:
 
 ```json
 {
@@ -141,9 +139,7 @@ cw init --preset opencode --allow-write
 }
 ```
 
-3. If you prefer environment variables instead, set the secret in the same runtime that will launch `cw`:
-
-Add the key directly to `config.json`:
+3. Persist the worker secret in `config.json`:
 
 ```json
 {

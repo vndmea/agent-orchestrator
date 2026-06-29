@@ -15,7 +15,7 @@ Supporting templates:
 - Node.js `22`
 - pnpm `>=11`
 - Git available on `PATH`
-- Optional real worker credentials via environment variables
+- Optional real worker credentials persisted in the user-scoped `config.json`
 
 CI currently validates Node 22. Other Node.js `>=22` versions are best-effort until they are added to the CI matrix.
 
