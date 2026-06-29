@@ -42,8 +42,7 @@ export const getCwWorkspaceId = (rootDir: string): string => {
 };
 
 export const getCwWorkspaceDir = (
-  rootDir: string,
-  _env?: NodeJS.ProcessEnv
+  rootDir: string
 ): string => join(getCwHomeDir(), "workspaces", getCwWorkspaceId(rootDir));
 
 export const getCwWorkspaceFilePathFromStorageDir = (
@@ -53,8 +52,7 @@ export const getCwWorkspaceFilePathFromStorageDir = (
 
 export const getCwWorkspaceFilePath = (
   rootDir: string,
-  fileName: string,
-  _env?: NodeJS.ProcessEnv
+  fileName: string
 ): string =>
   getCwWorkspaceFilePathFromStorageDir(getCwWorkspaceDir(rootDir), fileName);
 
@@ -63,8 +61,7 @@ export const getCwWorkspaceRunsDirFromStorageDir = (
 ): string => join(resolve(cwStorageDir), "runs");
 
 export const getCwWorkspaceRunsDir = (
-  rootDir: string,
-  _env?: NodeJS.ProcessEnv
+  rootDir: string
 ): string => getCwWorkspaceRunsDirFromStorageDir(getCwWorkspaceDir(rootDir));
 
 export const getCwWorkspaceAuditDirFromStorageDir = (
@@ -72,6 +69,5 @@ export const getCwWorkspaceAuditDirFromStorageDir = (
 ): string => join(resolve(cwStorageDir), "audit");
 
 export const getCwWorkspaceAuditDir = (
-  rootDir: string,
-  _env?: NodeJS.ProcessEnv
+  rootDir: string
 ): string => getCwWorkspaceAuditDirFromStorageDir(getCwWorkspaceDir(rootDir));

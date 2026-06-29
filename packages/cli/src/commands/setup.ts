@@ -101,7 +101,7 @@ export interface SetupResult {
     toolName?: string;
   }>;
   recommendedConfig: string[];
-  readiness: Awaited<ReturnType<typeof buildWorkerAvailabilitySnapshot>>;
+  readiness: Awaited<ReturnType<typeof buildWorkerAvailabilitySnapshot>> | null;
   rootDir: string;
   status: AvailabilityStatus;
   steps: SetupStepResult[];

@@ -2,10 +2,7 @@ import { getCwWorkspaceDir } from "../storage/cw-paths.js";
 import type { ModelConfig } from "../types/workflow.js";
 import { SafetyPolicy } from "../policies/safety-policy.js";
 import { WritePolicy } from "../policies/write-policy.js";
-import {
-  normalizeCommandInput,
-  normalizeFileSystemPath
-} from "./path-input.js";
+import { normalizeFileSystemPath } from "./path-input.js";
 
 export interface ExecutionContext {
   cwStorageDir: string;

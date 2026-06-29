@@ -26,19 +26,15 @@ export interface ResolveExecutionContextOptions {
 }
 
 export const getCwConfigPath = (
-  rootDir: string,
-  env: NodeJS.ProcessEnv = process.env
-): string => getCwWorkspaceFilePath(rootDir, "config.json", env);
+  rootDir: string
+): string => getCwWorkspaceFilePath(rootDir, "config.json");
 
 const buildDefaultConfig = (): CwConfig =>
   CwConfigSchema.parse({
     version: 1
   });
 
-const resolveRootDir = (
-  env: NodeJS.ProcessEnv,
-  options: ResolveExecutionContextOptions
-): string => {
+const resolveRootDir = (options: ResolveExecutionContextOptions): string => {
   const cliOverrides = options.cliOverrides ?? {};
   const configuredRootDir = options.rootDir ?? cliOverrides.rootDir ?? process.cwd();
 
@@ -87,10 +83,9 @@ const mergeModelConfig = (
 };
 
 export async function loadCwConfig(
-  rootDir: string,
-  env: NodeJS.ProcessEnv = process.env
+  rootDir: string
 ): Promise<LoadCwConfigResult> {
-  const path = getCwConfigPath(rootDir, env);
+  const path = getCwConfigPath(rootDir);
 
   try {
     const contents = await readFile(path, "utf8");
@@ -131,8 +126,8 @@ export async function resolveExecutionContext(
 ): Promise<ExecutionContext> {
   const env = options.env ?? process.env;
   const cliOverrides = options.cliOverrides ?? {};
-  const rootDir = resolveRootDir(env, options);
-  const configResult = await loadCwConfig(rootDir, env);
+  const rootDir = resolveRootDir(options);
+  const configResult = await loadCwConfig(rootDir);
   const baseContext = createExecutionContextFromEnv(env, {
     ...cliOverrides,
     rootDir

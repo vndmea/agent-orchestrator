@@ -286,24 +286,15 @@ const inspectHostMcpConfig = async (
 const buildExpectedServerSummary = (host: McpHost): {
   args: string[];
   command: string;
-  env: Record<string, string>;
   summary: string;
 } => {
   const snippet = buildMcpConfigSnippet({ host });
   const server = snippet.mcpServers[SERVER_KEY];
-  const env = server.env ?? {};
-  const envSummary =
-    Object.keys(env).length > 0
-      ? Object.entries(env)
-          .map(([key, value]) => `${key}=${value}`)
-          .join(", ")
-      : "(none)";
 
   return {
     command: server.command,
     args: server.args,
-    env,
-    summary: `command=${server.command}; args=[${server.args.join(", ")}]; env={${envSummary}}`
+    summary: `command=${server.command}; args=[${server.args.join(", ")}]`
   };
 };
 
@@ -586,18 +577,12 @@ const createHostMcpDoctorChecks = async (
   const argsMatch =
     inspection.args.length === expected.args.length &&
     inspection.args.every((value, index) => value === expected.args[index]);
-  const envMatches = Object.entries(expected.env).every(
-    ([key, value]) => inspection.env[key] === value
-  );
   const validHostSnippet =
     inspection.serverEntryFound &&
     commandMatches &&
-    argsMatch &&
-    envMatches;
+    argsMatch;
   const foundSummary = inspection.serverEntryFound
-    ? `command=${inspection.command ?? "(missing)"}; args=[${inspection.args.join(", ")}]; env={${Object.entries(inspection.env)
-        .map(([key, value]) => `${key}=${value}`)
-        .join(", ") || "(none)"}}`
+    ? `command=${inspection.command ?? "(missing)"}; args=[${inspection.args.join(", ")}]`
     : "No mcp-code-worker server entry was found.";
   const mismatchReasons: string[] = [];
 
@@ -609,13 +594,6 @@ const createHostMcpDoctorChecks = async (
   }
   if (!argsMatch) {
     mismatchReasons.push(`args should be [${expected.args.join(", ")}]`);
-  }
-  if (!envMatches) {
-    mismatchReasons.push(
-      `env should include ${Object.entries(expected.env)
-        .map(([key, value]) => `${key}=${value}`)
-        .join(", ")}`
-    );
   }
   checks.push({
     name: "host-config-valid",

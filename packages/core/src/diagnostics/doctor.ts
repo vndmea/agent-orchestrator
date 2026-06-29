@@ -130,9 +130,6 @@ const canCreateDirectory = async (path: string): Promise<boolean> => {
   }
 };
 
-const hasEnvValue = (value: string | undefined): boolean =>
-  typeof value === "string" && value.trim().length > 0;
-
 const LOCAL_CLIENT_PROVIDERS = new Set(["client"]);
 
 const resolveLocalClientCommand = (
