@@ -18,6 +18,13 @@ import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
 import { runWorkerInterviewWorkflow } from "./worker-interview-workflow.js";
 
 type SavedArtifact = Awaited<ReturnType<typeof saveWorkerBenchmarkArtifact>>;
+type ResolvedWorkerProfileSource = Awaited<
+  ReturnType<typeof resolveWorkerProfile>
+>["source"];
+type UnavailableExecutionProfileSource = Exclude<
+  ResolvedWorkerProfileSource,
+  "persisted"
+>;
 
 export interface SavedWorkerProfileResult {
   mode: "dry-run" | "execute" | "skipped";
@@ -57,9 +64,14 @@ const buildProfileWarnings = (
 const buildExecutionProfileRefreshAction = (workerId: string): string =>
   `Run 'cw worker interview --worker ${workerId} --save' to refresh the persisted profile before routing new tasks.`;
 
+const toUnavailableExecutionProfileSource = (
+  source: ResolvedWorkerProfileSource
+): UnavailableExecutionProfileSource =>
+  source === "persisted" ? "incompatible" : source;
+
 const buildUnavailableExecutionProfile = (input: {
   reason: string;
-  source: "missing" | "stale" | "incompatible" | "provider-error";
+  source: UnavailableExecutionProfileSource;
   workerContext: ExecutionContext;
   workerId: string;
 }): WorkerCapabilityProfile => {
@@ -136,7 +148,7 @@ export const resolveWorkerCapabilityProfileForExecution = async (input: {
 
   const profile = buildUnavailableExecutionProfile({
     reason: resolution.freshness.reason,
-    source: resolution.source,
+    source: toUnavailableExecutionProfileSource(resolution.source),
     workerContext: input.workerContext,
     workerId: resolution.workerId
   });

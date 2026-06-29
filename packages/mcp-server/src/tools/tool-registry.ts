@@ -1,4 +1,4 @@
-import type { ZodRawShape } from "zod";
+import type { ZodObject, ZodRawShape } from "zod";
 
 import { cwBenchmarkWorkerTool } from "./cw-benchmark-worker.tool.js";
 import { cwDoctorTool } from "./cw-doctor.tool.js";
@@ -30,6 +30,18 @@ import { cwUnregisterWorkerTool } from "./cw-unregister-worker.tool.js";
 import { cwValidateRepositoryTool } from "./cw-validate-repository.tool.js";
 import type { CwToolDefinition } from "./tool-types.js";
 
+interface RegisteredCwToolDefinition {
+  description: string;
+  execute: (args: unknown) => unknown;
+  inputSchema: ZodObject<ZodRawShape>;
+  name: string;
+}
+
+const asRegisteredTool = <TArgs extends ZodRawShape, TResult>(
+  tool: CwToolDefinition<TArgs, TResult>
+): RegisteredCwToolDefinition =>
+  tool as unknown as RegisteredCwToolDefinition;
+
 export type McpToolCategory =
   | "diagnostics"
   | "high-level-task-entrypoints"
@@ -39,123 +51,123 @@ export type McpToolCategory =
 interface CwToolRegistryEntry {
   category: McpToolCategory;
   recommended?: boolean;
-  tool: CwToolDefinition<ZodRawShape, unknown>;
+  tool: RegisteredCwToolDefinition;
 }
 
 export const cwToolRegistry: CwToolRegistryEntry[] = [
   {
-    tool: cwRunHostWorkerTool,
+    tool: asRegisteredTool(cwRunHostWorkerTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwProposePatchTool,
+    tool: asRegisteredTool(cwProposePatchTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwInspectPatchTool,
+    tool: asRegisteredTool(cwInspectPatchTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwApplyPatchTool,
+    tool: asRegisteredTool(cwApplyPatchTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwReviewRepositoryTool,
+    tool: asRegisteredTool(cwReviewRepositoryTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwReviewDiffTool,
+    tool: asRegisteredTool(cwReviewDiffTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwReviewFilesTool,
+    tool: asRegisteredTool(cwReviewFilesTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwValidateRepositoryTool,
+    tool: asRegisteredTool(cwValidateRepositoryTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwFixErrorTool,
+    tool: asRegisteredTool(cwFixErrorTool),
     category: "workflow-building-blocks"
   },
   {
-    tool: cwStartTaskTool,
+    tool: asRegisteredTool(cwStartTaskTool),
     category: "high-level-task-entrypoints",
     recommended: true
   },
   {
-    tool: cwResumeTaskTool,
+    tool: asRegisteredTool(cwResumeTaskTool),
     category: "high-level-task-entrypoints",
     recommended: true
   },
   {
-    tool: cwGetTaskStatusTool,
+    tool: asRegisteredTool(cwGetTaskStatusTool),
     category: "high-level-task-entrypoints"
   },
   {
-    tool: cwListTasksTool,
+    tool: asRegisteredTool(cwListTasksTool),
     category: "high-level-task-entrypoints"
   },
   {
-    tool: cwGetTaskReportTool,
+    tool: asRegisteredTool(cwGetTaskReportTool),
     category: "high-level-task-entrypoints",
     recommended: true
   },
   {
-    tool: cwReadTaskArtifactTool,
+    tool: asRegisteredTool(cwReadTaskArtifactTool),
     category: "high-level-task-entrypoints"
   },
   {
-    tool: cwListModelsTool,
+    tool: asRegisteredTool(cwListModelsTool),
     category: "diagnostics"
   },
   {
-    tool: cwListWorkflowsTool,
+    tool: asRegisteredTool(cwListWorkflowsTool),
     category: "diagnostics"
   },
   {
-    tool: cwListToolsTool,
+    tool: asRegisteredTool(cwListToolsTool),
     category: "diagnostics"
   },
   {
-    tool: cwListAuditEventsTool,
+    tool: asRegisteredTool(cwListAuditEventsTool),
     category: "diagnostics"
   },
   {
-    tool: cwRegisterWorkerTool,
+    tool: asRegisteredTool(cwRegisterWorkerTool),
     category: "management"
   },
   {
-    tool: cwUnregisterWorkerTool,
+    tool: asRegisteredTool(cwUnregisterWorkerTool),
     category: "management"
   },
   {
-    tool: cwListWorkerRegistryTool,
+    tool: asRegisteredTool(cwListWorkerRegistryTool),
     category: "management"
   },
   {
-    tool: cwGetWorkerRegistrationTool,
+    tool: asRegisteredTool(cwGetWorkerRegistrationTool),
     category: "management"
   },
   {
-    tool: cwRunWorkerInterviewTool,
+    tool: asRegisteredTool(cwRunWorkerInterviewTool),
     category: "management"
   },
   {
-    tool: cwBenchmarkWorkerTool,
+    tool: asRegisteredTool(cwBenchmarkWorkerTool),
     category: "management"
   },
   {
-    tool: cwListWorkersTool,
+    tool: asRegisteredTool(cwListWorkersTool),
     category: "management"
   },
   {
-    tool: cwGetWorkerProfileTool,
+    tool: asRegisteredTool(cwGetWorkerProfileTool),
     category: "management"
   },
   {
-    tool: cwDoctorTool,
+    tool: asRegisteredTool(cwDoctorTool),
     category: "diagnostics"
   }
 ];
