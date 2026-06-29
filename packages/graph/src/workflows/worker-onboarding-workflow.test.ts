@@ -19,10 +19,18 @@ vi.mock("@mcp-code-worker/models", () => ({
     source: "configured",
     status: "pass"
   })),
-  requireConfiguredWorkerId: vi.fn((context, workerId) => {
-    void context;
-    return workerId;
-  }),
+  requireConfiguredWorkerId: vi.fn(
+    (context: ExecutionContext, workerId: string | undefined, action: string) => {
+      void context;
+      void action;
+
+      if (!workerId) {
+        throw new Error("workerId is required in this test mock");
+      }
+
+      return workerId;
+    }
+  ),
   resolveWorkerProfile: vi.fn(() => ({
     workerId: "mock:worker",
     source: "persisted",

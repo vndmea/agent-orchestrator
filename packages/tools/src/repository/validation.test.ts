@@ -186,6 +186,7 @@ describe("runRepositoryValidation", () => {
       test: true,
       scope: "packages/pkg"
     });
+    const typecheckCheck = result.checks.find((check) => check.name === "typecheck");
 
     expect(result.ok).toBe(true);
     expect(result.checks).toEqual(
@@ -196,8 +197,7 @@ describe("runRepositoryValidation", () => {
           scriptName: "typecheck",
           resolutionSource: "canonical",
           packageJsonPath: "package.json",
-          scriptSourceScope: "workspace-root",
-          stdout: expect.stringContaining(rootDir)
+          scriptSourceScope: "workspace-root"
         }),
         expect.objectContaining({
           name: "lint",
@@ -217,6 +217,7 @@ describe("runRepositoryValidation", () => {
         })
       ])
     );
+    expect(typecheckCheck?.stdout).toContain(rootDir);
     expect(result.warnings).toEqual(
       expect.arrayContaining([
         expect.stringContaining("fell back to workspace-root script typecheck"),
