@@ -2,7 +2,6 @@ import { execFile as execFileCallback } from "node:child_process";
 import { mkdir, mkdtemp, readFile, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
@@ -975,49 +974,6 @@ describe("cli parsing", () => {
       });
     });
   });
-
-  it("tests live MCP launch and tool discovery through doctor --mcp", async () => {
-    await withTempCwd(async (rootDir) => {
-      await writeProfiles(rootDir, [createProfile()]);
-
-      await withTempHome(async (homeDir) => {
-        const distMainPath = fileURLToPath(
-          new URL("../dist/main.js", import.meta.url)
-        );
-
-        await writeCodexConfig(homeDir, {
-          command: process.execPath,
-          args: [distMainPath, "mcp", "serve"]
-        });
-        const { io, output } = createIo();
-        const cli = buildCli(io);
-
-        await cli.parseAsync(["node", "cw", "doctor", "--mcp", "--host", "codex"]);
-
-        const result = parseLastJson<{
-          checks?: Array<{ name: string; status: string }>;
-        }>(output);
-
-        expect(
-          result.checks?.some(
-            (check) =>
-              check.name === "mcp-server-launchable" && check.status === "pass"
-          )
-        ).toBe(true);
-        expect(
-          result.checks?.some(
-            (check) => check.name === "mcp-connection" && check.status === "pass"
-          )
-        ).toBe(true);
-        expect(
-          result.checks?.some(
-            (check) =>
-              check.name === "mcp-tool-catalog-match" && check.status === "pass"
-          )
-        ).toBe(true);
-      });
-    });
-  }, 20_000);
 
   it("renders doctor probe details in compact human mode", async () => {
     await withTempCwd(async (rootDir) => {

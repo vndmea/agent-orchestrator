@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   getCwConfigPath,
   loadCwConfig,
+  normalizeFileSystemPath,
   resolveExecutionContext
 } from "@mcp-code-worker/core";
 
@@ -163,8 +164,9 @@ describe("cw config", () => {
 
     try {
       process.chdir(rootDir);
+      const expectedRootDir = normalizeFileSystemPath(process.cwd());
       const context = await resolveExecutionContext();
-      expect(context.rootDir).toBe(rootDir);
+      expect(context.rootDir).toBe(expectedRootDir);
     } finally {
       process.chdir(originalCwd);
     }

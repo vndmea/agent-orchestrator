@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
 export interface WorkspaceBindingSummary {
@@ -8,12 +9,23 @@ export interface WorkspaceBindingSummary {
   warning?: string;
 }
 
+const canonicalizePath = (value: string): string => {
+  const resolvedValue = resolve(value);
+
+  try {
+    return realpathSync.native(resolvedValue);
+  } catch {
+    return resolvedValue;
+  }
+};
+
 export const buildWorkspaceBindingSummary = (
   rootDir: string,
   callerWorkingDirectory = process.cwd()
 ): WorkspaceBindingSummary => {
-  const normalizedRootDir = resolve(rootDir);
-  const normalizedCallerWorkingDirectory = resolve(callerWorkingDirectory);
+  const normalizedRootDir = canonicalizePath(rootDir);
+  const normalizedCallerWorkingDirectory =
+    canonicalizePath(callerWorkingDirectory);
   const matchesCallerWorkingDirectory =
     normalizedRootDir === normalizedCallerWorkingDirectory;
 
