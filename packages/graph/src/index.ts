@@ -12,3 +12,4 @@ export * from "./workflows/task-session-workflow.js";
 export * from "./workflows/workflow-output.js";
 export * from "./workflows/worker-benchmark-workflow.js";
 export * from "./workflows/worker-interview-workflow.js";
+export * from "./workflows/worker-onboarding-workflow.js";

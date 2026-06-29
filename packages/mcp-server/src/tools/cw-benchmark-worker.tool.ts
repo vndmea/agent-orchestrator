@@ -2,15 +2,8 @@ import { z } from "zod";
 
 import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
-  applyBenchmarkCapabilityUpdate,
-  runWorkerBenchmarkWorkflow,
-  saveWorkerBenchmarkArtifact
+  runWorkerBenchmarkOnboarding
 } from "@mcp-code-worker/graph";
-import {
-  getWorkerProfile,
-  resolveWorkerTarget,
-  saveWorkerProfile
-} from "@mcp-code-worker/models";
 
 import type { CwToolDefinition } from "./tool-types.js";
 
@@ -26,7 +19,7 @@ const inputSchema = z.object({
 
 export const cwBenchmarkWorkerTool: CwToolDefinition<
   typeof inputSchema.shape,
-  Awaited<ReturnType<typeof runWorkerBenchmarkWorkflow>> & {
+  Awaited<ReturnType<typeof runWorkerBenchmarkOnboarding>>["benchmarkResult"] & {
     capabilityUpdateApplied: boolean;
     patchGenerationQualified: boolean;
     persistence?: { mode: "execute" | "dry-run"; path: string };
@@ -45,51 +38,25 @@ export const cwBenchmarkWorkerTool: CwToolDefinition<
     }
 
     const context = await resolveExecutionContext();
-    const resolvedTarget = await resolveWorkerTarget({
-      context,
-      workerId: args.workerId,
-      provider: args.provider,
-      model: args.model,
+    const result = await runWorkerBenchmarkOnboarding({
       baseURL: args.baseURL,
-      requireNamedWorker: true
-    });
-    const result = await runWorkerBenchmarkWorkflow({
       context,
+      model: args.model,
+      persistArtifact: args.persistArtifact ?? false,
+      provider: args.provider,
       suite,
-      workerId: resolvedTarget.workerId,
-      modelConfig: resolvedTarget.modelConfig
+      updateProfileCapabilities: args.updateProfileCapabilities ?? false,
+      workerId: args.workerId
     });
-    const persistence = args.persistArtifact
-      ? await saveWorkerBenchmarkArtifact(context, result, true)
-      : undefined;
-    const existingProfile = await getWorkerProfile(
-      context.rootDir,
-      result.workerId,
-      context.cwStorageDir
-    );
-
-    if (args.updateProfileCapabilities && !existingProfile) {
-      throw new Error(
-        `No persisted worker profile was found for '${result.workerId}'. Run cw_run_worker_interview with workerId='${result.workerId}' and persistProfile=true first.`
-      );
-    }
-
-    const profileUpdate = existingProfile
-      ? applyBenchmarkCapabilityUpdate(existingProfile, result, {
-          updateProfileCapabilities: args.updateProfileCapabilities
-        })
-      : null;
-    const profilePersistence =
-      args.persistArtifact && profileUpdate
-        ? await saveWorkerProfile(context, profileUpdate.profile, true)
-        : undefined;
 
     return {
-      ...result,
-      capabilityUpdateApplied: profileUpdate?.capabilityUpdateApplied ?? false,
-      patchGenerationQualified: profileUpdate?.patchGenerationQualified ?? false,
-      ...(persistence ? { persistence } : {}),
-      ...(profilePersistence ? { profilePersistence } : {})
+      ...result.benchmarkResult,
+      capabilityUpdateApplied: result.profileUpdate?.capabilityUpdateApplied ?? false,
+      patchGenerationQualified: result.profileUpdate?.patchGenerationQualified ?? false,
+      ...(result.persistence ? { persistence: result.persistence } : {}),
+      ...(result.profilePersistence
+        ? { profilePersistence: result.profilePersistence }
+        : {})
     };
   }
 };

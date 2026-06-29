@@ -20,7 +20,8 @@ import {
   type ModelConfig
 } from "@mcp-code-worker/core";
 import {
-  runWorkerInterviewWorkflow,
+  runWorkerBenchmarkOnboarding,
+  runWorkerInterviewOnboarding,
 } from "@mcp-code-worker/graph";
 import {
   applyWorkerAvailabilityToDoctorReport,
@@ -36,11 +37,6 @@ import {
 } from "@mcp-code-worker/models";
 
 import { formatDisplayPath } from "../output.js";
-import {
-  runBenchmarkCapabilityUpdate,
-  saveInterviewProfile
-} from "./worker-onboarding.js";
-
 type SetupStepStatus =
   | "unavailable"
   | "completed"
@@ -614,17 +610,12 @@ const runSetupWorkerPlan = async (input: {
         command: `cw worker register --worker ${input.plan.workerId} --provider <provider> --model <model> --allow-write`
       });
     } else {
-      const interviewResult = await runWorkerInterviewWorkflow({
+      const interviewResult = await runWorkerInterviewOnboarding({
+        persistProfile: input.allowWrite,
         context: input.context,
-        workerId: input.plan.workerId,
-        modelConfig: workerModel
+        workerId: input.plan.workerId
       });
-      const interviewSave = await saveInterviewProfile({
-        context: input.context,
-        profile: interviewResult.profile,
-        save: input.allowWrite,
-        persistenceAdvice: interviewResult.persistenceAdvice
-      });
+      const interviewSave = interviewResult.persistence;
 
       if (interviewSave?.mode === "skipped") {
         summary.interviewStatus = "unavailable";
@@ -719,10 +710,9 @@ const runSetupWorkerPlan = async (input: {
           `cw worker benchmark --worker ${input.plan.workerId} --suite coding-v1 --save --update-profile-capabilities`
       });
     } else {
-      const benchmarkUpdate = await runBenchmarkCapabilityUpdate({
+      const benchmarkUpdate = await runWorkerBenchmarkOnboarding({
         context: input.context,
-        modelConfig: workerModel,
-        save: true,
+        persistArtifact: true,
         updateProfileCapabilities: true,
         workerId: input.plan.workerId
       });

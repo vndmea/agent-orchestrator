@@ -2,8 +2,8 @@ import type { Command } from "commander";
 
 import { resolveExecutionContext } from "@mcp-code-worker/core";
 import {
-  runWorkerBenchmarkWorkflow,
-  runWorkerInterviewWorkflow
+  runWorkerBenchmarkOnboarding,
+  runWorkerInterviewOnboarding
 } from "@mcp-code-worker/graph";
 import {
   getWorkerRegistration,
@@ -12,7 +12,6 @@ import {
   listWorkerProfiles,
   removeWorkerRegistration,
   requireConfiguredWorkerId,
-  resolveWorkerTarget,
   saveWorkerRegistration
 } from "@mcp-code-worker/models";
 
@@ -22,10 +21,6 @@ import {
   buildWorkerReadinessReport,
   formatWorkerReadinessResult
 } from "./worker-readiness.js";
-import {
-  runBenchmarkCapabilityUpdate,
-  saveInterviewProfile
-} from "./worker-onboarding.js";
 
 const formatWorkerList = (
   title: string,
@@ -325,37 +320,19 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         worker: string;
       }) => {
         const context = await resolveExecutionContext();
-        const resolvedTarget = await resolveWorkerTarget({
-          context,
-          workerId: options.worker,
-          provider: options.provider,
-          model: options.model,
+        const result = await runWorkerInterviewOnboarding({
           baseURL: options.baseUrl,
-          requireNamedWorker: true
-        });
-        const result = await runWorkerInterviewWorkflow({
           context,
-          workerId: resolvedTarget.workerId,
-          modelConfig: resolvedTarget.modelConfig
-        });
-
-        const saveResult = await saveInterviewProfile({
-          context,
-          profile: result.profile,
-          save: options.save,
-          persistenceAdvice: result.persistenceAdvice
+          model: options.model,
+          persistProfile: options.save,
+          provider: options.provider,
+          workerId: options.worker
         });
 
         writeOutput(
           io,
-          {
-            ...result,
-            persistence: saveResult
-          },
-          formatWorkerInterviewResult({
-            ...result,
-            persistence: saveResult
-          })
+          result,
+          formatWorkerInterviewResult(result)
         );
       }
     );
@@ -392,33 +369,21 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         }
 
         const context = await resolveExecutionContext();
-        const resolvedTarget = await resolveWorkerTarget({
-          context,
-          workerId: options.worker,
-          provider: options.provider,
-          model: options.model,
+        const benchmarkUpdate = await runWorkerBenchmarkOnboarding({
           baseURL: options.baseUrl,
-          requireNamedWorker: true
-        });
-        const result = await runWorkerBenchmarkWorkflow({
           context,
+          model: options.model,
+          persistArtifact: options.save,
+          provider: options.provider,
           suite: "coding-v1",
-          workerId: resolvedTarget.workerId,
-          modelConfig: resolvedTarget.modelConfig
-        });
-        const benchmarkUpdate = await runBenchmarkCapabilityUpdate({
-          benchmarkResult: result,
-          context,
-          modelConfig: resolvedTarget.modelConfig,
-          save: options.save,
           updateProfileCapabilities: options.updateProfileCapabilities,
-          workerId: result.workerId
+          workerId: options.worker
         });
 
         writeOutput(
           io,
           {
-            ...result,
+            ...benchmarkUpdate.benchmarkResult,
             capabilityUpdateApplied:
               benchmarkUpdate.profileUpdate?.capabilityUpdateApplied ?? false,
             patchGenerationQualified:
@@ -427,7 +392,7 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
             profilePersistence: benchmarkUpdate.profilePersistence
           },
           formatWorkerBenchmarkResult({
-            ...result,
+            ...benchmarkUpdate.benchmarkResult,
             capabilityUpdateApplied:
               benchmarkUpdate.profileUpdate?.capabilityUpdateApplied ?? false,
             patchGenerationQualified:

@@ -466,6 +466,7 @@ describe("mcp tool registration", () => {
 
       const result = await cwBenchmarkWorkerTool.execute({
         persistArtifact: true,
+        workerId: "default-worker",
         updateProfileCapabilities: true
       });
 

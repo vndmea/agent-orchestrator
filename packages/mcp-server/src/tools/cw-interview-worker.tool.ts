@@ -1,11 +1,7 @@
 import { z } from "zod";
 
 import { resolveExecutionContext } from "@mcp-code-worker/core";
-import { runWorkerInterviewWorkflow } from "@mcp-code-worker/graph";
-import {
-  resolveWorkerTarget,
-  saveWorkerProfile
-} from "@mcp-code-worker/models";
+import { runWorkerInterviewOnboarding } from "@mcp-code-worker/graph";
 
 import type { CwToolDefinition } from "./tool-types.js";
 
@@ -18,48 +14,21 @@ const inputSchema = z.object({
 });
 
 type WorkerInterviewToolResult = Awaited<
-  ReturnType<typeof runWorkerInterviewWorkflow>
-> & {
-  persistence?:
-    | { mode: "execute" | "dry-run"; path: string }
-    | {
-        mode: "skipped";
-        reason: string;
-        recommendedActions: string[];
-      };
-};
+  ReturnType<typeof runWorkerInterviewOnboarding>
+>;
 
 const executeWorkerInterview = async (
   args: z.infer<typeof inputSchema>
 ): Promise<WorkerInterviewToolResult> => {
   const context = await resolveExecutionContext();
-  const resolvedTarget = await resolveWorkerTarget({
-    context,
-    workerId: args.workerId,
-    provider: args.provider,
-    model: args.model,
+  return runWorkerInterviewOnboarding({
     baseURL: args.baseURL,
-    requireNamedWorker: true
-  });
-  const result = await runWorkerInterviewWorkflow({
     context,
-    workerId: resolvedTarget.workerId,
-    modelConfig: resolvedTarget.modelConfig
+    model: args.model,
+    persistProfile: args.persistProfile ?? false,
+    provider: args.provider,
+    workerId: args.workerId
   });
-  const persistence = args.persistProfile
-    ? result.persistenceAdvice.canPersist
-      ? await saveWorkerProfile(context, result.profile, true)
-      : {
-          mode: "skipped" as const,
-          reason: result.persistenceAdvice.reason,
-          recommendedActions: result.persistenceAdvice.recommendedActions
-        }
-    : undefined;
-
-  return {
-    ...result,
-    ...(persistence ? { persistence } : {})
-  };
 };
 
 export const cwRunWorkerInterviewTool: CwToolDefinition<

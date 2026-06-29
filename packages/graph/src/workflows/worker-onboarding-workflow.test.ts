@@ -2,7 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ExecutionContext } from "@mcp-code-worker/core";
 
-vi.mock("@mcp-code-worker/graph", () => ({
+vi.mock("@mcp-code-worker/models", () => ({
+  getWorkerProfile: vi.fn(async () => ({
+    workerId: "mock:worker"
+  })),
+  resolveWorkerTarget: vi.fn(async () => ({
+    modelConfig: {
+      model: "worker-model",
+      provider: "mock"
+    },
+    source: "registry",
+    warnings: [],
+    workerId: "mock:worker"
+  })),
+  saveWorkerProfile: vi.fn(async () => ({
+    mode: "execute",
+    path: "/tmp/worker-profile.json"
+  }))
+}));
+
+vi.mock("./worker-benchmark-workflow.js", () => ({
   applyBenchmarkCapabilityUpdate: vi.fn(() => ({
     capabilityUpdateApplied: true,
     patchGenerationQualified: true,
@@ -17,38 +36,28 @@ vi.mock("@mcp-code-worker/graph", () => ({
   }))
 }));
 
-vi.mock("@mcp-code-worker/models", () => ({
-  getWorkerProfile: vi.fn(async () => ({
-    workerId: "mock:worker"
-  })),
-  saveWorkerProfile: vi.fn(async () => ({
-    mode: "execute",
-    path: "/tmp/worker-profile.json"
-  }))
+vi.mock("./worker-interview-workflow.js", () => ({
+  runWorkerInterviewWorkflow: vi.fn()
 }));
 
-import { runWorkerBenchmarkWorkflow } from "@mcp-code-worker/graph";
+import { runWorkerBenchmarkWorkflow } from "./worker-benchmark-workflow.js";
 
-import { runBenchmarkCapabilityUpdate } from "./worker-onboarding.js";
+import { runWorkerBenchmarkOnboarding } from "./worker-onboarding-workflow.js";
 
-describe("worker onboarding benchmark updates", () => {
+describe("worker onboarding workflow", () => {
   it("reuses a provided benchmark result instead of rerunning the workflow", async () => {
     const benchmarkResult = {
       suiteName: "coding-v1",
       workerId: "mock:worker"
     } as Awaited<ReturnType<typeof runWorkerBenchmarkWorkflow>>;
 
-    const result = await runBenchmarkCapabilityUpdate({
+    const result = await runWorkerBenchmarkOnboarding({
       benchmarkResult,
       context: {
         cwStorageDir: "/tmp/cw",
         rootDir: "/tmp/repo"
       } as ExecutionContext,
-      modelConfig: {
-        model: "worker-model",
-        provider: "mock"
-      } as never,
-      save: true,
+      persistArtifact: true,
       updateProfileCapabilities: true,
       workerId: "mock:worker"
     });
