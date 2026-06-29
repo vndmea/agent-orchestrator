@@ -8,6 +8,7 @@ export * from "./workflows/fix-error-workflow.js";
 export * from "./workflows/host-worker-workflow.js";
 export * from "./workflows/patch-proposal-workflow.js";
 export * from "./workflows/review-workflow.js";
+export * from "./workflows/setup-workflow.js";
 export * from "./workflows/task-session-workflow.js";
 export * from "./workflows/workflow-output.js";
 export * from "./workflows/worker-benchmark-workflow.js";
