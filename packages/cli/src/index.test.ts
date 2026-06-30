@@ -2318,6 +2318,30 @@ describe("cli parsing", () => {
         "mock:registered-worker",
         "--scope",
         "packages/core",
+        "--output",
+        "tmp/generated-proposal.patch",
+        "--allow-write-output",
+        "--summary"
+      ]);
+      const persistedProposal = PatchProposalSchema.parse(
+        JSON.parse(
+          await readFile(join(rootDir, "tmp", "generated-proposal.patch"), "utf8")
+        ) as unknown
+      );
+      expect(persistedProposal.unifiedDiff).toContain("diff --git");
+      expect(persistedProposal.title.length).toBeGreaterThan(0);
+
+      await cli.parseAsync([
+        "node",
+        "cw",
+        "patch",
+        "propose",
+        "--goal",
+        "Fix typecheck",
+        "--worker",
+        "mock:registered-worker",
+        "--scope",
+        "packages/core",
         "--full"
       ]);
       expect(output.at(-1)).toContain("\"proposal\"");

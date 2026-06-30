@@ -288,7 +288,7 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
           workerId: options.worker,
           requireProfile: options.requireProfile
         });
-        const serialized = JSON.stringify(result, null, 2);
+        const serialized = JSON.stringify(result.proposal, null, 2);
 
         if (options.output && options.allowWriteOutput) {
           await writeRepositoryFile(
