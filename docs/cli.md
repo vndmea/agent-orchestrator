@@ -66,7 +66,7 @@ For the dedicated `claudecode` adapter, use `cw init --preset=claudecode --allow
 
 For the dedicated `codex` adapter, use `cw init --preset=codex --allow-write`. That preset keeps `provider=codex` and defaults the command to `codex`.
 
-`cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.cw/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
+`cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.code-worker/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
 
 If Codex is your MCP host, `cw init` detects the user-level Codex MCP file at `~/.codex/config.toml` on macOS/Linux or the same home-relative path on Windows. It only offers opt-in writing when that file already exists; otherwise it falls back to a manual reminder.
 
@@ -88,7 +88,7 @@ For instruction scoping, put repository-specific guidance in `./AGENTS.md` and g
 
 ## Task Sessions
 
-Task sessions keep local state under `~/.cw/workspaces/<workspace-id>/runs/<taskId>` by default:
+Task sessions keep local state under `~/.code-worker/workspaces/<workspace-id>/runs/<taskId>` by default:
 
 ```bash
 cw task start \
@@ -132,7 +132,7 @@ cw task resume <taskId> --apply-patch --allow-write --confirm-apply
 Benchmark artifacts are persisted under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/worker-benchmarks/<sanitized-worker-id>/coding-v1.json
+~/.code-worker/workspaces/<workspace-id>/worker-benchmarks/<sanitized-worker-id>/coding-v1.json
 ```
 
 The persisted directory name uses a filesystem-safe worker id. Example:
@@ -182,3 +182,4 @@ curl https://api.deepseek.com/chat/completions \
 ```
 
 If `Not Found` occurs, test both `https://api.deepseek.com` and `https://api.deepseek.com/v1` and confirm the model name, network access, and the selected `config.json.workers[]` entry's `apiKey`.
+

@@ -5,10 +5,10 @@
 The default base path is:
 
 ```text
-~/.cw/workspaces/<workspace-id>/
+~/.code-worker/workspaces/<workspace-id>/
 ```
 
-The default `~/.cw` root is always used for user-scoped CW state. `--root` on supported CLI commands changes which repository path maps to `<workspace-id>`.
+The default `~/.code-worker` root is always used for user-scoped CW state. `--root` on supported CLI commands changes which repository path maps to `<workspace-id>`.
 
 ## Common Files And Directories
 
@@ -26,7 +26,7 @@ Typical CW-managed files include:
 Task sessions are stored under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/runs/<taskId>/
+~/.code-worker/workspaces/<workspace-id>/runs/<taskId>/
 ```
 
 Common artifacts include:
@@ -54,7 +54,7 @@ Worker qualification state is stored in user-scoped CW storage:
 Audit events are local CW artifacts under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/audit/
+~/.code-worker/workspaces/<workspace-id>/audit/
 ```
 
 Dry-run does not create audit files by default for ordinary evaluation paths, but explicit audit-writing paths still remain local to CW storage.
@@ -71,8 +71,9 @@ Neither cleanup command modifies repository source files.
 When something looks “missing,” verify:
 
 - the active repository root
-- the active CW storage root under `~/.cw`
+- the active CW storage root under `~/.code-worker`
 - the derived workspace id
 - whether the state was created by `cw init`, task sessions, or audit-producing actions
 
 The most common source of confusion is not data loss but a different effective root or CW home path.
+

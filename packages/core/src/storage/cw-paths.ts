@@ -28,7 +28,7 @@ const canonicalizeWorkspaceRootDir = (rootDir: string): string => {
 };
 
 export const getCwHomeDir = (): string =>
-  normalizeFileSystemPath(join(homedir(), ".cw"));
+  normalizeFileSystemPath(join(homedir(), ".code-worker"));
 
 export const getCwWorkspaceId = (rootDir: string): string => {
   const canonicalRootDir = canonicalizeWorkspaceRootDir(rootDir);

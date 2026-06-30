@@ -39,7 +39,7 @@ Notes:
 
 When `cw` resolves an `opencode` worker, the effective model comes from this order:
 
-1. the named worker entry in `~/.cw/workspaces/<workspace-id>/workers.json`
+1. the named worker entry in `~/.code-worker/workspaces/<workspace-id>/workers.json`
 2. the matching worker entry in `config.json`
 3. only then the local OpenCode default model from `opencode.json`
 
@@ -114,3 +114,4 @@ Benchmark only after compatibility and interview both succeed.
   - the executable exists but does not expose the expected `opencode run` surface
 - probe fails after compatibility passes
   - OpenCode launches but cannot complete the actual model call
+

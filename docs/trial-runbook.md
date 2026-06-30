@@ -41,7 +41,7 @@ pnpm exec cw doctor
 
 Recommended next checks:
 
-- Confirm `~/.cw/workspaces/<workspace-id>/config.json` exists.
+- Confirm `~/.code-worker/workspaces/<workspace-id>/config.json` exists.
 - Confirm `worker-profiles.json` and `workers.json` were created in user-scoped CW storage, not in the repository checkout.
 - If an API key was written into the user-scoped `config.json`, confirm it remains local-only and is not copied into commits, logs, or shared notes.
 - Confirm no workflow depends on a repository-local legacy `.cw/` directory. Current builds do not read it.
@@ -208,7 +208,7 @@ Do not keep:
 - raw API keys
 - bearer tokens
 - full sensitive request headers
-- raw operator usernames or machine-specific absolute paths when a sanitized placeholder such as `<workspace-root>` or `%USERPROFILE%\.cw` is enough
+- raw operator usernames or machine-specific absolute paths when a sanitized placeholder such as `<workspace-root>` or `%USERPROFILE%\.code-worker` is enough
 
 ## Rollback Notes
 
@@ -216,3 +216,4 @@ Do not keep:
 - Audit artifacts can be removed with `cw cleanup audit`.
 - Repository changes are never auto-committed.
 - Patch apply validation failures should be handled through the recorded recovery guidance in the task report.
+

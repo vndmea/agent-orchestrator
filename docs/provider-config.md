@@ -22,7 +22,7 @@ Additional related settings include:
 Runtime configuration resolves in this order:
 
 1. CLI flags
-2. `~/.cw/workspaces/<workspace-id>/config.json`
+2. `~/.code-worker/workspaces/<workspace-id>/config.json`
 3. Built-in defaults
 
 Treat `config.json` as the primary source for persisted worker settings used by both CLI and MCP flows. Persist API keys and local client commands in `config.json.workers[]`, and never commit real keys into repository files or logs.
@@ -494,3 +494,4 @@ For provider-specific health checks and failure signatures, use the matching con
 - [Claude Code adapter](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/claudecode.md)
 - [Codex adapter](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/codex.md)
 - [OpenCode adapter](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/opencode.md)
+

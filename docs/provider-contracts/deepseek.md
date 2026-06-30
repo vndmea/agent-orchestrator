@@ -142,7 +142,7 @@ Qualification sequence:
 By default, saved DeepSeek-related CW artifacts live under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/
+~/.code-worker/workspaces/<workspace-id>/
 ```
 
 Expected files:
@@ -155,3 +155,4 @@ Example:
 
 - worker id: `deepseek-flash`
 - persisted path segment: `openai-compatible_deepseek-v4-flash`
+

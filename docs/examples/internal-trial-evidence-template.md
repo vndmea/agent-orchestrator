@@ -2,7 +2,7 @@
 
 Use one copy of this template for each real worker end-to-end trial.
 
-Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.cw`, or `<cw-home>` instead of raw operator usernames or machine-specific absolute paths.
+Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.code-worker`, or `<cw-home>` instead of raw operator usernames or machine-specific absolute paths.
 
 ## Run Identity
 
@@ -60,3 +60,4 @@ Prefer sanitized placeholders such as `<workspace-root>`, `%USERPROFILE%\.cw`, o
 - Rollback or cleanup actions taken:
 - Follow-up owner:
 - Follow-up due date:
+

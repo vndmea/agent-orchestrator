@@ -21,7 +21,7 @@ Before changing versions:
 
 1. Run `cw doctor`.
 2. Run `cw mcp list-tools`.
-3. If you rely on saved state, note the current workspace directory under `~/.cw/workspaces/<workspace-id>/`.
+3. If you rely on saved state, note the current workspace directory under `~/.code-worker/workspaces/<workspace-id>/`.
 4. Back up any user-scoped CW state you cannot easily recreate, especially:
    - `config.json`
    - `workers.json`
@@ -114,7 +114,7 @@ If a rollback spans a meaningful change in worker configuration or local state s
 
 ## State And Root Resolution Notes
 
-- `cw` stores user-scoped state under the default `~/.cw` root.
+- `cw` stores user-scoped state under the default `~/.code-worker` root.
 - The active repository root is resolved from cwd unless a supported CLI command passes `--root`.
 - Different absolute repository roots produce different workspace ids.
 - Changing either variable can make existing state appear to “move” even when files were not deleted.
@@ -153,3 +153,4 @@ Stop and restore your saved CW state before continuing when:
 - task artifacts needed for audit or review can no longer be read
 
 If rollback does not restore expected behavior, capture the failing command, the active version, and the relevant CW storage path before investigating further.
+

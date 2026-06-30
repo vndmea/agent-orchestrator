@@ -173,10 +173,11 @@ describe("doctor", () => {
       const runtimeBootstrapMetadata = findCheck(report, "runtime-bootstrap")?.metadata;
 
       expect(rootMetadata?.["rootSource"]).toBe("cwd");
-      expect(runtimeBootstrapMetadata?.["cwHomeDir"]).toBe(join(homedir(), ".cw"));
+      expect(runtimeBootstrapMetadata?.["cwHomeDir"]).toBe(join(homedir(), ".code-worker"));
       expect(typeof runtimeBootstrapMetadata?.["workspaceId"]).toBe("string");
     } finally {
       process.chdir(originalCwd);
     }
   });
 });
+

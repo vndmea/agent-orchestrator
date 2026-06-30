@@ -8,7 +8,7 @@ cw doctor
 cw mcp list-tools
 ```
 
-`cw` stores user-scoped local state under `~/.cw/workspaces/<workspace-id>/` by default.
+`cw` stores user-scoped local state under `~/.code-worker/workspaces/<workspace-id>/` by default.
 
 See [docs/supported-matrix.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/supported-matrix.md) before claiming support for a specific OS, Node.js version, or MCP host.
 
@@ -94,3 +94,4 @@ pnpm exec cw mcp serve
 - For the dedicated Claude Code adapter, use `provider=claudecode` and let `claude` remain the default command unless you need a custom path.
 - For the dedicated Codex adapter, use `provider=codex` and let `codex` remain the default command unless you need a custom path.
 - See `docs/distribution.md` for the current publish and development distribution shapes.
+

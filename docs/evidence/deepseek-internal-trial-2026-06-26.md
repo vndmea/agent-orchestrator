@@ -10,7 +10,7 @@
 - Node: `v22.22.0`
 - pnpm: `11.9.0`
 - Workspace root: `<workspace-root>`
-- CW home override: `%USERPROFILE%\.cw-rc-20260626`
+- CW home override: `%USERPROFILE%\.code-worker-rc-20260626`
 - Distribution path: repository checkout plus built CLI (`node packages/cli/dist/main.js`) and built MCP exports (`packages/mcp-server/dist/index.js`)
 - Note: later documentation-only commits may differ from the runtime trial target above without changing the validated runtime result.
 
@@ -33,7 +33,7 @@ The following commands completed successfully on the commit above:
 - Model: `deepseek-v4-flash`
 - Base URL: `https://api.deepseek.com`
 - API key env var: `WORKER_MODEL_API_KEY`
-- Worker registry path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\workers.json`
+- Worker registry path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\workers.json`
 
 ### Interview
 
@@ -42,7 +42,7 @@ The following commands completed successfully on the commit above:
 - `providerInvocationFailures`: `0`
 - Profile status: `qualified`
 - Persistence mode: `execute`
-- Profile path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-profiles.json`
+- Profile path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-profiles.json`
 
 ### Benchmark
 
@@ -52,7 +52,7 @@ The following commands completed successfully on the commit above:
 - Confidence band: `high`
 - Capability update applied: `true`
 - `patch-generation` qualified: `true`
-- Benchmark artifact path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-benchmarks\openai-compatible_deepseek-v4-flash\coding-v1.json`
+- Benchmark artifact path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-benchmarks\openai-compatible_deepseek-v4-flash\coding-v1.json`
 
 ### Safety Gate Check
 
@@ -62,7 +62,7 @@ The following commands completed successfully on the commit above:
 - MCP artifact read: verified with `cw_read_task_artifact` for `report.md`
 - Patch apply gate result: blocked as expected on dirty worktree
 - Blocking reason: `Dirty worktree detected. Re-run with --allow-dirty-worktree only after reviewing local changes.`
-- Patch apply artifact path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-12-869Z-e4b2538c\patch-apply-result.json`
+- Patch apply artifact path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-12-869Z-e4b2538c\patch-apply-result.json`
 
 ## Worker: `openai-compatible:deepseek-v4-pro`
 
@@ -72,7 +72,7 @@ The following commands completed successfully on the commit above:
 - Model: `deepseek-v4-pro`
 - Base URL: `https://api.deepseek.com`
 - API key env var: `WORKER_MODEL_API_KEY`
-- Worker registry path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\workers.json`
+- Worker registry path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\workers.json`
 
 ### Interview
 
@@ -81,7 +81,7 @@ The following commands completed successfully on the commit above:
 - `providerInvocationFailures`: `0`
 - Profile status: `qualified`
 - Persistence mode: `execute`
-- Profile path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-profiles.json`
+- Profile path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-profiles.json`
 
 ### Benchmark
 
@@ -91,7 +91,7 @@ The following commands completed successfully on the commit above:
 - Confidence band: `high`
 - Capability update applied: `true`
 - `patch-generation` qualified: `true`
-- Benchmark artifact path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-benchmarks\openai-compatible_deepseek-v4-pro\coding-v1.json`
+- Benchmark artifact path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\worker-benchmarks\openai-compatible_deepseek-v4-pro\coding-v1.json`
 
 ### Persisted Task Session Check
 
@@ -99,11 +99,11 @@ The following commands completed successfully on the commit above:
 - Task id: `task-2026-06-26T15-10-13-113Z-2881390f`
 - Session persisted: `yes`
 - Artifact registry complete: `yes`
-- Session path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\session.json`
-- Report path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\report.md`
-- Validation artifact path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\validation-report.json`
-- Patch proposal path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\patch-proposal.json`
-- Patch inspection path: `%USERPROFILE%\.cw-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\patch-inspection.json`
+- Session path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\session.json`
+- Report path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\report.md`
+- Validation artifact path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\validation-report.json`
+- Patch proposal path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\patch-proposal.json`
+- Patch inspection path: `%USERPROFILE%\.code-worker-rc-20260626\workspaces\mcp-code-worker-645b92a8a0\runs\task-2026-06-26T15-10-13-113Z-2881390f\patch-inspection.json`
 - Artifact names verified: `repository-context.json`, `review-result.json`, `validation-report.json`, `patch-proposal.json`, `patch-inspection.json`, `report.md`
 
 ### CLI / MCP Output Checks
@@ -140,3 +140,4 @@ The following commands completed successfully on the commit above:
 - Rollback or cleanup actions taken: none
 - Follow-up owner: local operator
 - Follow-up due date: before shared team trial, remove insecure TLS override from the shell environment
+

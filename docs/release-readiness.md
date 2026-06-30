@@ -154,7 +154,7 @@ For each required document, confirm:
 
 - commands are syntactically correct
 - the described workflow can be reproduced with the documented install path
-- storage paths are described consistently with `~/.cw/workspaces/<workspace-id>/`
+- storage paths are described consistently with `~/.code-worker/workspaces/<workspace-id>/`
 - no unsupported platform, packaging, or client claims are made
 - examples that mention MCP root resolution align with `cw mcp serve` from the target workspace root
 
@@ -195,7 +195,7 @@ Operational checks ensure the packaged build still respects the documented safet
 
 ### Storage checks
 
-- Run `cw init` and confirm user-scoped CW storage is created under `~/.cw/workspaces/<workspace-id>/`.
+- Run `cw init` and confirm user-scoped CW storage is created under `~/.code-worker/workspaces/<workspace-id>/`.
 - Confirm CW-managed files live in user-scoped storage rather than the repository checkout.
 - Confirm `config.json`, `workers.json`, `worker-profiles.json`, `runs/`, and `audit/` appear where the documentation says they should.
 - If an API key was persisted in the user-scoped `config.json`, confirm it stayed local, was not committed, and does not appear in captured logs or evidence.
@@ -227,3 +227,4 @@ If a known limitation is accepted for the release, it must be listed explicitly 
 | MCP reviewer       | `vndmea` | `2026-06-28` | MCP launch snippet and stdio packaging checks reviewed against the candidate release commit. |
 
 Do not publish until every required reviewer signs off on the exact release commit.
+

@@ -10,7 +10,7 @@ const execFile = promisify(execFileCallback);
 const repoRoot = process.cwd();
 const cliPackageDir = join(repoRoot, "packages", "cli");
 const publishDir = join(cliPackageDir, ".publish");
-const cwStorageRoot = (homeDir: string): string => join(homeDir, ".cw");
+const cwStorageRoot = (homeDir: string): string => join(homeDir, ".code-worker");
 const installedCwPath = (prefixDir: string): string =>
   join(prefixDir, "node_modules", ".bin", process.platform === "win32" ? "cw.cmd" : "cw");
 
@@ -175,3 +175,4 @@ describe("cli packed tarball smoke", () => {
     }
   }, 180_000);
 });
+

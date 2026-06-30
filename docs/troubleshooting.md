@@ -52,7 +52,7 @@ Different absolute repository roots produce different workspace ids, so a root m
 
 ### Checks
 
-- Remember that default state lives under `~/.cw/workspaces/<workspace-id>/`
+- Remember that default state lives under `~/.code-worker/workspaces/<workspace-id>/`
 - Read the `runtime-bootstrap` check from `cw doctor` for the resolved `config.json`, `cwStorageDir`, `cwHomeDir`, and `workspaceId`
 
 ## Worker Interview Is Blocked By Provider Failures
@@ -153,3 +153,4 @@ When escalating an issue, collect:
 - sanitized error output
 
 Never include raw API keys, bearer tokens, or secret-bearing config files in a bug report.
+

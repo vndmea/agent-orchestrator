@@ -73,7 +73,7 @@ cw audit list
 By default, task-session artifacts live under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/runs/<taskId>/
+~/.code-worker/workspaces/<workspace-id>/runs/<taskId>/
 ```
 
 Typical artifacts include:
@@ -111,3 +111,4 @@ cw task start \
   --inspect-patch \
   --allow-write-session
 ```
+

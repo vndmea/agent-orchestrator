@@ -33,10 +33,10 @@ Patch apply stays explicitly two-step:
 By default, local CW state is stored under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/
+~/.code-worker/workspaces/<workspace-id>/
 ```
 
-The default `~/.cw` root stores user-scoped state. Explicit `--root` flags on supported CLI commands affect which repository path maps to `<workspace-id>`.
+The default `~/.code-worker` root stores user-scoped state. Explicit `--root` flags on supported CLI commands affect which repository path maps to `<workspace-id>`.
 
 ## What Writes Under `cwStorageDir`
 
@@ -63,3 +63,4 @@ Local-managed artifacts include:
 - `cw cleanup runs` only removes local task-session artifacts under `cwStorageDir/runs`.
 - `cw cleanup audit` only removes local audit artifacts under `cwStorageDir/audit`.
 - Cleanup commands do not touch project source files.
+

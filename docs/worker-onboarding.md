@@ -96,7 +96,7 @@ Run `cw worker readiness --worker=<workerId>` for the separate runtime answer ab
 By default, onboarding-related state is stored under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/
+~/.code-worker/workspaces/<workspace-id>/
 ```
 
 Typical files include:
@@ -185,3 +185,4 @@ Stop and fix the environment before retrying when:
 Use `cw worker readiness --worker=<workerId> --probe` before a retry when you want a live connectivity probe for the exact named worker you plan to run.
 
 Do not treat a provider-failure interview result as a completed qualification result.
+

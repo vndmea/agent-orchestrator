@@ -71,7 +71,7 @@ Example:
 By default, the MCP server stores CW-managed state under:
 
 ```text
-~/.cw/workspaces/<workspace-id>/
+~/.code-worker/workspaces/<workspace-id>/
 ```
 
 - `rootDir` determines `<workspace-id>`.
@@ -164,3 +164,4 @@ MCP clients should surface report paths, `cw_get_task_report`, and/or `cw_read_t
 - `packages/mcp-server/src/tools/mcp-tool-catalog.ts` is the single source for the published tool list.
 - `cw mcp list-tools` prints the current runtime-visible tool names.
 - Tests should fail if the tool list in this document drifts from the catalog.
+

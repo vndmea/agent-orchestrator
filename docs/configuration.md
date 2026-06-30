@@ -7,7 +7,7 @@ This document explains how runtime configuration is resolved in `mcp-code-worker
 Runtime configuration resolves in this order:
 
 1. CLI flags
-2. `~/.cw/workspaces/<workspace-id>/config.json`
+2. `~/.code-worker/workspaces/<workspace-id>/config.json`
 3. built-in defaults
 
 This means a CLI override wins over persisted user-scoped CW config, and persisted CW config wins over built-in defaults for runtime settings.
@@ -26,8 +26,8 @@ See [docs/examples/cw-config.example.json](https://github.com/vndmea/mcp-code-wo
 
 By default, the resolved config file lives at:
 
-- macOS / Linux: `~/.cw/workspaces/<workspace-id>/config.json`
-- Windows: `%USERPROFILE%/.cw/workspaces/<workspace-id>/config.json`
+- macOS / Linux: `~/.code-worker/workspaces/<workspace-id>/config.json`
+- Windows: `%USERPROFILE%/.code-worker/workspaces/<workspace-id>/config.json`
 
 The persisted config is intended for workspace-local runtime defaults such as:
 
@@ -105,3 +105,4 @@ cw worker interview --worker=<workerId> --save
 - [docs/provider-config.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-config.md)
 - [docs/mcp-client-setup.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/mcp-client-setup.md)
 - [docs/permissions.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/permissions.md)
+

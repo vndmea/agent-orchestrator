@@ -72,7 +72,7 @@ const createCommandEnv = (homeDir: string): NodeJS.ProcessEnv => ({
 });
 
 const getWorkspaceStorageDir = (rootDir: string, homeDir: string): string =>
-  join(homeDir, ".cw", "workspaces", getCwWorkspaceId(rootDir));
+  join(homeDir, ".code-worker", "workspaces", getCwWorkspaceId(rootDir));
 
 const listToolNames = (stdout: string): string[] => {
   const parsed = JSON.parse(stdout) as
@@ -387,3 +387,4 @@ describe("cli dist smoke", () => {
     });
   }, 20_000);
 });
+
