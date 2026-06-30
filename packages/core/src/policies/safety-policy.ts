@@ -54,6 +54,11 @@ const isAllowedReadOnlyGitCommand = (parts: string[]): boolean => {
       return args[0] === "--stat" && areSafeGitTokens(args.slice(1));
     case "log":
       return args[0] === "--oneline" && areSafeGitTokens(args.slice(1));
+    case "apply":
+      return args.length === 3 &&
+        args[0] === "--check" &&
+        args[1] === "--verbose" &&
+        args[2] === "-";
     default:
       return false;
   }

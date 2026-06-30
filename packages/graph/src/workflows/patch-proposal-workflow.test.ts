@@ -216,6 +216,63 @@ describe("patch proposal workflow", () => {
     invokeStructuredSpy.mockRestore();
   });
 
+  it("blocks structured proposals whose unified diff fails git apply --check", async () => {
+    const rootDir = await createWorkspace();
+    await registerWorker(rootDir);
+    const invokeStructuredSpy = vi
+      .spyOn(models, "invokeStructured")
+      .mockResolvedValue({
+        ok: true,
+        data: {
+          id: "patch-bad-diff",
+          title: "Broken diff",
+          summary: "Structured output returned a malformed diff.",
+          rationale: ["Used to verify git apply validation during inspection."],
+          unifiedDiff: [
+            "diff --git a/packages/core/src/index.ts b/packages/core/src/index.ts",
+            "--- a/packages/core/src/index.ts",
+            "+++ b/packages/core/src/index.ts",
+            "@@ -1,1 +1,2 @@",
+            "+// broken patch"
+          ].join("\n"),
+          files: [
+            {
+              path: "packages/core/src/index.ts",
+              changeType: "modify",
+              summary: "Broken test diff",
+              riskLevel: "low"
+            }
+          ],
+          risks: [],
+          validationPlan: ["Run typecheck"],
+          generatedAt: new Date().toISOString(),
+          source: {
+            workflow: "patch-generation-worker",
+            workerId,
+            scope: "packages/core"
+          }
+        },
+        rawText: "",
+        raw: undefined,
+        attempts: 1,
+        errors: []
+      });
+
+    const result = await runPatchProposalWorkflow({
+      context: createContext(rootDir),
+      goal: "Fix the failing typecheck",
+      scope: "packages/core",
+      workerId
+    });
+
+    expect(result.inspection.ok).toBe(false);
+    expect(result.inspection.blockedReasons.join("\n")).toContain(
+      "corrupt patch"
+    );
+
+    invokeStructuredSpy.mockRestore();
+  });
+
   it("passes validation reports through to structured patch generation", async () => {
     const rootDir = await createWorkspace();
     await registerWorker(rootDir);

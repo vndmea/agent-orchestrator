@@ -16,6 +16,7 @@ import {
   isRepositoryPathInsideScope,
   resolveRepositoryPath
 } from "../repository/file-selection.js";
+import { runSafeCommand } from "../shell/safe-command.js";
 
 const SECRET_FILE_PATTERNS = [
   /^\.env(?:\..+)?$/iu,
@@ -185,6 +186,25 @@ export async function inspectPatch(
 
   if (proposal.files.length !== files.length) {
     warnings.push("Proposal metadata file list did not fully match parsed diff files.");
+  }
+
+  if (blockedReasons.length === 0) {
+    const checkResult = await runSafeCommand(
+      "git apply --check --verbose -",
+      context,
+      {
+        commandKind: "read-only",
+        stdin: proposal.unifiedDiff,
+        maxOutputBytes: 120_000,
+        timeoutMs: 120_000
+      }
+    );
+
+    if (checkResult.code !== 0) {
+      blockedReasons.push(
+        checkResult.stderr || checkResult.stdout || "git apply --check failed."
+      );
+    }
   }
 
   return PatchInspectionSchema.parse({

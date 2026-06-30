@@ -244,6 +244,28 @@ describe("patch lifecycle tools", () => {
     expect(emptyInspection.ok).toBe(false);
   });
 
+  it("blocks syntactically corrupt diffs during inspection", async () => {
+    const rootDir = await createGitRoot();
+    const context = createContext(rootDir);
+    const corruptInspection = await inspectPatch(
+      context,
+      createProposal(
+        [
+          "diff --git a/demo.ts b/demo.ts",
+          "--- a/demo.ts",
+          "+++ b/demo.ts",
+          "@@ -1,1 +1,2 @@",
+          "+// comment"
+        ].join("\n")
+      )
+    );
+
+    expect(corruptInspection.ok).toBe(false);
+    expect(corruptInspection.blockedReasons.join("\n")).toContain(
+      "corrupt patch"
+    );
+  });
+
   it("supports dry-run patch application and blocks missing confirmation", async () => {
     const rootDir = await createGitRoot();
     const proposal = await createValidProposal(rootDir);
