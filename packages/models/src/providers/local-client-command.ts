@@ -99,7 +99,7 @@ export const resolveLocalClientCommandResolution = (
   const configuredCommand = config.clientCommand?.trim();
 
   return {
-    command: normalizeCommandInput(configuredCommand || "opencode"),
+    command: normalizeCommandInput(configuredCommand || "sparkcode"),
     configuredCommand: configuredCommand
       ? normalizeCommandInput(configuredCommand)
       : null,

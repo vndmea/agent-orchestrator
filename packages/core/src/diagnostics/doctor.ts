@@ -67,7 +67,7 @@ export interface RunDoctorOptions {
   skipLocalClientCommandCheck?: boolean;
 }
 
-const LOCAL_CLIENT_PROVIDERS = new Set(["client"]);
+const LOCAL_CLIENT_PROVIDERS = new Set(["client", "opencode"]);
 
 const WHY_THIS_MATTERS: Record<string, string> = {
   "root-dir":
@@ -293,7 +293,7 @@ export const runDoctor = async (
 
   if (
     !options.skipLocalClientCommandCheck &&
-    context.workerModel.provider === "client"
+    LOCAL_CLIENT_PROVIDERS.has(context.workerModel.provider)
   ) {
     addCheck(checks, {
       name: "local-client-command",
@@ -301,7 +301,9 @@ export const runDoctor = async (
       message:
         "Local client command checks were not resolved through the worker-aware model layer.",
       metadata: {
-        command: context.workerModel.clientCommand?.trim() || "opencode",
+        command:
+          context.workerModel.clientCommand?.trim() ||
+          (context.workerModel.provider === "opencode" ? "opencode" : "sparkcode"),
         source: context.workerModel.clientCommand?.trim() ? "configured" : "default"
       }
     });

@@ -57,7 +57,7 @@ describe("LocalClientProvider", () => {
     inspectConfiguredLocalClientCommandMock.mockReset();
     spawnMock.mockReset();
     inspectConfiguredLocalClientCommandMock.mockResolvedValue({
-      command: "opencode",
+      command: "sparkcode",
       compatibility: {
         checked: false,
         message: "Command resolution passed.",
@@ -65,7 +65,7 @@ describe("LocalClientProvider", () => {
       },
       configuredCommand: null,
       isPathLike: false,
-      resolvedPath: "resolved-opencode",
+      resolvedPath: "resolved-sparkcode",
       source: "default",
       status: "pass"
     });
@@ -82,7 +82,7 @@ describe("LocalClientProvider", () => {
     await waitForSpawn();
 
     expect(spawnMock).toHaveBeenCalledWith(
-      "resolved-opencode",
+      "resolved-sparkcode",
       [
         "-p",
         "--tools",

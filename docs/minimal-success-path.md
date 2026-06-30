@@ -14,6 +14,7 @@ If you already know the worker shape you want, the shortest scripted paths are:
 ```bash
 cw init --preset=mock --allow-write
 cw init --preset=deepseek --allow-write
+cw init --preset=client --allow-write
 cw init --preset=opencode --allow-write
 ```
 

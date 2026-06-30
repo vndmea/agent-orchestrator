@@ -11,6 +11,7 @@ import { AnthropicProvider } from "../providers/anthropic-provider.js";
 import { LiteLlmProvider } from "../providers/litellm-provider.js";
 import { LocalClientProvider } from "../providers/local-client-provider.js";
 import { MockModelProvider } from "../providers/mock-provider.js";
+import { OpencodeProvider } from "../providers/opencode-provider.js";
 import type { ModelProvider } from "../types/model-provider.js";
 import { assessWorkerTaskEligibility } from "./worker-routing.js";
 
@@ -31,6 +32,7 @@ export class ModelRouter {
       ["openai-compatible", new AiSdkProvider()],
       ["claude-compatible", anthropicProvider],
       ["client", new LocalClientProvider()],
+      ["opencode", new OpencodeProvider()],
       ["litellm", new LiteLlmProvider()]
     ]);
   }

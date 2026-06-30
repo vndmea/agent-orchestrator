@@ -28,6 +28,15 @@ describe("model router", () => {
     expect(router.route("worker").provider.name).toBe("anthropic");
   });
 
+  it("routes opencode workers to the dedicated opencode provider", () => {
+    const router = new ModelRouter({
+      provider: "opencode",
+      model: "deepseek/deepseek-v4-flash"
+    });
+
+    expect(router.route("worker").provider.name).toBe("opencode");
+  });
+
   it("rejects removed provider aliases instead of silently routing them", () => {
     const router = new ModelRouter({
       provider: "anthropic",

@@ -337,7 +337,7 @@ const createReadlinePrompter = (): InitPrompter => {
 const resolveApiProviderDefault = (
   provider: string
 ): string =>
-  ["mock", "client"].includes(provider)
+  ["mock", "client", "opencode"].includes(provider)
     ? "openai-compatible"
     : provider;
 
@@ -698,7 +698,9 @@ const collectInitSetupOptions = async (
       presetChoice === "custom" ? undefined : getInitPreset(presetChoice);
 
     let workerMode: "api" | "client" =
-      selectedPreset?.workerProvider === "client" ? "client" : "api";
+      ["client", "opencode"].includes(selectedPreset?.workerProvider ?? "")
+        ? "client"
+        : "api";
     let workerProvider =
       selectedPreset?.workerProvider ??
       resolveApiProviderDefault(workerContext.workerModel.provider);
@@ -752,7 +754,7 @@ const collectInitSetupOptions = async (
       (options.advanced ||
         (!selectedPreset &&
           (Boolean(workerContext.workerModel.baseURL) ||
-            !["mock", "client"].includes(workerProvider))))
+            !["mock", "client", "opencode"].includes(workerProvider))))
     ) {
       const promptedBaseUrl = await prompter.text(
         "Worker base URL? Leave blank to skip.",
@@ -766,7 +768,7 @@ const collectInitSetupOptions = async (
 
     if (
       workerMode === "api" &&
-      !["mock", "client"].includes(workerProvider)
+      !["mock", "client", "opencode"].includes(workerProvider)
     ) {
       const promptedApiKey = await prompter.text(
         "Worker API key? Leave blank to skip.",
@@ -785,7 +787,7 @@ const collectInitSetupOptions = async (
         Boolean(selectedPreset?.workerClientCommand))
     ) {
       const promptedClientCommand = await prompter.text(
-        "Local client command? Leave blank to use opencode.",
+        `Local client command? Leave blank to use ${workerProvider === "opencode" ? "opencode" : "sparkcode"}.`,
         {
           allowEmpty: true,
           defaultValue:

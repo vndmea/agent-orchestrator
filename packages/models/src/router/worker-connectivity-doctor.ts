@@ -3,10 +3,14 @@ import type { DoctorCheck, ExecutionContext, ModelConfig } from "@mcp-code-worke
 import {
   inspectConfiguredLocalClientCommand
 } from "../providers/local-client-command.js";
+import {
+  inspectConfiguredOpencodeCommand
+} from "../providers/opencode-command.js";
 import { ModelRouter } from "./model-router.js";
 import { resolveWorkerTarget } from "./worker-target-resolution.js";
 
 const LOCAL_CLIENT_PROVIDERS = new Set(["client"]);
+const OPENCODE_PROVIDERS = new Set(["opencode"]);
 
 const summarizeWorkerResponse = (value: string): string =>
   value.replaceAll(/\s+/gu, " ").trim().slice(0, 160);
@@ -43,13 +47,21 @@ export const createLocalClientDoctorChecks = async (
 
   const modelConfig = resolvedWorker?.modelConfig ?? context.workerModel;
 
-  if (!LOCAL_CLIENT_PROVIDERS.has(modelConfig.provider)) {
+  if (
+    !LOCAL_CLIENT_PROVIDERS.has(modelConfig.provider) &&
+    !OPENCODE_PROVIDERS.has(modelConfig.provider)
+  ) {
     return [];
   }
 
-  const inspection = await inspectConfiguredLocalClientCommand(modelConfig, {
-    checkCompatibility: true
-  });
+  const inspection =
+    LOCAL_CLIENT_PROVIDERS.has(modelConfig.provider)
+      ? await inspectConfiguredLocalClientCommand(modelConfig, {
+          checkCompatibility: true
+        })
+      : await inspectConfiguredOpencodeCommand(modelConfig, {
+          checkCompatibility: true
+        });
   const resolvedCommand = inspection.resolvedPath ?? inspection.command;
 
   return [
@@ -122,11 +134,16 @@ export const createWorkerConnectivityDoctorChecks = async (
     probeConfig = createProbeConfig(
       resolvedWorker?.modelConfig ?? context.workerModel
     );
-    localClientInspection = LOCAL_CLIENT_PROVIDERS.has(probeConfig.provider)
-      ? await inspectConfiguredLocalClientCommand(probeConfig, {
-          checkCompatibility: false
-        })
-      : null;
+    localClientInspection =
+      LOCAL_CLIENT_PROVIDERS.has(probeConfig.provider)
+        ? await inspectConfiguredLocalClientCommand(probeConfig, {
+            checkCompatibility: false
+          })
+        : OPENCODE_PROVIDERS.has(probeConfig.provider)
+          ? await inspectConfiguredOpencodeCommand(probeConfig, {
+              checkCompatibility: false
+            })
+          : null;
     const router = new ModelRouter(probeConfig);
     const routed = router.route("worker");
     const result = await routed.provider.invoke(probeConfig, {

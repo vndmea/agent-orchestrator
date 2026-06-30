@@ -11,6 +11,7 @@ For write gates and local artifact boundaries, see `docs/permissions.md`.
 cw init
 cw init --preset=mock --allow-write
 cw init --preset=deepseek --allow-write
+cw init --preset=client --allow-write
 cw init --preset=opencode --allow-write
 cw review repo --worker=qwen-local --scope=packages/graph
 cw review diff --worker=qwen-local --base=main --head=HEAD
@@ -55,7 +56,9 @@ Treat `cw mcp serve` as a stdio endpoint for a connected host session, not as a 
 
 Treat `config.json` as the primary runtime config surface for worker, validation, safety, and local client defaults. Treat the MCP host snippet as launch-only: command and args only.
 
-For local client providers, `opencode` is the default command. Start with `cw init --preset=opencode --allow-write`, then persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command=<command> --allow-write` or a manual edit when needed.
+For generic local client providers, `sparkcode` is the default command. Start with `cw init --preset=client --allow-write`, then persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command=<command> --allow-write` or a manual edit when needed.
+
+For the dedicated `opencode` adapter, use `cw init --preset=opencode --allow-write`. That preset keeps `provider=opencode` and defaults the command to `opencode`.
 
 `cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.cw/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
 

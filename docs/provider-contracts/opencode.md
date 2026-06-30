@@ -1,14 +1,14 @@
-# Local Client Provider Contract
+# OpenCode Provider Contract
 
-Use this document when `cw` should proxy worker calls through a compatible local CLI instead of a hosted HTTP API.
+Use this document when `cw` should proxy worker calls through the dedicated OpenCode adapter instead of a hosted HTTP API or the generic local client contract.
 
 ## When To Use It
 
 Use this contract when:
 
-- provider is `client`
-- a compatible local executable should bridge the model call
-- the bridge command is local to the machine where `cw` runs
+- provider is `opencode`
+- `cw` should call `opencode run --format json`
+- the OpenCode executable is local to the machine where `cw` runs
 
 ## Minimal Configuration
 
@@ -18,23 +18,23 @@ Persist the non-secret defaults in `config.json`:
 {
   "version": 1,
   "workerModel": {
-    "provider": "client",
-    "model": "qwen3-coder"
+    "provider": "opencode",
+    "model": "deepseek/deepseek-v4-flash"
   },
-  "workerClientCommand": "/path/to/compatible-client"
+  "workerClientCommand": "/path/to/opencode"
 }
 ```
 
 Notes:
 
-- `sparkcode` is the default compatible command
+- `opencode` is the default command
 - use `workerClientCommand` in `config.json` as the primary persisted override
 
 ## Required Environment Variables
 
-No API key is required by `cw` for `client` providers.
+No API key is required by `cw` for `opencode` providers.
 
-You may still need upstream secrets if the compatible local client itself expects them.
+You may still need upstream secrets if the OpenCode runtime itself expects them.
 
 ## Minimal Health Checks
 
@@ -54,14 +54,14 @@ The static local client checks matter before probe:
 
 Expected static checks:
 
-- `worker-model`: shows `provider=client`
+- `worker-model`: shows `provider=opencode`
 - `worker-api-key`: `pass`
 - `local-client-command`: `pass`
 - `local-client-compatibility`: `pass`
 
 Expected probe behavior:
 
-- `worker-connectivity`: `pass` when the compatible client launches and can answer a short probe
+- `worker-connectivity`: `pass` when OpenCode launches and can answer a short probe
 
 If probe fails, read:
 
@@ -73,8 +73,8 @@ If probe fails, read:
 ## Recommended Qualification Flow
 
 ```bash
-cw worker register --worker=sparkcode-local --provider=client --model=qwen3-coder --allow-write
-cw worker interview --worker=sparkcode-local --save
+cw worker register --worker=opencode-local --provider=opencode --model=deepseek/deepseek-v4-flash --allow-write
+cw worker interview --worker=opencode-local --save
 ```
 
 Benchmark only after compatibility and interview both succeed.
@@ -85,6 +85,6 @@ Benchmark only after compatibility and interview both succeed.
   - `workerClientCommand` is wrong
   - the executable is not on `PATH`
 - compatibility check fails
-  - the executable exists but does not look like the expected bridge client
+  - the executable exists but does not expose the expected `opencode run` surface
 - probe fails after compatibility passes
-  - the client launches but cannot complete the actual model call
+  - OpenCode launches but cannot complete the actual model call

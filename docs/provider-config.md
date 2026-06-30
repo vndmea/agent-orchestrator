@@ -116,7 +116,7 @@ Use this when you want a Claude-native hosted model.
 
 ```bash
 npm i -g mcp-code-worker
-cw init --preset=opencode --allow-write
+cw init --allow-write
 ```
 
 2. Persist the runtime defaults in `config.json`:
@@ -270,8 +270,8 @@ Contract:
 
 Use a local client provider when a compatible local CLI bridges the model calls.
 
-- `opencode` is the default compatible command.
-- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `opencode`.
+- `sparkcode` is the default compatible command.
+- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `sparkcode`.
 
 Example:
 
@@ -289,6 +289,30 @@ Example:
 Contract:
 
 - [docs/provider-contracts/local-client.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/local-client.md)
+
+### `opencode`
+
+Use `opencode` when worker traffic should go through the dedicated OpenCode adapter instead of the generic local client protocol.
+
+- `opencode` uses `opencode run --format json` and parses the event stream directly.
+- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `opencode`.
+
+Example:
+
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "opencode",
+    "model": "deepseek/deepseek-v4-flash"
+  },
+  "workerClientCommand": "/path/to/opencode"
+}
+```
+
+Contract:
+
+- [docs/provider-contracts/opencode.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/opencode.md)
 
 ## Minimal Validation Flow
 

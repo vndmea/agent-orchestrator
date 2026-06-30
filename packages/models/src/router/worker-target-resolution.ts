@@ -23,7 +23,7 @@ export interface ResolveWorkerTargetResult {
 }
 
 const requiresApiKey = (config: ModelConfig): boolean =>
-  !["client", "mock"].includes(config.provider);
+  !["client", "mock", "opencode"].includes(config.provider);
 
 const modelConfigFromRegistration = (
   registration: WorkerRegistration,

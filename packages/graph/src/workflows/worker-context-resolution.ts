@@ -4,6 +4,7 @@ import {
   type ExecutionContext
 } from "@mcp-code-worker/core";
 import {
+  inspectConfiguredOpencodeCommand,
   inspectConfiguredLocalClientCommand,
   requireConfiguredWorkerId,
   resolveWorkerProfile,
@@ -27,13 +28,18 @@ export interface ResolvedWorkflowWorkerContext {
 const resolveLocalClientRuntime = async (
   modelConfig: ModelConfig
 ): Promise<LocalClientRuntimeSummary | undefined> => {
-  if (modelConfig.provider !== "client") {
+  if (!["client", "opencode"].includes(modelConfig.provider)) {
     return undefined;
   }
 
-  const inspection = await inspectConfiguredLocalClientCommand(modelConfig, {
-    checkCompatibility: false
-  });
+  const inspection =
+    modelConfig.provider === "client"
+      ? await inspectConfiguredLocalClientCommand(modelConfig, {
+          checkCompatibility: false
+        })
+      : await inspectConfiguredOpencodeCommand(modelConfig, {
+          checkCompatibility: false
+        });
 
   return {
     configuredCommand: inspection.configuredCommand,

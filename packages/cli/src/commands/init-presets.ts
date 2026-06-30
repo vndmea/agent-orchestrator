@@ -1,6 +1,6 @@
 import type { ModelConfig } from "@mcp-code-worker/core";
 
-export type InitPresetId = "mock" | "deepseek" | "opencode";
+export type InitPresetId = "mock" | "deepseek" | "client" | "opencode";
 
 export interface InitPresetDefinition {
   id: InitPresetId;
@@ -26,10 +26,16 @@ export const INIT_PRESETS: InitPresetDefinition[] = [
     workerProvider: "openai-compatible"
   },
   {
-    id: "opencode",
-    label: "Local OpenCode",
+    id: "client",
+    label: "Local Client",
     workerModel: "qwen3-coder",
     workerProvider: "client"
+  },
+  {
+    id: "opencode",
+    label: "OpenCode Adapter",
+    workerModel: "deepseek/deepseek-v4-flash",
+    workerProvider: "opencode"
   }
 ];
 
@@ -61,6 +67,15 @@ export const detectInitPreset = (
   if (
     workerModel.provider === "client" &&
     workerModel.model === "qwen3-coder" &&
+    (!workerModel.clientCommand ||
+      workerModel.clientCommand === "sparkcode")
+  ) {
+    return "client";
+  }
+
+  if (
+    workerModel.provider === "opencode" &&
+    workerModel.model === "deepseek/deepseek-v4-flash" &&
     (!workerModel.clientCommand ||
       workerModel.clientCommand === "opencode")
   ) {

@@ -562,7 +562,7 @@ describe("cli parsing", () => {
     });
   });
 
-  it("reports local client compatibility warnings when the resolved command is not opencode-compatible", async () => {
+  it("reports local client compatibility warnings when the resolved command is not local-client-compatible", async () => {
     await withTempCwd(async (rootDir) => {
       await writeCwConfig(rootDir, {
         workerClientCommand: "node",
@@ -759,7 +759,7 @@ describe("cli parsing", () => {
       }>(output);
 
       expect(result.readiness?.checks?.probe?.detail).toContain(clientCommand);
-      expect(result.readiness?.checks?.probe?.detail).not.toContain("opencode ENOENT");
+      expect(result.readiness?.checks?.probe?.detail).not.toContain("sparkcode ENOENT");
     });
   });
 
@@ -774,7 +774,7 @@ describe("cli parsing", () => {
           "cw",
           "init",
           "--worker-client-command",
-          "./missing/opencode.exe"
+          "./missing/sparkcode.exe"
         ])
       ).rejects.toThrow("was not found");
     });
