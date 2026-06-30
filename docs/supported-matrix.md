@@ -65,6 +65,18 @@ The MCP runtime contract is stdio-based. A host must be able to:
 | Environment variables for launch bootstrap and safety defaults | unsupported | Launch from the correct cwd and persist runtime settings in `config.json` instead |
 | Host MCP config as the place for worker/provider defaults | unsupported | Host snippets should stay launch-focused, not become the main runtime config surface |
 
+## Provider Families
+
+| Provider family / adapter | Level | Notes |
+| ------------------------- | ----- | ----- |
+| `mock` | supported | Deterministic local provider for tests and workflow validation |
+| `openai-compatible` | supported | Preferred path for OpenAI-compatible hosted APIs, including provider-specific configs such as DeepSeek |
+| `claude-compatible` | supported | Preferred path for Anthropic-compatible hosted APIs |
+| `litellm` | supported | Supported gateway path when the runtime is intentionally fronted by LiteLLM |
+| `client` | supported | Generic local CLI bridge contract; `sparkcode` is the default command |
+| `opencode` | documented best-effort | Dedicated local OpenCode adapter with first-party docs, but not yet in the release-grade host/runtime matrix |
+| `claudecode` | documented best-effort | Dedicated local Claude Code adapter with first-party docs, but not yet in the release-grade host/runtime matrix |
+
 ## Release Rule
 
 A release is not ready to claim support beyond this matrix unless:

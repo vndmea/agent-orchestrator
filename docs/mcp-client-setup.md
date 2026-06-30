@@ -92,6 +92,8 @@ If the worker model uses the generic local client provider, `sparkcode` is the d
 
 If the worker model uses the dedicated OpenCode adapter, keep `provider=opencode` and use `opencode` as the default command unless you need a custom executable path.
 
+If the worker model uses the dedicated Claude Code adapter, keep `provider=claudecode` and use `claude` as the default command unless you need a custom executable path.
+
 Example:
 
 ```json

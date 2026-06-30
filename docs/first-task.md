@@ -17,6 +17,14 @@ cw doctor
 cw mcp config
 ```
 
+If you already know you want a local adapter instead of the interactive flow, the shortest setup presets are:
+
+```bash
+cw init --preset=client --allow-write
+cw init --preset=opencode --allow-write
+cw init --preset=claudecode --allow-write
+```
+
 If you are using a repository checkout, read the commands below as `pnpm exec cw ...` from the repository root.
 
 ## Task Goal

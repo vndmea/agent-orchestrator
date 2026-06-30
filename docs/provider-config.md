@@ -186,6 +186,39 @@ cw doctor --probe
 
 If this path fails, inspect the `local-client-command`, `local-client-compatibility`, `runtime-bootstrap`, and `worker-connectivity` checks first.
 
+### Quickstart: Claude Code adapter
+
+Use this when a local Claude Code CLI should proxy the worker call.
+
+1. Install and initialize:
+
+```bash
+npm i -g mcp-code-worker
+cw init --preset=claudecode --allow-write
+```
+
+2. Persist the provider and optional command override in `config.json`:
+
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "claudecode",
+    "model": "sonnet"
+  },
+  "workerClientCommand": "/path/to/claude"
+}
+```
+
+3. Verify locally:
+
+```bash
+cw doctor
+cw doctor --probe
+```
+
+If this path fails, inspect the `local-client-command`, `local-client-compatibility`, `runtime-bootstrap`, and `worker-connectivity` checks first.
+
 ## Supported Provider Shapes
 
 ### `mock`
@@ -314,6 +347,30 @@ Contract:
 
 - [docs/provider-contracts/opencode.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/opencode.md)
 
+### `claudecode`
+
+Use `claudecode` when worker traffic should go through the dedicated Claude Code CLI adapter instead of the generic local client protocol or a hosted Anthropic-compatible API.
+
+- `claudecode` uses `claude --print --output-format json` and reads Claude Code's structured JSON result.
+- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `claude`.
+
+Example:
+
+```json
+{
+  "version": 1,
+  "workerModel": {
+    "provider": "claudecode",
+    "model": "sonnet"
+  },
+  "workerClientCommand": "/path/to/claude"
+}
+```
+
+Contract:
+
+- [docs/provider-contracts/claudecode.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/claudecode.md)
+
 ## Minimal Validation Flow
 
 After changing provider configuration, run:
@@ -359,3 +416,5 @@ For provider-specific health checks and failure signatures, use the matching con
 - [Claude-compatible](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/claude-compatible.md)
 - [LiteLLM](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/litellm.md)
 - [Local client](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/local-client.md)
+- [Claude Code adapter](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/claudecode.md)
+- [OpenCode adapter](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/opencode.md)

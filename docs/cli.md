@@ -13,6 +13,7 @@ cw init --preset=mock --allow-write
 cw init --preset=deepseek --allow-write
 cw init --preset=client --allow-write
 cw init --preset=opencode --allow-write
+cw init --preset=claudecode --allow-write
 cw review repo --worker=qwen-local --scope=packages/graph
 cw review diff --worker=qwen-local --base=main --head=HEAD
 cw review files --worker=qwen-local --file=packages/graph/src/index.ts
@@ -59,6 +60,8 @@ Treat `config.json` as the primary runtime config surface for worker, validation
 For generic local client providers, `sparkcode` is the default command. Start with `cw init --preset=client --allow-write`, then persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command=<command> --allow-write` or a manual edit when needed.
 
 For the dedicated `opencode` adapter, use `cw init --preset=opencode --allow-write`. That preset keeps `provider=opencode` and defaults the command to `opencode`.
+
+For the dedicated `claudecode` adapter, use `cw init --preset=claudecode --allow-write`. That preset keeps `provider=claudecode` and defaults the command to `claude`.
 
 `cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.cw/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
 

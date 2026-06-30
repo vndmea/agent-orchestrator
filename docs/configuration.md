@@ -39,6 +39,17 @@ The persisted config is intended for workspace-local runtime defaults such as:
 - session retention settings
 - worker and MCP-adjacent runtime defaults that should stay consistent across CLI and MCP entrypoints
 
+Provider families currently split into two broad groups:
+
+- hosted API providers such as `openai-compatible`, `claude-compatible`, and `litellm`
+- local CLI adapter providers such as `client`, `opencode`, and `claudecode`
+
+Default local command assumptions:
+
+- `client` -> `sparkcode`
+- `opencode` -> `opencode`
+- `claudecode` -> `claude`
+
 Persisted config no longer chooses an implicit execution worker for task, patch, or host-worker flows. Those commands now require an explicit named `workerId` at runtime.
 
 If you choose to persist an API key in the user-scoped config, keep it local to the machine, never commit it into repository files, and avoid pasting it into logs or shared transcripts.

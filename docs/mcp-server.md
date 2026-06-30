@@ -46,6 +46,8 @@ If the resolved worker model uses the generic local client provider, `sparkcode`
 
 If the resolved worker model uses the dedicated OpenCode adapter, keep `provider=opencode` and use `workerClientCommand` only when the `opencode` executable name or path needs to be overridden.
 
+If the resolved worker model uses the dedicated Claude Code adapter, keep `provider=claudecode` and use `workerClientCommand` only when the `claude` executable name or path needs to be overridden.
+
 Example:
 
 ```json

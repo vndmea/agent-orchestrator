@@ -147,6 +147,19 @@ cw worker register \
 cw worker interview --worker=qwen-local --save
 ```
 
+## Example: Claude Code Local Adapter
+
+```bash
+cw worker register \
+  --worker=claudecode-local \
+  --provider=claudecode \
+  --model=sonnet \
+  --allow-write
+
+cw worker interview --worker=claudecode-local --save
+cw worker readiness --worker=claudecode-local --probe
+```
+
 ## Failure And Retry Guidance
 
 Stop and fix the environment before retrying when:
@@ -154,7 +167,7 @@ Stop and fix the environment before retrying when:
 - provider invocation fails during interview
 - API key wiring is missing from the actual runtime
 - the base URL or model name is wrong
-- a local client provider points to the wrong executable
+- a local client provider or dedicated local adapter points to the wrong executable
 
 Use `cw worker readiness --worker=<workerId> --probe` before a retry when you want a live connectivity probe for the exact named worker you plan to run.
 
