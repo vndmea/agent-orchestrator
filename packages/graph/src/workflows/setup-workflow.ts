@@ -875,8 +875,8 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
     id: "workspace-scaffold",
     status: normalizedOptions.allowWrite ? "completed" : "dry-run",
     summary: normalizedOptions.allowWrite
-      ? "Ensured user-scoped cw workspace directories exist for audit logs and task runs."
-      : "Would ensure user-scoped cw workspace directories exist for audit logs and task runs.",
+      ? "Ensured the user-scoped cw workspace has config.json and data.db ready."
+      : "Would ensure the user-scoped cw workspace has config.json and data.db ready.",
     details: {
       cwDir: relativePath(context.rootDir, cwDirResult.path),
       auditDir: relativePath(context.rootDir, auditDirResult.path),

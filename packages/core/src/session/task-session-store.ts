@@ -1,15 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { resolve } from "node:path";
 
+import { loadCwConfig } from "../config/cw-config.js";
 import { AgentError } from "../errors/agent-error.js";
 import type { ExecutionContext } from "../runtime/execution-context.js";
-import { loadCwConfig } from "../config/cw-config.js";
 import {
-  getCwWorkspaceRunsDir,
-  getCwWorkspaceRunsDirFromStorageDir
+  TaskSessionSchema,
+  type TaskSession,
+  type TaskSessionStep
+} from "../schemas/task-session.schema.js";
+import {
+  getCwWorkspaceDir
 } from "../storage/cw-paths.js";
-import { TaskSessionSchema, type TaskSession } from "../schemas/task-session.schema.js";
+import {
+  bootstrapSqliteWorkspaceStore,
+  openSqliteWorkspaceStore
+} from "../storage/sqlite.js";
 import { writeAuditEvent } from "../audit/audit-log.js";
 
 export interface CreateTaskSessionInput {
@@ -61,27 +67,30 @@ const ensureArtifactName = (artifactName: string): string => {
   return artifactName;
 };
 
+const resolveStorageDir = (
+  rootDir: string,
+  cwStorageDir?: string
+): string => cwStorageDir ?? getCwWorkspaceDir(rootDir);
+
 export const getTaskRunsDirectory = (
   rootDir: string,
   cwStorageDir?: string
 ): string =>
-  cwStorageDir
-    ? getCwWorkspaceRunsDirFromStorageDir(cwStorageDir)
-    : getCwWorkspaceRunsDir(rootDir);
+  resolve(resolveStorageDir(rootDir, cwStorageDir), "data.db#task_sessions");
 
 export const getTaskSessionDirectory = (
   rootDir: string,
   taskId: string,
   cwStorageDir?: string
 ): string =>
-  join(getTaskRunsDirectory(rootDir, cwStorageDir), ensureTaskId(taskId));
+  `${getTaskRunsDirectory(rootDir, cwStorageDir)}/${ensureTaskId(taskId)}`;
 
 export const getTaskSessionPath = (
   rootDir: string,
   taskId: string,
   cwStorageDir?: string
 ): string =>
-  join(getTaskSessionDirectory(rootDir, taskId, cwStorageDir), "session.json");
+  `${getTaskSessionDirectory(rootDir, taskId, cwStorageDir)}/session`;
 
 export const getTaskArtifactPath = (
   rootDir: string,
@@ -89,10 +98,7 @@ export const getTaskArtifactPath = (
   artifactName: string,
   cwStorageDir?: string
 ): string =>
-  join(
-    getTaskSessionDirectory(rootDir, taskId, cwStorageDir),
-    ensureArtifactName(artifactName)
-  );
+  `${getTaskSessionDirectory(rootDir, taskId, cwStorageDir)}/artifacts/${ensureArtifactName(artifactName)}`;
 
 const createTaskId = (): string =>
   `task-${new Date().toISOString().replace(/[:.]/gu, "-")}-${randomUUID().slice(0, 8)}`;
@@ -102,20 +108,6 @@ const sortSessions = (sessions: TaskSession[]): TaskSession[] =>
     (left, right) =>
       Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
   );
-
-const parseTaskSession = (contents: string, path: string): TaskSession => {
-  const parsed = TaskSessionSchema.safeParse(JSON.parse(contents) as unknown);
-
-  if (!parsed.success) {
-    throw new AgentError(
-      "TASK_SESSION_INVALID",
-      parsed.error.issues.map((issue) => issue.message).join("; "),
-      { path }
-    );
-  }
-
-  return parsed.data;
-};
 
 const createTaskSessionValue = (input: CreateTaskSessionInput): TaskSession => {
   const now = new Date().toISOString();
@@ -160,11 +152,6 @@ const writeSessionAuditEvent = async (
   );
 };
 
-const toTimestamp = (value: string): number => {
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
-
 const buildSessionRetentionGroupKey = (session: TaskSession): string => {
   const metadata = session.metadata as {
     inspectPatch?: boolean;
@@ -195,70 +182,290 @@ const buildSessionRetentionGroupKey = (session: TaskSession): string => {
   });
 };
 
-const pruneStoredTaskSessions = async (
-  context: ExecutionContext,
-  preserveTaskId?: string
-): Promise<void> => {
-  const config = await loadCwConfig(context.rootDir);
-  const maxStoredSessions = config.config.storage.runs.maxPerKind;
-  const scanned = await scanTaskSessions(context.rootDir, context.cwStorageDir);
-  const grouped = new Map<string, TaskSession[]>();
+const hydrateTaskSession = (row: {
+  created_at: string;
+  errors_json: string;
+  goal: string;
+  metadata_json: string;
+  require_profile: number;
+  scope: string | null;
+  status: TaskSession["status"];
+  task_id: string;
+  updated_at: string;
+  warnings_json: string;
+  worker_id: string | null;
+}): TaskSession => TaskSessionSchema.parse({
+  taskId: row.task_id,
+  goal: row.goal,
+  scope: row.scope ?? undefined,
+  workerId: row.worker_id ?? undefined,
+  requireProfile: row.require_profile === 1,
+  status: row.status,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  steps: [],
+  artifacts: {},
+  warnings: JSON.parse(row.warnings_json) as string[],
+  errors: JSON.parse(row.errors_json) as string[],
+  metadata: JSON.parse(row.metadata_json) as Record<string, unknown>
+});
 
-  for (const session of scanned.sessions) {
-    const key = buildSessionRetentionGroupKey(session);
-    const existing = grouped.get(key) ?? [];
-    existing.push(session);
-    grouped.set(key, existing);
-  }
+const loadSteps = (
+  db: Awaited<ReturnType<typeof openSqliteWorkspaceStore>>,
+  taskId: string,
+  rootDir: string,
+  cwStorageDir?: string
+): TaskSessionStep[] =>
+  (db.prepare(
+    `SELECT step_id, name, status, started_at, completed_at, warnings_json, errors_json, artifact_name
+     FROM task_session_steps
+     WHERE task_id = ?
+     ORDER BY id ASC`
+  ).all(taskId) as Array<{
+    artifact_name: string | null;
+    completed_at: string | null;
+    errors_json: string;
+    name: string;
+    started_at: string | null;
+    status: TaskSessionStep["status"];
+    step_id: string;
+    warnings_json: string;
+  }>).map((row) => ({
+    id: row.step_id,
+    name: row.name,
+    status: row.status,
+    startedAt: row.started_at ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    warnings: JSON.parse(row.warnings_json) as string[],
+    errors: JSON.parse(row.errors_json) as string[],
+    artifactPath: row.artifact_name
+      ? getTaskArtifactPath(rootDir, taskId, row.artifact_name, cwStorageDir)
+      : undefined
+  }));
 
-  for (const sessions of grouped.values()) {
-    const sorted = [...sessions].sort(
-      (left, right) => toTimestamp(right.updatedAt) - toTimestamp(left.updatedAt)
-    );
-    const removable = sorted.slice(maxStoredSessions).filter(
-      (session) => session.taskId !== preserveTaskId
-    );
+const loadArtifacts = (
+  db: Awaited<ReturnType<typeof openSqliteWorkspaceStore>>,
+  taskId: string,
+  rootDir: string,
+  cwStorageDir?: string
+): Record<string, string> =>
+  Object.fromEntries(
+    (db.prepare(
+      `SELECT artifact_name
+       FROM task_artifacts
+       WHERE task_id = ?`
+    ).all(taskId) as Array<{ artifact_name: string }>).map((row) => [
+      row.artifact_name,
+      getTaskArtifactPath(rootDir, taskId, row.artifact_name, cwStorageDir)
+    ])
+  );
 
-    for (const session of removable) {
-      await rm(
-        getTaskSessionDirectory(
-          context.rootDir,
-          session.taskId,
-          context.cwStorageDir
-        ),
-        { recursive: true, force: true }
-      );
+const readTaskSessionFromDb = async (input: {
+  cwStorageDir?: string;
+  rootDir: string;
+  taskId: string;
+}): Promise<TaskSession | null> => {
+  const storageDir = resolveStorageDir(input.rootDir, input.cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
+  try {
+    const row = db.prepare(
+      `SELECT task_id, goal, scope, worker_id, require_profile, status,
+              metadata_json, warnings_json, errors_json, created_at, updated_at
+       FROM task_sessions
+       WHERE task_id = ?`
+    ).get(input.taskId) as
+      | {
+          created_at: string;
+          errors_json: string;
+          goal: string;
+          metadata_json: string;
+          require_profile: number;
+          scope: string | null;
+          status: TaskSession["status"];
+          task_id: string;
+          updated_at: string;
+          warnings_json: string;
+          worker_id: string | null;
+        }
+      | undefined;
+
+    if (!row) {
+      return null;
     }
+
+    const session = hydrateTaskSession(row);
+    session.steps = loadSteps(db, row.task_id, input.rootDir, storageDir);
+    session.artifacts = loadArtifacts(
+      db,
+      row.task_id,
+      input.rootDir,
+      storageDir
+    );
+    return session;
+  } finally {
+    db.close();
   }
 };
 
-const writeManagedFile = async (
+const persistTaskSession = async (
   context: ExecutionContext,
-  path: string,
-  content: string,
+  session: TaskSession
+): Promise<void> => {
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
+  try {
+    db.exec("BEGIN");
+    db.prepare(
+      `INSERT INTO task_sessions(
+         task_id,
+         retention_group_key,
+         goal,
+         scope,
+         worker_id,
+         requested_worker_id,
+         require_profile,
+         status,
+         metadata_json,
+         warnings_json,
+         errors_json,
+         created_at,
+         updated_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(task_id) DO UPDATE SET
+         retention_group_key = excluded.retention_group_key,
+         goal = excluded.goal,
+         scope = excluded.scope,
+         worker_id = excluded.worker_id,
+         requested_worker_id = excluded.requested_worker_id,
+         require_profile = excluded.require_profile,
+         status = excluded.status,
+         metadata_json = excluded.metadata_json,
+         warnings_json = excluded.warnings_json,
+         errors_json = excluded.errors_json,
+         updated_at = excluded.updated_at`
+    ).run(
+      session.taskId,
+      buildSessionRetentionGroupKey(session),
+      session.goal,
+      session.scope ?? null,
+      session.workerId ?? null,
+      typeof session.metadata.requestedWorkerId === "string"
+        ? session.metadata.requestedWorkerId
+        : null,
+      session.requireProfile ? 1 : 0,
+      session.status,
+      JSON.stringify(session.metadata),
+      JSON.stringify(session.warnings),
+      JSON.stringify(session.errors),
+      session.createdAt,
+      session.updatedAt
+    );
+    db.prepare("DELETE FROM task_session_steps WHERE task_id = ?").run(session.taskId);
+
+    for (const step of session.steps) {
+      const artifactName = Object.entries(session.artifacts).find(
+        ([, path]) => path === step.artifactPath
+      )?.[0] ?? null;
+
+      db.prepare(
+        `INSERT INTO task_session_steps(
+           task_id,
+           step_id,
+           name,
+           status,
+           started_at,
+           completed_at,
+           warnings_json,
+           errors_json,
+           artifact_name
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        session.taskId,
+        step.id,
+        step.name,
+        step.status,
+        step.startedAt ?? null,
+        step.completedAt ?? null,
+        JSON.stringify(step.warnings),
+        JSON.stringify(step.errors),
+        artifactName
+      );
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  } finally {
+    db.close();
+  }
+};
+
+const pruneStoredTaskSessions = async (
+  context: ExecutionContext,
+  session: TaskSession
+): Promise<void> => {
+  const config = await loadCwConfig(context.rootDir);
+  const maxStoredSessions = config.config.storage.runs.maxPerKind;
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
+
+  try {
+    db.prepare(
+      `DELETE FROM task_sessions
+       WHERE retention_group_key = ?
+         AND task_id NOT IN (
+           SELECT task_id
+           FROM task_sessions
+           WHERE retention_group_key = ?
+           ORDER BY updated_at DESC, task_id DESC
+           LIMIT ?
+         )`
+    ).run(
+      buildSessionRetentionGroupKey(session),
+      buildSessionRetentionGroupKey(session),
+      maxStoredSessions
+    );
+  } finally {
+    db.close();
+  }
+};
+
+const writeManagedSession = async (
+  context: ExecutionContext,
+  session: TaskSession,
   explicitAllowWrite: boolean
-): Promise<{ mode: "execute" | "dry-run"; normalizedPath: string }> => {
-  const evaluation = context.writePolicy.evaluate(path, explicitAllowWrite);
+): Promise<{ mode: "execute" | "dry-run"; path: string }> => {
+  const path = getTaskSessionPath(
+    context.rootDir,
+    session.taskId,
+    context.cwStorageDir
+  );
+  const evaluation = context.storageWritePolicy.evaluate(
+    "session-write",
+    explicitAllowWrite
+  );
 
   if (!evaluation.allowed || evaluation.mode === "blocked") {
-    throw new AgentError("WRITE_BLOCKED", evaluation.reason, {
-      path: evaluation.normalizedPath
-    });
+    throw new AgentError("WRITE_BLOCKED", evaluation.reason, { path });
   }
 
   if (evaluation.mode === "dry-run") {
     return {
       mode: "dry-run",
-      normalizedPath: evaluation.normalizedPath
+      path
     };
   }
 
-  await mkdir(dirname(evaluation.normalizedPath), { recursive: true });
-  await writeFile(evaluation.normalizedPath, content, "utf8");
+  await persistTaskSession(context, session);
+  await pruneStoredTaskSessions(context, session);
 
   return {
     mode: "execute",
-    normalizedPath: evaluation.normalizedPath
+    path
   };
 };
 
@@ -268,33 +475,19 @@ export async function createTaskSession(
   explicitAllowWrite = false
 ): Promise<{ mode: "execute" | "dry-run"; path: string; session: TaskSession }> {
   const session = createTaskSessionValue(input);
-  const path = getTaskSessionPath(
-    context.rootDir,
-    session.taskId,
-    context.cwStorageDir
-  );
-  const result = await writeManagedFile(
-    context,
-    path,
-    JSON.stringify(session, null, 2),
-    explicitAllowWrite
-  );
+  const result = await writeManagedSession(context, session, explicitAllowWrite);
 
   await writeSessionAuditEvent(
     context,
     "create-task-session",
     result.mode,
     session.taskId,
-    { path: result.normalizedPath }
+    { path: result.path }
   );
-
-  if (result.mode === "execute") {
-    await pruneStoredTaskSessions(context, session.taskId);
-  }
 
   return {
     mode: result.mode,
-    path: result.normalizedPath,
+    path: result.path,
     session
   };
 }
@@ -304,19 +497,11 @@ export async function readTaskSession(
   taskId: string,
   cwStorageDir?: string
 ): Promise<TaskSession | null> {
-  const path = getTaskSessionPath(rootDir, taskId, cwStorageDir);
-
-  try {
-    const contents = await readFile(path, "utf8");
-    return parseTaskSession(contents, path);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/ENOENT/u.test(message)) {
-      return null;
-    }
-
-    throw error;
-  }
+  return readTaskSessionFromDb({
+    rootDir,
+    taskId,
+    cwStorageDir
+  });
 }
 
 export async function updateTaskSession(
@@ -329,15 +514,9 @@ export async function updateTaskSession(
     taskId: ensureTaskId(session.taskId),
     updatedAt: new Date().toISOString()
   });
-  const path = getTaskSessionPath(
-    context.rootDir,
-    nextSession.taskId,
-    context.cwStorageDir
-  );
-  const result = await writeManagedFile(
+  const result = await writeManagedSession(
     context,
-    path,
-    JSON.stringify(nextSession, null, 2),
+    nextSession,
     explicitAllowWrite
   );
 
@@ -346,19 +525,12 @@ export async function updateTaskSession(
     "update-task-session",
     result.mode,
     nextSession.taskId,
-    { path: result.normalizedPath, status: nextSession.status }
+    { path: result.path, status: nextSession.status }
   );
-
-  if (result.mode === "execute") {
-    await pruneStoredTaskSessions(context, nextSession.taskId);
-  }
 
   Object.assign(session, nextSession);
 
-  return {
-    mode: result.mode,
-    path: result.normalizedPath
-  };
+  return result;
 }
 
 export async function writeTaskArtifact(
@@ -376,31 +548,86 @@ export async function writeTaskArtifact(
     safeArtifactName,
     context.cwStorageDir
   );
-  const content =
-    typeof artifact === "string"
-      ? artifact
-      : JSON.stringify(artifact, null, 2);
-  const result = await writeManagedFile(
-    context,
-    path,
-    content,
+  const evaluation = context.storageWritePolicy.evaluate(
+    "session-write",
     explicitAllowWrite
   );
+
+  if (!evaluation.allowed || evaluation.mode === "blocked") {
+    throw new AgentError("WRITE_BLOCKED", evaluation.reason, { path });
+  }
+
+  if (evaluation.mode === "dry-run") {
+    await writeSessionAuditEvent(
+      context,
+      "write-task-artifact",
+      "dry-run",
+      safeTaskId,
+      { artifactName: safeArtifactName, path }
+    );
+
+    return {
+      mode: "dry-run",
+      path
+    };
+  }
+
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
+  try {
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO task_artifacts(
+         task_id,
+         artifact_name,
+         content_type,
+         content_text,
+         created_at,
+         updated_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(task_id, artifact_name) DO UPDATE SET
+         content_type = excluded.content_type,
+         content_text = excluded.content_text,
+         updated_at = excluded.updated_at`
+    ).run(
+      safeTaskId,
+      safeArtifactName,
+      typeof artifact === "string" && safeArtifactName.endsWith(".md")
+        ? "text/markdown"
+        : "application/json",
+      typeof artifact === "string"
+        ? artifact
+        : JSON.stringify(artifact, null, 2),
+      now,
+      now
+    );
+  } finally {
+    db.close();
+  }
+
+  const session = await readTaskSessionFromDb({
+    rootDir: context.rootDir,
+    taskId: safeTaskId,
+    cwStorageDir: context.cwStorageDir
+  });
+  if (session) {
+    session.artifacts[safeArtifactName] = path;
+    await persistTaskSession(context, session);
+  }
 
   await writeSessionAuditEvent(
     context,
     "write-task-artifact",
-    result.mode,
+    "execute",
     safeTaskId,
-    {
-      artifactName: safeArtifactName,
-      path: result.normalizedPath
-    }
+    { artifactName: safeArtifactName, path }
   );
 
   return {
-    mode: result.mode,
-    path: result.normalizedPath
+    mode: "execute",
+    path
   };
 }
 
@@ -408,45 +635,46 @@ export async function scanTaskSessions(
   rootDir: string,
   cwStorageDir?: string
 ): Promise<ScanTaskSessionsResult> {
-  const runsDir = getTaskRunsDirectory(rootDir, cwStorageDir);
-
+  const storageDir = resolveStorageDir(rootDir, cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
-    const entries = await readdir(runsDir, { withFileTypes: true });
-    const sessions: TaskSession[] = [];
-    const invalidSessions: Array<{ error: string; path: string }> = [];
-
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-
-      const path = getTaskSessionPath(rootDir, entry.name, cwStorageDir);
-
-      try {
-        const contents = await readFile(path, "utf8");
-        sessions.push(parseTaskSession(contents, path));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (/ENOENT/u.test(message)) {
-          continue;
-        }
-
-        invalidSessions.push({
-          path,
-          error: message
-        });
-      }
-    }
+    const rows = db.prepare(
+      `SELECT task_id, goal, scope, worker_id, require_profile, status,
+              metadata_json, warnings_json, errors_json, created_at, updated_at
+       FROM task_sessions
+       ORDER BY updated_at DESC, task_id DESC`
+    ).all() as Array<{
+      created_at: string;
+      errors_json: string;
+      goal: string;
+      metadata_json: string;
+      require_profile: number;
+      scope: string | null;
+      status: TaskSession["status"];
+      task_id: string;
+      updated_at: string;
+      warnings_json: string;
+      worker_id: string | null;
+    }>;
+    const sessions = rows.map((row) => {
+      const session = hydrateTaskSession(row);
+      session.steps = loadSteps(db, row.task_id, rootDir, storageDir);
+      session.artifacts = loadArtifacts(db, row.task_id, rootDir, storageDir);
+      return session;
+    });
 
     return {
       sessions: sortSessions(sessions),
-      invalidSessions
+      invalidSessions: []
     };
   } catch {
     return {
       sessions: [],
       invalidSessions: []
     };
+  } finally {
+    db.close();
   }
 }
 
@@ -467,26 +695,40 @@ export async function readTaskArtifact<T = unknown>(
 ): Promise<TaskArtifactReadResult<T>> {
   const path = getTaskArtifactPath(rootDir, taskId, artifactName, cwStorageDir);
 
+  const storageDir = resolveStorageDir(rootDir, cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
-    const contents = await readFile(path, "utf8");
+    const row = db.prepare(
+      `SELECT content_text
+       FROM task_artifacts
+       WHERE task_id = ? AND artifact_name = ?`
+    ).get(taskId, ensureArtifactName(artifactName)) as
+      | { content_text: string }
+      | undefined;
+
+    if (!row) {
+      return {
+        exists: false,
+        path,
+        value: null
+      };
+    }
+
     try {
       return {
         exists: true,
         path,
-        value: JSON.parse(contents) as T
+        value: JSON.parse(row.content_text) as T
       };
     } catch {
       return {
         exists: true,
         path,
-        value: contents
+        value: row.content_text
       };
     }
-  } catch {
-    return {
-      exists: false,
-      path,
-      value: null
-    };
+  } finally {
+    db.close();
   }
 }

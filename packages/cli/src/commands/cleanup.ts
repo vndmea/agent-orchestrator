@@ -53,8 +53,7 @@ interface CleanupTargetValidation {
 
 const PROTECTED_CW_FILES = new Set([
   "config.json",
-  "worker-profiles.json",
-  "workers.json"
+  "data.db"
 ]);
 
 const isPathInsideDirectory = (directory: string, candidate: string): boolean => {
@@ -247,7 +246,7 @@ const registerCleanupSubcommand = (
 export const registerCleanupCommand = (program: Command, io: CliIo): void => {
   const cleanup = program
     .command("cleanup")
-    .description("Remove aged user-scoped cw run and audit artifacts.");
+    .description("Remove aged user-scoped cw artifacts without touching config.json or data.db.");
 
   registerCleanupSubcommand(cleanup, io, "runs");
   registerCleanupSubcommand(cleanup, io, "audit");

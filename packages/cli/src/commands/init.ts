@@ -931,7 +931,7 @@ export const registerInitCommand = (
     .option("--worker-provider <provider>", "Worker provider")
     .option("--worker-model <model>", "Worker model")
     .option("--worker-base-url <url>", "Worker base URL")
-    .option("--worker-api-key <key>", "Persist a worker API key in the user-scoped cw config.")
+    .option("--worker-api-key <key>", "Persist a worker API key in the user-scoped SQLite store.")
     .option(
       "--worker-client-command <command>",
       "Persist a non-default local client bridge command in cw config."

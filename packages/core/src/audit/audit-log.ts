@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { appendFile, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { resolve } from "node:path";
 
 import { loadCwConfig } from "../config/cw-config.js";
 import type { ExecutionContext } from "../runtime/execution-context.js";
+import { getCwWorkspaceDir } from "../storage/cw-paths.js";
 import {
-  getCwWorkspaceAuditDir,
-  getCwWorkspaceAuditDirFromStorageDir
-} from "../storage/cw-paths.js";
+  bootstrapSqliteWorkspaceStore,
+  openSqliteWorkspaceStore
+} from "../storage/sqlite.js";
 
 export type AuditActor =
   | "worker"
@@ -71,65 +71,40 @@ const sanitizeValue = (value: unknown, seen: WeakSet<object>): unknown => {
   );
 };
 
-const getAuditDirectory = (
+const resolveStorageDir = (
+  rootDir: string,
+  cwStorageDir?: string
+): string => cwStorageDir ?? getCwWorkspaceDir(rootDir);
+
+const getAuditStorePath = (
   rootDir: string,
   cwStorageDir?: string
 ): string =>
-  cwStorageDir
-    ? getCwWorkspaceAuditDirFromStorageDir(cwStorageDir)
-    : getCwWorkspaceAuditDir(rootDir);
+  resolve(resolveStorageDir(rootDir, cwStorageDir), "data.db#audit_events");
 
-const getAuditPath = (
-  rootDir: string,
-  timestamp: Date,
-  cwStorageDir?: string
-): string =>
-  join(
-    getAuditDirectory(rootDir, cwStorageDir),
-    `${timestamp.toISOString().slice(0, 10)}.jsonl`
-  );
-
-const isAuditEvent = (value: unknown): value is AuditEvent =>
-  isRecord(value) &&
-  typeof value.id === "string" &&
-  typeof value.timestamp === "string" &&
-  typeof value.actor === "string" &&
-  typeof value.action === "string" &&
-  typeof value.mode === "string" &&
-  typeof value.inputSummary === "string" &&
-  Array.isArray(value.warnings) &&
-  Array.isArray(value.errors);
-
-const pruneAuditFiles = async (
+const pruneAuditEvents = async (
   context: ExecutionContext,
-  currentPath: string
+  eventType: string
 ): Promise<void> => {
-  const retentionDays = 30;
-  const cutoff = Date.now() - retentionDays * 86_400_000;
-  const auditDirectory = getAuditDirectory(context.rootDir, context.cwStorageDir);
+  const config = await loadCwConfig(context.rootDir);
+  const maxPerType = config.config.storage.audit.maxPerType;
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
 
   try {
-    const files = await readdir(auditDirectory);
-
-    for (const fileName of files) {
-      if (!fileName.endsWith(".jsonl")) {
-        continue;
-      }
-
-      const filePath = join(auditDirectory, fileName);
-      if (filePath === currentPath) {
-        continue;
-      }
-
-      const details = await stat(filePath);
-      if (details.mtime.getTime() >= cutoff) {
-        continue;
-      }
-
-      await rm(filePath, { force: true });
-    }
-  } catch {
-    // Ignore prune failures to keep audit writing best-effort.
+    db.prepare(
+      `DELETE FROM audit_events
+       WHERE event_type = ?
+         AND id NOT IN (
+           SELECT id
+           FROM audit_events
+           WHERE event_type = ?
+           ORDER BY created_at DESC, id DESC
+           LIMIT ?
+         )`
+    ).run(eventType, eventType, maxPerType);
+  } finally {
+    db.close();
   }
 };
 
@@ -153,46 +128,83 @@ export async function writeAuditEvent(
   event: Omit<AuditEvent, "id" | "timestamp">,
   explicitAllowWrite = false
 ): Promise<WriteAuditEventResult> {
-  const now = new Date();
-  const path = getAuditPath(context.rootDir, now, context.cwStorageDir);
-  const evaluation = context.writePolicy.evaluate(path, explicitAllowWrite);
+  const path = getAuditStorePath(context.rootDir, context.cwStorageDir);
+  const evaluation = context.storageWritePolicy.evaluate(
+    "audit-write",
+    explicitAllowWrite
+  );
 
   if (evaluation.mode !== "execute") {
     return {
       mode: "dry-run",
-      path: evaluation.normalizedPath,
+      path,
       written: false
     };
   }
 
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
   const payload: AuditEvent = {
     ...event,
     id: randomUUID(),
-    timestamp: now.toISOString(),
+    timestamp: new Date().toISOString(),
     metadata: event.metadata
       ? sanitizeAuditMetadata(event.metadata)
       : undefined
   };
+  const eventType = `${payload.actor}:${payload.action}`;
+  const db = await openSqliteWorkspaceStore(storageDir);
 
   try {
-    await mkdir(getAuditDirectory(context.rootDir, context.cwStorageDir), {
-      recursive: true
-    });
-    await appendFile(path, `${JSON.stringify(payload)}\n`, "utf8");
-    await pruneAuditFiles(context, path);
-
-    return {
-      mode: "execute",
-      path: evaluation.normalizedPath,
-      written: true
-    };
+    db.prepare(
+      `INSERT INTO audit_events(
+         id,
+         event_type,
+         actor,
+         action,
+         mode,
+         workflow,
+         tool,
+         input_summary,
+         output_summary,
+         warnings_json,
+         errors_json,
+         metadata_json,
+         created_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      payload.id,
+      eventType,
+      payload.actor,
+      payload.action,
+      payload.mode,
+      payload.workflow ?? null,
+      payload.tool ?? null,
+      payload.inputSummary,
+      payload.outputSummary ?? null,
+      JSON.stringify(payload.warnings),
+      JSON.stringify(payload.errors),
+      payload.metadata ? JSON.stringify(payload.metadata) : null,
+      payload.timestamp
+    );
   } catch {
+    db.close();
     return {
       mode: "execute",
-      path: evaluation.normalizedPath,
+      path,
       written: false
     };
   }
+
+  db.close();
+  await pruneAuditEvents(context, eventType);
+
+  return {
+    mode: "execute",
+    path,
+    written: true
+  };
 }
 
 export const listAuditEvents = async (
@@ -200,40 +212,50 @@ export const listAuditEvents = async (
   limit = 50,
   cwStorageDir?: string
 ): Promise<AuditEvent[]> => {
-  const auditDirectory = getAuditDirectory(rootDir, cwStorageDir);
-
+  const storageDir = resolveStorageDir(rootDir, cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
-    const files = (await readdir(auditDirectory))
-      .filter((fileName) => fileName.endsWith(".jsonl"))
-      .sort((left, right) => right.localeCompare(left));
-    const events: AuditEvent[] = [];
+    const rows = db.prepare(
+      `SELECT id, actor, action, mode, workflow, tool, input_summary, output_summary,
+              warnings_json, errors_json, metadata_json, created_at
+       FROM audit_events
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`
+    ).all(limit) as Array<{
+      action: string;
+      actor: AuditActor;
+      created_at: string;
+      errors_json: string;
+      id: string;
+      input_summary: string;
+      metadata_json: string | null;
+      mode: AuditMode;
+      output_summary: string | null;
+      tool: string | null;
+      warnings_json: string;
+      workflow: string | null;
+    }>;
 
-    for (const fileName of files) {
-      const contents = await readFile(join(auditDirectory, fileName), "utf8");
-      const lines = contents
-        .split(/\r?\n/u)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .reverse();
-
-      for (const line of lines) {
-        try {
-          const parsed = JSON.parse(line) as unknown;
-          if (isAuditEvent(parsed)) {
-            events.push(parsed);
-          }
-        } catch {
-          // Ignore invalid JSONL lines during listing.
-        }
-
-        if (events.length >= limit) {
-          return events.slice(0, limit);
-        }
-      }
-    }
-
-    return events.slice(0, limit);
+    return rows.map((row) => ({
+      id: row.id,
+      timestamp: row.created_at,
+      actor: row.actor,
+      action: row.action,
+      mode: row.mode,
+      workflow: row.workflow ?? undefined,
+      tool: row.tool ?? undefined,
+      inputSummary: row.input_summary,
+      outputSummary: row.output_summary ?? undefined,
+      warnings: JSON.parse(row.warnings_json) as string[],
+      errors: JSON.parse(row.errors_json) as string[],
+      metadata: row.metadata_json
+        ? JSON.parse(row.metadata_json) as Record<string, unknown>
+        : undefined
+    }));
   } catch {
     return [];
+  } finally {
+    db.close();
   }
 };

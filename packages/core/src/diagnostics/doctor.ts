@@ -18,10 +18,12 @@ import {
 } from "../validation/validation-scripts.js";
 import {
   getCwHomeDir,
-  getCwWorkspaceAuditDirFromStorageDir,
-  getCwWorkspaceId,
-  getCwWorkspaceRunsDirFromStorageDir
+  getCwWorkspaceDatabasePathFromStorageDir,
+  getCwWorkspaceId
 } from "../storage/cw-paths.js";
+import {
+  bootstrapSqliteWorkspaceStore
+} from "../storage/sqlite.js";
 
 export interface DoctorCheck {
   message: string;
@@ -81,7 +83,7 @@ const WHY_THIS_MATTERS: Record<string, string> = {
   "local-client-compatibility":
     "A discovered executable still needs to look like the compatible local client bridge that cw expects.",
   "cw-dir":
-    "The user-scoped cw workspace directory stores local runs, audit logs, configuration, and task artifacts outside the repository.",
+    "The user-scoped cw workspace directory stores config.json and data.db outside the repository.",
   "execution-mode":
     "Repository writes and session writes are separate concerns; this check explains the repository-side default only.",
   "allowed-commands":
@@ -89,13 +91,13 @@ const WHY_THIS_MATTERS: Record<string, string> = {
   "cw-config":
     "Local configuration controls safety defaults, model resolution, validation mappings, and session retention.",
   "worker-api-key":
-    "Without a worker credential for non-mock providers, worker-routed tasks can degrade or fail.",
+    "Without a persisted worker credential in SQLite for non-mock providers, worker-routed tasks can degrade or fail.",
   "runs-dir":
-    "Persisted task sessions live here. If it is unavailable, reports may be temporary and not resumable.",
+    "Persisted task sessions live in SQLite. If that store is unavailable, reports may be temporary and not resumable.",
   "task-sessions":
     "Broken or failed sessions can make follow-up resume and artifact reads unreliable.",
   "audit-log":
-    "Audit logs help explain what cw wrote and why, especially when explicit write gates are used.",
+    "Audit events in SQLite help explain what cw wrote and why, especially when explicit write gates are used.",
   "validation-scripts":
     "Deterministic validation is how cw proves a result instead of just sounding confident.",
   "worker-profile-store":
@@ -417,7 +419,7 @@ export const runDoctor = async (
             ? `${entry.name} is using a local client provider and does not require an API key.`
           : entry.hasKey
             ? `${entry.name} resolved successfully from ${entry.source ?? "runtime config"}.`
-            : `${entry.name} is not set. Expected an apiKey on the selected worker config in config.json for provider ${entry.provider}.`,
+            : `${entry.name} is not set. Persist a worker secret into SQLite for provider ${entry.provider}.`,
       metadata: {
         provider: entry.provider,
         source: entry.source
@@ -425,8 +427,8 @@ export const runDoctor = async (
     });
   });
 
-  const runsDir = getCwWorkspaceRunsDirFromStorageDir(context.cwStorageDir);
-  const runsDirExists = await checkExists(runsDir);
+  const databasePath = getCwWorkspaceDatabasePathFromStorageDir(context.cwStorageDir);
+  const databaseExists = await checkExists(databasePath);
   const sessionScan = await scanTaskSessions(
     context.rootDir,
     context.cwStorageDir
@@ -437,13 +439,13 @@ export const runDoctor = async (
 
   addCheck(checks, {
     name: "runs-dir",
-    status: runsDirExists ? "pass" : "warning",
-    message: runsDirExists
-      ? `cw session storage is present with ${sessionScan.sessions.length} valid session(s).`
-      : "cw session storage is not present yet. It can be created when task sessions are persisted.",
+    status: databaseExists ? "pass" : "warning",
+    message: databaseExists
+      ? `cw session storage is present in data.db with ${sessionScan.sessions.length} valid session(s).`
+      : "cw session storage is not present yet. data.db will be created when task sessions are persisted.",
     metadata: {
-      runsDir,
-      exists: runsDirExists
+      databasePath,
+      exists: databaseExists
     }
   });
 
@@ -455,7 +457,7 @@ export const runDoctor = async (
         : "pass",
     message:
       sessionScan.invalidSessions.length > 0
-        ? `Found ${sessionScan.invalidSessions.length} invalid task session file(s).`
+        ? `Found ${sessionScan.invalidSessions.length} invalid task session record(s).`
         : failedSessions.length > 0
           ? `Found ${failedSessions.length} recent failed task session(s).`
           : "Stored task sessions look healthy.",
@@ -466,8 +468,9 @@ export const runDoctor = async (
     }
   });
 
-  const auditDir = getCwWorkspaceAuditDirFromStorageDir(context.cwStorageDir);
-  const auditDirExists = await checkExists(auditDir);
+  if (!databaseExists) {
+    await bootstrapSqliteWorkspaceStore(context.cwStorageDir);
+  }
   const recentAuditEvents = await listAuditEvents(
     context.rootDir,
     5,
@@ -475,13 +478,13 @@ export const runDoctor = async (
   );
   addCheck(checks, {
     name: "audit-log",
-    status: auditDirExists ? "pass" : "warning",
-    message: auditDirExists
-      ? `Audit log directory is available with ${recentAuditEvents.length} recent event(s) sampled.`
-      : "Audit log directory is not present yet. It will be created on the first auditable write.",
+    status: databaseExists ? "pass" : "warning",
+    message: databaseExists
+      ? `Audit storage is available in data.db with ${recentAuditEvents.length} recent event(s) sampled.`
+      : "Audit storage is not present yet. data.db will be created on the first auditable write.",
     metadata: {
-      auditDir,
-      exists: auditDirExists,
+      databasePath,
+      exists: databaseExists,
       sampledEvents: recentAuditEvents.length
     }
   });
