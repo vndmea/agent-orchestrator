@@ -9,10 +9,41 @@ export interface WorkerTaskEligibility {
   requiresHostReview: boolean;
 }
 
+export const getPatchGenerationConsistencyIssue = (
+  profile: WorkerCapabilityProfile
+): string | null => {
+  const hasPatchGenerationTag =
+    profile.supportedTaskTypes.includes("patch-generation");
+  const marksPatchGenerationUnsupported =
+    profile.unsupportedTaskTypes.includes("patch-generation");
+
+  if (
+    profile.routingPolicy.allowPatchGeneration !== hasPatchGenerationTag ||
+    (profile.routingPolicy.allowPatchGeneration &&
+      marksPatchGenerationUnsupported)
+  ) {
+    return `Persisted worker profile ${profile.workerId} is inconsistent for patch-generation: routingPolicy.allowPatchGeneration, supportedTaskTypes, and unsupportedTaskTypes disagree.`;
+  }
+
+  return null;
+};
+
 export const assessWorkerTaskEligibility = (
   profile: WorkerCapabilityProfile,
   taskType: WorkerTaskType
 ): WorkerTaskEligibility => {
+  if (taskType === "patch-generation") {
+    const consistencyIssue = getPatchGenerationConsistencyIssue(profile);
+
+    if (consistencyIssue) {
+      return {
+        allowed: false,
+        reason: consistencyIssue,
+        requiresHostReview: true
+      };
+    }
+  }
+
   if (!profile.supportedTaskTypes.includes(taskType)) {
     return {
       allowed: false,

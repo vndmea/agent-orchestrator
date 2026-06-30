@@ -16,6 +16,10 @@ import {
   type WorkerAvailabilitySnapshot
 } from "@mcp-code-worker/core";
 
+import {
+  assessWorkerTaskEligibility,
+  getPatchGenerationConsistencyIssue
+} from "./worker-routing.js";
 import { createWorkerDoctorChecks } from "./worker-doctor.js";
 import { resolveWorkerProfile } from "./worker-profile-resolution.js";
 import { getWorkerRegistration } from "./worker-registry-store.js";
@@ -219,8 +223,14 @@ const buildNextSteps = (input: {
   }
 
   if (
-    input.status === "ready" &&
-    ["missing", "not-qualified"].includes(input.checks.benchmark.status)
+    (
+      input.status === "ready" &&
+      ["invalid", "missing", "not-qualified"].includes(input.checks.patchGeneration.status)
+    ) ||
+    (
+      input.status === "ready" &&
+      ["missing", "not-qualified"].includes(input.checks.benchmark.status)
+    )
   ) {
     actions.push(
       `If you need patch-generation, run: cw worker benchmark --worker ${input.workerId} --suite coding-v1 --save --update-profile-capabilities`
@@ -237,6 +247,44 @@ const buildNextSteps = (input: {
   }
 
   return actions;
+};
+
+const buildPatchGenerationCheck = (input: {
+  benchmark: WorkerAvailabilityCheck;
+  profile: NonNullable<Awaited<ReturnType<typeof resolveWorkerProfile>>["profile"]>;
+  workerId: string;
+}): WorkerAvailabilityCheck => {
+  const consistencyIssue = getPatchGenerationConsistencyIssue(input.profile);
+
+  if (consistencyIssue) {
+    return defaultCheck(
+      "invalid",
+      `${consistencyIssue} Re-run 'cw worker benchmark --worker ${input.workerId} --suite coding-v1 --save --update-profile-capabilities'.`
+    );
+  }
+
+  const eligibility = assessWorkerTaskEligibility(
+    input.profile,
+    "patch-generation"
+  );
+
+  if (eligibility.allowed) {
+    return defaultCheck(
+      "allowed",
+      `Persisted worker profile ${input.workerId} currently allows patch-generation.`
+    );
+  }
+
+  if (!input.profile.routingPolicy.allowPatchGeneration) {
+    return input.benchmark.status === "missing"
+      ? defaultCheck(
+          "not-produced",
+          "Patch-generation is not enabled because no qualifying persisted benchmark was found."
+        )
+      : defaultCheck("not-allowed", eligibility.reason);
+  }
+
+  return defaultCheck("not-qualified", eligibility.reason);
 };
 
 export const buildWorkerAvailabilitySnapshot = async (input: {
@@ -353,20 +401,11 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
   checks.benchmark = await readBenchmarkCheck(resolvedContext, resolvedWorkerId);
 
   if (profileResolution?.profile) {
-    checks.patchGeneration = profileResolution.profile.routingPolicy.allowPatchGeneration
-      ? defaultCheck(
-          "allowed",
-          `Persisted worker profile ${resolvedWorkerId} currently allows patch-generation.`
-        )
-      : checks.benchmark.status === "missing"
-        ? defaultCheck(
-            "not-produced",
-            "Patch-generation is not enabled because no qualifying persisted benchmark was found."
-          )
-        : defaultCheck(
-            "not-allowed",
-            `Persisted worker profile ${resolvedWorkerId} does not allow patch-generation.`
-          );
+    checks.patchGeneration = buildPatchGenerationCheck({
+      benchmark: checks.benchmark,
+      profile: profileResolution.profile,
+      workerId: resolvedWorkerId
+    });
   }
 
   const unavailableReasonType = deriveUnavailableReasonType(checks);

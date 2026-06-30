@@ -112,7 +112,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
       maxTaskComplexity: "medium",
       requiresHostReview: false,
       allowCodegen: true,
-      allowPatchGeneration: false,
+      allowPatchGeneration: true,
       allowDomainTasks: true
     },
     evaluatedAt: new Date().toISOString(),
@@ -261,7 +261,7 @@ describe("patch proposal workflow", () => {
     invokeStructuredSpy.mockRestore();
   });
 
-  it("returns a blocked placeholder when the persisted worker profile is not qualified for patch generation", async () => {
+  it("returns a blocked placeholder when the persisted worker profile never qualified for patch generation", async () => {
     const rootDir = await createWorkspace();
     await saveWorkerRegistration(
       createWriteContext(rootDir),
@@ -276,7 +276,19 @@ describe("patch proposal workflow", () => {
       },
       true
     );
-    await saveWorkerProfile(createWriteContext(rootDir), createProfile(), true);
+    await saveWorkerProfile(
+      createWriteContext(rootDir),
+      createProfile({
+        supportedTaskTypes: createProfile().supportedTaskTypes.filter(
+          (taskType) => taskType !== "patch-generation"
+        ),
+        routingPolicy: {
+          ...createProfile().routingPolicy,
+          allowPatchGeneration: false
+        }
+      }),
+      true
+    );
 
     const result = await runPatchProposalWorkflow({
       context: createContext(rootDir),
@@ -288,7 +300,7 @@ describe("patch proposal workflow", () => {
 
     expect(result.proposal.title).toContain("[PLACEHOLDER]");
     expect(result.inspection.ok).toBe(false);
-    expect(result.warnings.join("\n")).toContain("not allowed to generate patch proposals");
+    expect(result.warnings.join("\n")).toContain("not qualified for patch-generation tasks");
     expect(result.inspection.blockedReasons).toContain(
       "Patch proposal is a fallback placeholder and must not be applied."
     );
@@ -342,7 +354,8 @@ describe("patch proposal workflow", () => {
 
     expect(result.proposal.title).toContain("[PLACEHOLDER]");
     expect(result.inspection.ok).toBe(false);
-    expect(result.warnings.join("\n")).toContain("not qualified for patch-generation tasks");
+    expect(result.warnings.join("\n")).toContain("inconsistent for patch-generation");
+    expect(result.warnings.join("\n")).toContain("--update-profile-capabilities");
   });
 });
 

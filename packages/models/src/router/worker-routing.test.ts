@@ -19,6 +19,7 @@ const createProfile = (
     "review-lite",
     "risk-analysis",
     "codegen",
+    "patch-generation",
     "test-generation",
     "validation-fix",
     "doc-generation"
@@ -81,13 +82,9 @@ const createProfile = (
 });
 
 describe("assessWorkerTaskEligibility", () => {
-  it("blocks patch-generation when the routing policy disallows it", () => {
+  it("reports an inconsistent patch-generation profile when task tags and routing policy disagree", () => {
     const result = assessWorkerTaskEligibility(
       createProfile({
-        supportedTaskTypes: [
-          ...createProfile().supportedTaskTypes,
-          "patch-generation"
-        ],
         routingPolicy: {
           ...createProfile().routingPolicy,
           allowPatchGeneration: false
@@ -97,11 +94,22 @@ describe("assessWorkerTaskEligibility", () => {
     );
 
     expect(result.allowed).toBe(false);
-    expect(result.reason).toContain("not allowed to generate patch proposals");
+    expect(result.reason).toContain("inconsistent for patch-generation");
   });
 
-  it("blocks patch-generation when the supported task tag is missing even if routing allows it", () => {
-    const result = assessWorkerTaskEligibility(createProfile(), "patch-generation");
+  it("blocks patch-generation when the worker never qualified for patch capability", () => {
+    const result = assessWorkerTaskEligibility(
+      createProfile({
+        supportedTaskTypes: createProfile().supportedTaskTypes.filter(
+          (taskType) => taskType !== "patch-generation"
+        ),
+        routingPolicy: {
+          ...createProfile().routingPolicy,
+          allowPatchGeneration: false
+        }
+      }),
+      "patch-generation"
+    );
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain("not qualified for patch-generation tasks");

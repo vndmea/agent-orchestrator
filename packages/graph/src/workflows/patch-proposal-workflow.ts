@@ -10,6 +10,7 @@ import {
 } from "@mcp-code-worker/core";
 import {
   assessWorkerTaskEligibility,
+  getPatchGenerationConsistencyIssue,
   resolveWorkerProfile
 } from "@mcp-code-worker/models";
 import {
@@ -126,6 +127,19 @@ export const runPatchProposalWorkflow = async (
   const routedWorkerProfile = patchEligibility?.allowed ? workerProfile : null;
 
   if (workerProfile) {
+    const patchGenerationConsistencyIssue =
+      getPatchGenerationConsistencyIssue(workerProfile);
+
+    if (patchGenerationConsistencyIssue) {
+      return buildDeniedPatchProposalOutput({
+        context,
+        fallbackProposal,
+        reason:
+          `${patchGenerationConsistencyIssue} Re-run 'cw worker benchmark --worker ${workerProfile.workerId} --suite coding-v1 --save --update-profile-capabilities'.`,
+        scope: effectiveScope
+      });
+    }
+
     if (workerProfile.status !== "qualified") {
       return buildDeniedPatchProposalOutput({
         context,
