@@ -444,8 +444,9 @@ describe("cli parsing", () => {
 
     await cli.parseAsync(["node", "cw", "mcp", "config", "--host", "codex"]);
 
-    expect(output.join("\n")).toContain("\"args\": [");
-    expect(output.join("\n")).not.toContain("\"env\":");
+    expect(output.join("\n")).toContain('[mcp_servers."mcp-code-worker"]');
+    expect(output.join("\n")).toContain('args = ["mcp", "serve"]');
+    expect(output.join("\n")).not.toContain("\"mcpServers\"");
   });
 
   it("prints the same minimal mcp config snippet when a host preset is selected", async () => {
@@ -779,61 +780,119 @@ describe("cli parsing", () => {
   });
 
   it("runs init and persists a dry-run-first onboarding config", async () => {
-    await withTempCwd(async (rootDir) => {
-      const { io, output } = createIo();
-      let openedPath: string | null = null;
-      const cli = buildCli(io, {
-        initPrompter: createInitPrompter([
-          rootDir,
-          true,
-          true,
-          false,
-          true,
-          true
-        ]),
-        pathOpener: (targetPath: string) => {
-          openedPath = targetPath;
-          return Promise.resolve(true);
-        }
+    await withTempHome(async () => {
+      await withTempCwd(async (rootDir) => {
+        const { io, output } = createIo();
+        let openedPath: string | null = null;
+        const cli = buildCli(io, {
+          initPrompter: createInitPrompter([
+            rootDir,
+            true,
+            true,
+            false,
+            true,
+            true
+          ]),
+          pathOpener: (targetPath: string) => {
+            openedPath = targetPath;
+            return Promise.resolve(true);
+          }
+        });
+
+        await cli.parseAsync(["node", "cw", "init"]);
+
+        const result = parseLastJson<{
+          applied: boolean;
+          codexMcpConfig: { exists: boolean; status: string };
+          mcpConfig?: { mcpServers?: Record<string, unknown> };
+          openedConfigDirectory: boolean;
+          paths: {
+            codexConfigPath: string;
+            cwConfigDir: string;
+            cwConfigPath: string;
+            globalAgentsPath: string;
+            projectAgentsPath: string;
+          };
+          repositoryWriteMode: string;
+          setup: { mode: string };
+          tips: string[];
+        }>(output);
+        const savedConfig = JSON.parse(
+          await readFile(getCwConfigPath(rootDir), "utf8")
+        ) as {
+          safety?: {
+            allowWrite?: boolean;
+            dryRun?: boolean;
+          };
+        };
+
+        expect(result.applied).toBe(true);
+        expect(result.repositoryWriteMode).toBe("dry-run");
+        expect(result.setup.mode).toBe("execute");
+        expect(result.codexMcpConfig.exists).toBe(false);
+        expect(result.codexMcpConfig.status).toBe("not-requested");
+        expect(result.mcpConfig?.mcpServers?.["mcp-code-worker"]).toBeTruthy();
+        expect(result.openedConfigDirectory).toBe(true);
+        expect(result.paths.cwConfigPath).toContain("config.json");
+        expect(result.paths.codexConfigPath).toContain("config.toml");
+        expect(result.paths.projectAgentsPath).toContain("AGENTS.md");
+        expect(result.paths.globalAgentsPath).toContain(".codex");
+        expect(result.tips[0]).toContain("config.json");
+        expect(
+          result.tips.some((tip) => tip.includes("No Codex user config was detected"))
+        ).toBe(true);
+        expect(openedPath).toBe(result.paths.cwConfigDir);
+        expect(savedConfig.safety?.dryRun).toBe(true);
+        expect(savedConfig.safety?.allowWrite).toBe(false);
       });
+    });
+  });
 
-      await cli.parseAsync(["node", "cw", "init"]);
+  it("reminds scripted init users about the codex user config path in human output", async () => {
+    await withTempHome(async () => {
+      await withTempCwd(async (rootDir) => {
+        const { io, output } = createIo("human");
+        const cli = buildCli(io);
 
-      const result = parseLastJson<{
-        applied: boolean;
-        mcpConfig?: { mcpServers?: Record<string, unknown> };
-        openedConfigDirectory: boolean;
-        paths: {
-          cwConfigDir: string;
-          cwConfigPath: string;
-          globalAgentsPath: string;
-          projectAgentsPath: string;
-        };
-        repositoryWriteMode: string;
-        setup: { mode: string };
-        tips: string[];
-      }>(output);
-      const savedConfig = JSON.parse(
-        await readFile(getCwConfigPath(rootDir), "utf8")
-      ) as {
-        safety?: {
-          allowWrite?: boolean;
-          dryRun?: boolean;
-        };
-      };
+        await cli.parseAsync(["node", "cw", "init", "--allow-write"]);
 
-      expect(result.applied).toBe(true);
-      expect(result.repositoryWriteMode).toBe("dry-run");
-      expect(result.setup.mode).toBe("execute");
-      expect(result.mcpConfig?.mcpServers?.["mcp-code-worker"]).toBeTruthy();
-      expect(result.openedConfigDirectory).toBe(true);
-      expect(result.paths.cwConfigPath).toContain("config.json");
-      expect(result.paths.projectAgentsPath).toContain("AGENTS.md");
-      expect(result.paths.globalAgentsPath).toContain(".codex");
-      expect(result.tips[0]).toContain("config.json");
-      expect(openedPath).toBe(result.paths.cwConfigDir);
-      expect(savedConfig.safety?.dryRun).toBe(true);
-      expect(savedConfig.safety?.allowWrite).toBe(false);
+        expect(output.at(-1)).toContain("codex host config:");
+        expect(output.at(-1)).toContain("~/.codex/config.toml");
+        expect(output.at(-1)).toContain("not detected");
+        expect(output.at(-1)).toContain(rootDir);
+      });
+    });
+  });
+
+  it("updates an existing codex config only through the explicit scripted opt-in", async () => {
+    await withTempHome(async (homeDir) => {
+      await withTempCwd(async () => {
+        await writeCodexConfig(homeDir, {
+          command: "old-cw",
+          args: ["old", "serve"]
+        });
+        const { io, output } = createIo();
+        const cli = buildCli(io);
+
+        await cli.parseAsync([
+          "node",
+          "cw",
+          "init",
+          "--allow-write",
+          "--write-codex-mcp-config"
+        ]);
+
+        const result = parseLastJson<{
+          codexMcpConfig: { exists: boolean; status: string };
+        }>(output);
+        const contents = await readFile(join(homeDir, ".codex", "config.toml"), "utf8");
+
+        expect(result.codexMcpConfig.exists).toBe(true);
+        expect(result.codexMcpConfig.status).toBe("written");
+        expect(contents).toContain('command = "cw"');
+        expect(contents).toContain('args = ["mcp", "serve"]');
+        expect(contents).not.toContain('command = "old-cw"');
+      });
     });
   });
 

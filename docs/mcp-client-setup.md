@@ -41,11 +41,22 @@ Current built-in host presets:
 | Host | Built-in behavior |
 | ---- | ----------------- |
 | `generic` | Minimal stdio snippet |
-| `codex` | Minimal stdio snippet |
+| `codex` | TOML snippet for `~/.codex/config.toml` |
 | `cursor` | Minimal stdio snippet |
 | `vscode` | Minimal stdio snippet |
 | `claude-desktop` | Minimal stdio snippet |
 | `opencode` | Minimal stdio snippet |
+
+For Codex specifically, paste the output of `cw mcp config --host codex` into
+`~/.codex/config.toml`. Example:
+
+```toml
+[mcp_servers."mcp-code-worker"]
+command = "cw"
+args = ["mcp", "serve"]
+```
+
+`cw init` resolves that path from the current user's home directory, so the same `~/.codex/config.toml` guidance applies on macOS and Linux as well as Windows home directories.
 
 If the client launches from a shared tools checkout instead of the active repository, switch it to launch `cw mcp serve` from the intended repository root.
 
@@ -107,6 +118,8 @@ The MCP client snippet stays unchanged:
 - Put the same snippet into the host's global MCP config when every repository should see `mcp-code-worker`.
 - Put repository-specific instruction defaults in `./AGENTS.md`.
 - Put cross-repository Codex defaults in `~/.codex/AGENTS.md`.
+
+When Codex is the host, the user-level MCP file is `~/.codex/config.toml`.
 
 `cw init` prints the resolved CW storage paths so you can find and manually edit `~/.cw/workspaces/<workspace-id>/config.json` later if needed.
 

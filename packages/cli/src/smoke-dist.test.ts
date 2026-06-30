@@ -249,6 +249,16 @@ describe("cli dist smoke", () => {
           "mcp-code-worker"
         ]
       ).toBeTruthy();
+
+      const codexConfig = await execFile(
+        "node",
+        [distCliPath, "mcp", "config", "--host", "codex"],
+        {
+          cwd: rootDir
+        }
+      );
+      expect(codexConfig.stdout).toContain('[mcp_servers."mcp-code-worker"]');
+      expect(codexConfig.stdout).toContain('args = ["mcp", "serve"]');
     });
   }, 15_000);
 

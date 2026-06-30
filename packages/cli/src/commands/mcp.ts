@@ -5,6 +5,7 @@ import {
   buildMcpToolCatalogView,
   isMcpHost,
   MCP_HOSTS,
+  renderMcpConfigSnippet,
   serveCwMcpServer,
   type McpHost
 } from "@mcp-code-worker/mcp-server";
@@ -12,7 +13,13 @@ import {
 import type { CliIo } from "../index.js";
 import { writeOutput } from "../output.js";
 
-export { buildMcpConfigSnippet, isMcpHost, MCP_HOSTS, type McpHost };
+export {
+  buildMcpConfigSnippet,
+  isMcpHost,
+  MCP_HOSTS,
+  renderMcpConfigSnippet,
+  type McpHost
+};
 
 export const registerMcpCommand = (program: Command, io: CliIo): void => {
   const mcp = program.command("mcp").description("Manage the MCP server.");
@@ -47,7 +54,7 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
 
   mcp
     .command("config")
-    .description("Print a minimal local MCP stdio server config snippet. Worker, validation, and safety settings should live in cw config.json.")
+    .description("Print a host-aware local MCP stdio server config snippet. Worker, validation, and safety settings should live in cw config.json.")
     .option("--command <command>", "Command to launch the server", "cw")
     .option("--args <args...>", "Arguments passed to the command")
     .option(
@@ -67,15 +74,11 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
       }
 
       io.write(
-        JSON.stringify(
-          buildMcpConfigSnippet({
-            args: options.args,
-            command: options.command,
-            host: options.host
-          }),
-          null,
-          2
-        )
+        renderMcpConfigSnippet({
+          args: options.args,
+          command: options.command,
+          host: options.host
+        })
       );
     });
 };

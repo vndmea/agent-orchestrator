@@ -1,4 +1,5 @@
 import { emitKeypressEvents } from "node:readline";
+import { readFile, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { dirname, resolve } from "node:path";
@@ -24,7 +25,7 @@ import {
   INIT_PRESETS,
   type InitPresetId
 } from "./init-presets.js";
-import { buildMcpConfigSnippet } from "./mcp.js";
+import { buildMcpConfigSnippet, renderMcpConfigSnippet } from "./mcp.js";
 import {
   formatSetupResult,
   runSetup,
@@ -59,17 +60,28 @@ interface InitOptions extends Omit<SetupOptions, "repositoryWriteMode"> {
   advanced: boolean;
   preset?: string;
   repositoryWriteMode?: string;
+  writeCodexMcpConfig: boolean;
 }
 
 type InitWorkerPlan = SetupWorkerPlan;
 
+type CodexMcpConfigStatus = "not-requested" | "written" | "missing-file";
+
+interface CodexMcpConfigUpdateResult {
+  exists: boolean;
+  path: string;
+  status: CodexMcpConfigStatus;
+}
+
 interface InitResult {
   advanced: boolean;
   applied: boolean;
+  codexMcpConfig: CodexMcpConfigUpdateResult;
   enableMcp: boolean;
   mcpConfig?: ReturnType<typeof buildMcpConfigSnippet>;
   openedConfigDirectory: boolean;
   paths: {
+    codexConfigPath: string;
     cwConfigDir: string;
     cwConfigPath: string;
     cwHomeDir: string;
@@ -336,12 +348,128 @@ const describeRepositoryWriteMode = (
     ? "enabled by default"
     : "dry-run only by default";
 
+const normalizeTomlTableName = (value: string): string =>
+  value.replace(/["'\s]/gu, "");
+
+const CODEX_MCP_TABLE = 'mcp_servers.mcp-code-worker';
+const CODEX_MCP_ENV_TABLE = `${CODEX_MCP_TABLE}.env`;
+
+const inspectCodexMcpConfig = async (
+  codexConfigPath: string
+): Promise<CodexMcpConfigUpdateResult> => {
+  try {
+    await readFile(codexConfigPath, "utf8");
+
+    return {
+      exists: true,
+      path: codexConfigPath,
+      status: "not-requested"
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return {
+        exists: false,
+        path: codexConfigPath,
+        status: "not-requested"
+      };
+    }
+
+    throw error;
+  }
+};
+
+const stripCodexMcpSections = (contents: string, newline: string): string => {
+  const lines = contents.split(/\r?\n/u);
+  const kept: string[] = [];
+  let skipping = false;
+
+  for (const line of lines) {
+    const tableMatch = line.match(/^\s*\[(?<name>.+?)\]\s*$/u);
+
+    if (tableMatch?.groups?.name) {
+      const tableName = normalizeTomlTableName(tableMatch.groups.name);
+      const isTargetTable =
+        tableName === CODEX_MCP_TABLE || tableName === CODEX_MCP_ENV_TABLE;
+
+      skipping = isTargetTable;
+
+      if (isTargetTable) {
+        continue;
+      }
+    }
+
+    if (!skipping) {
+      kept.push(line);
+    }
+  }
+
+  return kept.join(newline).trimEnd();
+};
+
+const updateCodexMcpConfig = async (
+  codexConfigPath: string,
+  requested: boolean
+): Promise<CodexMcpConfigUpdateResult> => {
+  if (!requested) {
+    return inspectCodexMcpConfig(codexConfigPath);
+  }
+
+  const inspection = await inspectCodexMcpConfig(codexConfigPath);
+
+  if (!inspection.exists) {
+    return {
+      ...inspection,
+      status: "missing-file"
+    };
+  }
+
+  let contents: string;
+
+  try {
+    contents = await readFile(codexConfigPath, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return {
+        exists: false,
+        path: codexConfigPath,
+        status: "missing-file"
+      };
+    }
+
+    throw error;
+  }
+
+  const newline = contents.includes("\r\n") ? "\r\n" : "\n";
+  const renderedSnippet = renderMcpConfigSnippet({ host: "codex" }).replaceAll(
+    "\n",
+    newline
+  );
+  const withoutExistingEntry = stripCodexMcpSections(contents, newline);
+  const nextContents = [
+    withoutExistingEntry,
+    renderedSnippet
+  ]
+    .filter((value) => value.trim().length > 0)
+    .join(`${newline}${newline}`)
+    .trimEnd()
+    .concat(newline);
+
+  await writeFile(codexConfigPath, nextContents, "utf8");
+
+  return {
+    exists: true,
+    path: codexConfigPath,
+    status: "written"
+  };
+};
+
 const buildInitPaths = (rootDir: string): InitResult["paths"] => {
   const cwHomeDir = getCwHomeDir();
   const cwStorageDir = getCwWorkspaceDir(rootDir);
   const cwConfigPath = getCwConfigPath(rootDir);
 
   return {
+    codexConfigPath: resolve(homedir(), ".codex", "config.toml"),
     cwConfigDir: dirname(cwConfigPath),
     cwConfigPath,
     cwHomeDir,
@@ -351,12 +479,20 @@ const buildInitPaths = (rootDir: string): InitResult["paths"] => {
   };
 };
 
-const buildInitTips = (result: Pick<InitResult, "enableMcp" | "paths">): string[] => [
+const buildInitTips = (
+  result: Pick<InitResult, "codexMcpConfig" | "enableMcp" | "paths" | "rootDir">
+): string[] => [
   `Edit ${result.paths.cwConfigPath} manually if you need to tweak worker model settings or MCP-related runtime state.`,
   `Put project-only instructions in ${result.paths.projectAgentsPath}; put global Codex defaults in ${result.paths.globalAgentsPath}.`,
-  result.enableMcp
-    ? "Paste the MCP snippet into a workspace-scoped host config for this repository only, or into the host's global MCP config for every repository."
-    : "You can always rerun `cw mcp config` later when you are ready to wire an MCP host.",
+  result.codexMcpConfig.status === "written"
+    ? `Updated the Codex MCP entry in ${formatDisplayPath(result.rootDir, result.paths.codexConfigPath)} through the explicit opt-in flow.`
+    : result.codexMcpConfig.status === "missing-file"
+      ? `Codex MCP opt-in was requested, but ${formatDisplayPath(result.rootDir, result.paths.codexConfigPath)} was not found. Create that file manually and paste \`cw mcp config --host codex\`.`
+      : !result.codexMcpConfig.exists
+        ? `No Codex user config was detected at ${formatDisplayPath(result.rootDir, result.paths.codexConfigPath)}. If Codex is your host, create that file manually and paste \`cw mcp config --host codex\`; if you use another host such as OpenCode or Claude Desktop, configure that host instead.`
+      : result.enableMcp
+        ? `If Codex is your MCP host, paste \`cw mcp config --host codex\` into ${formatDisplayPath(result.rootDir, result.paths.codexConfigPath)}.`
+        : `When you are ready to wire Codex MCP, paste \`cw mcp config --host codex\` into ${formatDisplayPath(result.rootDir, result.paths.codexConfigPath)}.`,
   "Use `cw init` again when you want to revisit worker verification depth or onboarding defaults."
 ];
 
@@ -422,6 +558,14 @@ const formatWorkerSummary = (result: InitResult["worker"]): string => {
 };
 
 const formatInitResult = (result: InitResult): string[] => {
+  const codexHostConfigSummary =
+    result.codexMcpConfig.status === "written"
+      ? "updated via explicit opt-in"
+      : result.codexMcpConfig.status === "missing-file"
+        ? "not found; create it manually and paste cw mcp config --host codex"
+        : !result.codexMcpConfig.exists
+          ? "not detected; create it manually only if Codex is your host"
+        : "cw mcp config --host codex";
   const lines: string[] = [
     `cw init: ${result.applied ? "applied" : "preview"}`,
     result.applied
@@ -436,6 +580,7 @@ const formatInitResult = (result: InitResult): string[] => {
     `workers: ${formatWorkerSummary(result.worker)}`,
     `setup: ${result.setup.status}`,
     `agents: project -> ${formatDisplayPath(result.rootDir, result.paths.projectAgentsPath)} | global -> ${formatDisplayPath(result.rootDir, result.paths.globalAgentsPath)}`,
+    `codex host config: ${formatDisplayPath(result.rootDir, result.paths.codexConfigPath)} | ${codexHostConfigSummary}`,
     `next: ${result.setup.recommendedActions.slice(0, 2).join(" | ") || "Run cw doctor"} | cw doctor --probe`
   ];
 
@@ -464,6 +609,7 @@ const hasScriptedSetupInputs = (options: InitOptions): boolean =>
   options.interviewWorker ||
   options.probeWorker ||
   options.registerWorker ||
+  options.writeCodexMcpConfig ||
   options.typecheckScript.length > 0 ||
   options.lintScript.length > 0 ||
   options.testScript.length > 0 ||
@@ -481,6 +627,7 @@ const collectInitSetupOptions = async (
   prompter: InitPrompter
 ): Promise<{
   additionalWorkers: InitWorkerPlan[];
+  codexMcpConfig: CodexMcpConfigUpdateResult;
   enableMcp: boolean;
   setup: SetupOptions;
 }> => {
@@ -490,12 +637,16 @@ const collectInitSetupOptions = async (
       defaultValue: initialRoot
     })
   );
+  const paths = buildInitPaths(rootDir);
+  const codexMcpConfig = await inspectCodexMcpConfig(paths.codexConfigPath);
   const keepDryRun = await prompter.confirm(
     "Keep repository writes in dry-run mode by default?",
     true
   );
   const enableMcp = await prompter.confirm(
-    "Prepare an MCP config snippet for this workspace?",
+    codexMcpConfig.exists
+      ? `Prepare an MCP config snippet for this workspace? Detected Codex config: ${formatDisplayPath(rootDir, paths.codexConfigPath)}`
+      : `Prepare an MCP config snippet for this workspace? No Codex config was detected at ${formatDisplayPath(rootDir, paths.codexConfigPath)}, so cw will leave host wiring as a manual step unless you are using another MCP host.`,
     true
   );
   const configureWorker = await prompter.confirm(
@@ -758,6 +909,7 @@ const collectInitSetupOptions = async (
 
   return {
     additionalWorkers,
+    codexMcpConfig,
     enableMcp,
     setup
   };
@@ -803,6 +955,11 @@ export const registerInitCommand = (
       "--repository-write-mode <mode>",
       "Persist the default repository write mode in cw config (dry-run or allow-write)."
     )
+    .option(
+      "--write-codex-mcp-config",
+      "Explicitly update ~/.codex/config.toml with the cw MCP server entry when that file already exists.",
+      false
+    )
     .option("--allow-write", "Persist cw workspace setup changes", false)
     .action(async (options: InitOptions) => {
       const repositoryWriteMode =
@@ -825,6 +982,12 @@ export const registerInitCommand = (
       if (options.preset && !preset) {
         throw new Error(
           `Unsupported preset '${options.preset}'. Expected one of: ${INIT_PRESETS.map((entry) => entry.id).join(", ")}.`
+        );
+      }
+
+      if (options.writeCodexMcpConfig && !options.allowWrite) {
+        throw new Error(
+          "--write-codex-mcp-config requires --allow-write because it modifies a user-scoped Codex config file."
         );
       }
 
@@ -860,8 +1023,17 @@ export const registerInitCommand = (
           workerModel: options.workerModel ?? preset?.workerModel,
           workerProvider: options.workerProvider ?? preset?.workerProvider
         });
+        const paths = buildInitPaths(result.rootDir);
+        const codexMcpConfig = await updateCodexMcpConfig(
+          paths.codexConfigPath,
+          options.writeCodexMcpConfig
+        );
+        const output = {
+          ...result,
+          codexMcpConfig
+        };
 
-        writeOutput(io, result, formatSetupResult(result));
+        writeOutput(io, output, formatSetupResult(output));
         return;
       }
 
@@ -886,6 +1058,18 @@ export const registerInitCommand = (
           (worker) => !worker.isDefault
         );
         const paths = buildInitPaths(setup.rootDir);
+        const writeCodexMcpConfig =
+          collected.enableMcp &&
+          applyNow &&
+          collected.codexMcpConfig.exists &&
+          await prompter.confirm(
+            `Update the existing Codex MCP config now if ${formatDisplayPath(setup.rootDir, paths.codexConfigPath)} already exists?`,
+            false
+          );
+        const codexMcpConfig = await updateCodexMcpConfig(
+          paths.codexConfigPath,
+          writeCodexMcpConfig
+        );
         let openedConfigDirectory = false;
 
         if (
@@ -900,6 +1084,7 @@ export const registerInitCommand = (
         const result: InitResult = {
           advanced: options.advanced,
           applied: applyNow,
+          codexMcpConfig,
           enableMcp: collected.enableMcp,
           mcpConfig: collected.enableMcp
             ? buildMcpConfigSnippet()
@@ -911,7 +1096,9 @@ export const registerInitCommand = (
           rootDir: setup.rootDir,
           setup,
           tips: buildInitTips({
+            codexMcpConfig,
             enableMcp: collected.enableMcp,
+            rootDir: setup.rootDir,
             paths
           }),
           worker: {

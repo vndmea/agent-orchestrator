@@ -1,3 +1,6 @@
+import { homedir } from "node:os";
+import { resolve } from "node:path";
+
 export {
   runSetup,
   type SetupOptions,
@@ -10,9 +13,30 @@ export {
 
 import type { SetupResult } from "@mcp-code-worker/graph";
 
-export const formatSetupResult = (result: SetupResult): string[] => {
+import { formatDisplayPath } from "../output.js";
+
+export const formatSetupResult = (
+  result: SetupResult & {
+    codexMcpConfig?: {
+      exists?: boolean;
+      status: "missing-file" | "not-requested" | "written";
+    };
+  }
+): string[] => {
   const unavailableSteps = result.steps.filter((step) => step.status === "unavailable");
   const needsInputSteps = result.steps.filter((step) => step.status === "needs-input");
+  const codexConfigPath = formatDisplayPath(
+    result.rootDir,
+    resolve(homedir(), ".codex", "config.toml")
+  );
+  const codexConfigSummary =
+    result.codexMcpConfig?.status === "written"
+      ? "updated via explicit opt-in"
+      : result.codexMcpConfig?.status === "missing-file"
+        ? "not found; create it manually and paste cw mcp config --host codex"
+        : result.codexMcpConfig?.exists === false
+          ? "not detected; create it manually only if Codex is your host"
+        : "cw mcp config --host codex";
 
   const lines: string[] = [
     `cw init: ${result.status}`,
@@ -21,7 +45,8 @@ export const formatSetupResult = (result: SetupResult): string[] => {
     `mode: ${result.mode}`,
     `steps: ${result.steps
       .map((step) => `${step.id}=${step.status}`)
-      .join(", ")}`
+      .join(", ")}`,
+    `codex host config: ${codexConfigPath} | ${codexConfigSummary}`
   ];
 
   if (unavailableSteps.length > 0) {

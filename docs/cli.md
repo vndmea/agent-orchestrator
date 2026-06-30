@@ -59,6 +59,8 @@ For local client providers, `opencode` is the default command. Start with `cw in
 
 `cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.cw/workspaces/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
 
+If Codex is your MCP host, `cw init` detects the user-level Codex MCP file at `~/.codex/config.toml` on macOS/Linux or the same home-relative path on Windows. It only offers opt-in writing when that file already exists; otherwise it falls back to a manual reminder.
+
 For instruction scoping, put repository-specific guidance in `./AGENTS.md` and global Codex defaults in `~/.codex/AGENTS.md`.
 
 ## Review Commands

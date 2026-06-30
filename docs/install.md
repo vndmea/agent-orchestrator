@@ -27,6 +27,8 @@ Notes:
 - The published npm package installs the `cw` command.
 - Use `cw init` as the default onboarding path. Run it interactively by default, or use presets such as `--preset mock`, `--preset deepseek`, or `--preset opencode` with `--allow-write` when you need the lower-level scripted setup flow.
 - Persist worker, validation, safety, local client defaults, and optional provider API keys in `config.json`.
+- If Codex is your MCP host, paste `cw mcp config --host codex` into `~/.codex/config.toml`.
+- `cw init --allow-write --write-codex-mcp-config` only updates that file when it already exists. If it is missing, cw leaves a manual reminder instead of creating a new host config silently.
 - `cw mcp serve` resolves the workspace from the current directory by default.
 - `cw mcp list-tools` and `cw mcp config` only validate the local runtime and recommended snippet shape.
 - Use `cw doctor --mcp --host codex` when you need the host-side wiring check.
