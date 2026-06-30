@@ -88,9 +88,15 @@ Compatibility path worth testing in some SDKs:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "apiKey": "<secret>"
-  }
+  "workers": [
+    {
+      "workerId": "deepseek-flash",
+      "provider": "openai-compatible",
+      "model": "deepseek-v4-flash",
+      "baseURL": "https://api.deepseek.com",
+      "apiKey": "<secret>"
+    }
+  ]
 }
 ```
 
@@ -132,7 +138,7 @@ curl https://api.deepseek.com/chat/completions \
   }'
 ```
 
-If you get `Not Found`, test both base URLs, verify the model name, and confirm that `workerModel.apiKey` is persisted in `config.json`.
+If you get `Not Found`, test both base URLs, verify the model name, and confirm that the selected `config.json.workers[]` entry includes `apiKey`.
 
 If interview output reports provider invocation failures, do not treat the resulting unavailable status as a completed onboarding result. `cw worker interview --worker=<workerId> --save` now skips persistence in that case and returns recovery actions instead.
 

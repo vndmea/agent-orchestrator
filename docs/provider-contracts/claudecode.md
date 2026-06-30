@@ -28,15 +28,18 @@ You may still need Claude Code to be authenticated locally through its own suppo
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "claudecode",
-    "model": "sonnet"
-  },
-  "workerClientCommand": "/path/to/claude"
+  "workers": [
+    {
+      "workerId": "claudecode-local",
+      "provider": "claudecode",
+      "model": "sonnet",
+      "clientCommand": "/path/to/claude"
+    }
+  ]
 }
 ```
 
-If the executable is already available as `claude` on `PATH`, `workerClientCommand` is optional.
+If the executable is already available as `claude` on `PATH`, `clientCommand` is optional on that worker entry.
 
 ## Validation Flow
 
@@ -72,7 +75,7 @@ cw worker benchmark --suite=coding-v1 --worker=claudecode-local --save --update-
 ## Common Failure Shapes
 
 - the executable exists but is not actually Claude Code
-- the executable is not on `PATH` and `workerClientCommand` points to the wrong place
+- the executable is not on `PATH` and the selected `config.json.workers[]` entry points `clientCommand` to the wrong place
 - Claude Code local auth is missing, expired, or tied to the wrong environment
 - compatibility passes, but the connectivity probe fails because the local CLI cannot complete a model call
 

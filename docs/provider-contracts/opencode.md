@@ -17,18 +17,21 @@ Persist the non-secret defaults in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "opencode",
-    "model": "deepseek/deepseek-v4-flash"
-  },
-  "workerClientCommand": "/path/to/opencode"
+  "workers": [
+    {
+      "workerId": "opencode-local",
+      "provider": "opencode",
+      "model": "deepseek/deepseek-v4-flash",
+      "clientCommand": "/path/to/opencode"
+    }
+  ]
 }
 ```
 
 Notes:
 
 - `opencode` is the default command
-- use `workerClientCommand` in `config.json` as the primary persisted override
+- use `clientCommand` on the selected `config.json.workers[]` entry as the persisted override
 
 ## Required Environment Variables
 
@@ -82,7 +85,7 @@ Benchmark only after compatibility and interview both succeed.
 ## Common Failure Signatures
 
 - command not found
-  - `workerClientCommand` is wrong
+  - the selected `config.json.workers[]` entry has the wrong `clientCommand`
   - the executable is not on `PATH`
 - compatibility check fails
   - the executable exists but does not expose the expected `opencode run` surface

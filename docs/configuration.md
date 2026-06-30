@@ -31,9 +31,9 @@ By default, the resolved config file lives at:
 
 The persisted config is intended for workspace-local runtime defaults such as:
 
-- worker model provider, model, and base URL
-- optional worker model API key
-- local client bridge command via `workerClientCommand`
+- per-worker provider, model, and base URL entries in `config.json.workers[]`
+- optional per-worker API keys in `config.json.workers[]`
+- per-worker local client bridge commands in `config.json.workers[][*].clientCommand`
 - validation script preferences
 - default ignored paths
 - session retention settings
@@ -55,7 +55,7 @@ Persisted config no longer chooses an implicit execution worker for task, patch,
 
 If you choose to persist an API key in the user-scoped config, keep it local to the machine, never commit it into repository files, and avoid pasting it into logs or shared transcripts.
 
-Path-like inputs such as `workerClientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
+Path-like inputs such as `config.json.workers[][*].clientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
 
 ## Repository Context Defaults
 

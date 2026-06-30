@@ -26,15 +26,18 @@ Persist the non-secret defaults in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "codex",
-    "model": "gpt-5.4"
-  },
-  "workerClientCommand": "/path/to/codex"
+  "workers": [
+    {
+      "workerId": "codex-local",
+      "provider": "codex",
+      "model": "gpt-5.4",
+      "clientCommand": "/path/to/codex"
+    }
+  ]
 }
 ```
 
-If the executable is already available as `codex` on `PATH`, `workerClientCommand` can be omitted.
+If the executable is already available as `codex` on `PATH`, `clientCommand` can be omitted on that worker entry.
 
 ## Required Environment Variables
 
@@ -82,7 +85,7 @@ cw worker benchmark --suite=coding-v1 --worker=codex-local --save --update-profi
 ## Common Failure Signatures
 
 - command not found
-  - `workerClientCommand` is wrong
+  - the selected `config.json.workers[]` entry has the wrong `clientCommand`
   - the executable is not on `PATH`
 - compatibility check fails
   - the executable exists but does not expose the expected `codex exec` surface

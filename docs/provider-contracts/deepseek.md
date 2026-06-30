@@ -17,11 +17,14 @@ Persist the non-secret defaults in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "openai-compatible",
-    "model": "deepseek-v4-flash",
-    "baseURL": "https://api.deepseek.com"
-  }
+  "workers": [
+    {
+      "workerId": "deepseek-flash",
+      "provider": "openai-compatible",
+      "model": "deepseek-v4-flash",
+      "baseURL": "https://api.deepseek.com"
+    }
+  ]
 }
 ```
 
@@ -41,9 +44,15 @@ Persist the provider key in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "apiKey": "sk-..."
-  }
+  "workers": [
+    {
+      "workerId": "deepseek-flash",
+      "provider": "openai-compatible",
+      "model": "deepseek-v4-flash",
+      "baseURL": "https://api.deepseek.com",
+      "apiKey": "sk-..."
+    }
+  ]
 }
 ```
 
@@ -123,7 +132,7 @@ Qualification sequence:
   - test both documented base URLs
   - confirm the exact model name
 - auth failures
-  - verify `workerModel.apiKey` is persisted in the active CW `config.json`
+  - verify the selected `config.json.workers[]` entry persists `apiKey`
 - provider invocation failures during interview
   - do not treat the unavailable result as a completed qualification
   - fix connectivity or auth first, then rerun

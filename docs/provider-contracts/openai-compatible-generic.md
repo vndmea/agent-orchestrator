@@ -17,11 +17,14 @@ Persist the non-secret defaults in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "openai-compatible",
-    "model": "<model-name>",
-    "baseURL": "https://provider.example.com"
-  }
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "openai-compatible",
+      "model": "<model-name>",
+      "baseURL": "https://provider.example.com"
+    }
+  ]
 }
 ```
 
@@ -38,9 +41,15 @@ Persist the provider key in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "apiKey": "sk-..."
-  }
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "openai-compatible",
+      "model": "<model-name>",
+      "baseURL": "https://provider.example.com",
+      "apiKey": "sk-..."
+    }
+  ]
 }
 ```
 
@@ -92,7 +101,7 @@ cw worker benchmark --suite=coding-v1 --worker=openai-compatible:<model-name> --
 ## Common Failure Signatures
 
 - `401` / `403`
-  - invalid or missing `workerModel.apiKey`
+  - invalid or missing `apiKey` on the selected `config.json.workers[]` entry
 - `404` / `Not Found`
   - wrong base URL or wrong model name
 - probe fails but direct shell API call works

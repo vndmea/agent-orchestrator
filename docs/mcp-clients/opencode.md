@@ -27,6 +27,6 @@ Launch the server from the intended workspace root. If OpenCode starts it from e
 
 ## Local Client Provider Note
 
-If you also use the dedicated OpenCode worker adapter, set `provider=opencode`. `opencode` remains the default command, and `workerClientCommand` is only needed when the executable name or path differs.
+If you also use the dedicated OpenCode worker adapter, set `provider=opencode`. `opencode` remains the default command, and `config.json.workers[][*].clientCommand` is only needed when the executable name or path differs.
 
 If you use the generic local client provider instead, its default command is `sparkcode`, not `opencode`.

@@ -88,7 +88,7 @@ A bare `cw mcp serve` run is also not the best health check. It is a stdio serve
 
 ## Local Client Provider Note
 
-If the worker model uses the generic local client provider, `sparkcode` is the default bridge command. Persist a different command through `cw init --worker-client-command=<command> --allow-write` or by editing `config.json`.
+If the worker model uses the generic local client provider, `sparkcode` is the default bridge command. Persist a different command on the matching `config.json.workers[]` entry through `clientCommand`.
 
 If the worker model uses the dedicated OpenCode adapter, keep `provider=opencode` and use `opencode` as the default command unless you need a custom executable path.
 
@@ -101,7 +101,14 @@ Example:
 ```json
 {
   "version": 1,
-  "workerClientCommand": "/path/to/compatible-client"
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "client",
+      "model": "<model>",
+      "clientCommand": "/path/to/compatible-client"
+    }
+  ]
 }
 ```
 

@@ -17,10 +17,13 @@ Persist:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "mock",
-    "model": "gpt-5.4-mini"
-  }
+  "workers": [
+    {
+      "workerId": "mock-local",
+      "provider": "mock",
+      "model": "gpt-5.4-mini"
+    }
+  ]
 }
 ```
 
@@ -28,7 +31,7 @@ Persist:
 
 None.
 
-`mock` does not require `workerModel.apiKey`.
+`mock` does not require `apiKey` on its `config.json.workers[]` entry.
 
 ## Minimal Health Checks
 

@@ -58,7 +58,7 @@ Treat `cw mcp serve` as a stdio endpoint for a connected host session, not as a 
 
 Treat `config.json` as the primary runtime config surface for worker, validation, safety, and local client defaults. Treat the MCP host snippet as launch-only: command and args only.
 
-For generic local client providers, `sparkcode` is the default command. Start with `cw init --preset=client --allow-write`, then persist a different compatible CLI name or path in `config.json` through `cw init --worker-client-command=<command> --allow-write` or a manual edit when needed.
+For generic local client providers, `sparkcode` is the default command. Persist a different compatible CLI name or path on the matching `config.json.workers[]` entry through `clientCommand` when needed.
 
 For the dedicated `opencode` adapter, use `cw init --preset=opencode --allow-write`. That preset keeps `provider=opencode` and defaults the command to `opencode`.
 
@@ -152,9 +152,15 @@ Suggested troubleshooting flow:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "apiKey": "<secret>"
-  }
+  "workers": [
+    {
+      "workerId": "deepseek-flash",
+      "provider": "openai-compatible",
+      "model": "deepseek-v4-flash",
+      "baseURL": "https://api.deepseek.com",
+      "apiKey": "<secret>"
+    }
+  ]
 }
 ```
 
@@ -175,4 +181,4 @@ curl https://api.deepseek.com/chat/completions \
   }'
 ```
 
-If `Not Found` occurs, test both `https://api.deepseek.com` and `https://api.deepseek.com/v1` and confirm the model name, network access, and persisted `workerModel.apiKey`.
+If `Not Found` occurs, test both `https://api.deepseek.com` and `https://api.deepseek.com/v1` and confirm the model name, network access, and the selected `config.json.workers[]` entry's `apiKey`.

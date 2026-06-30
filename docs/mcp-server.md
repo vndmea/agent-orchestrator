@@ -42,20 +42,27 @@ Treat that MCP snippet as launch-only. Worker/provider/base URL/local client def
 
 Use `cw mcp list-tools` to confirm the local runtime-visible tool catalog, and use `cw doctor --mcp --host=<name>` to validate host wiring. Those are different checks: `list-tools` does not inspect the host config, and a bare `cw mcp serve` run can exit when stdio closes because it is waiting for a host-managed session.
 
-If the resolved worker model uses the generic local client provider, `sparkcode` is the default command. Persist a different compatible local CLI with `workerClientCommand` in `config.json` or `cw init --worker-client-command=<command> --allow-write`.
+If the resolved worker model uses the generic local client provider, `sparkcode` is the default command. Persist a different compatible local CLI on the matching `config.json.workers[]` entry via `clientCommand` or use `cw worker register --worker=<workerId> ... --worker-client-command=<command> --worker-api-key=<key> --allow-write`.
 
-If the resolved worker model uses the dedicated OpenCode adapter, keep `provider=opencode` and use `workerClientCommand` only when the `opencode` executable name or path needs to be overridden.
+If the resolved worker model uses the dedicated OpenCode adapter, keep `provider=opencode` and use `config.json.workers[][*].clientCommand` only when the `opencode` executable name or path needs to be overridden.
 
-If the resolved worker model uses the dedicated Claude Code adapter, keep `provider=claudecode` and use `workerClientCommand` only when the `claude` executable name or path needs to be overridden.
+If the resolved worker model uses the dedicated Claude Code adapter, keep `provider=claudecode` and use `config.json.workers[][*].clientCommand` only when the `claude` executable name or path needs to be overridden.
 
-If the resolved worker model uses the dedicated Codex adapter, keep `provider=codex` and use `workerClientCommand` only when the `codex` executable name or path needs to be overridden.
+If the resolved worker model uses the dedicated Codex adapter, keep `provider=codex` and use `config.json.workers[][*].clientCommand` only when the `codex` executable name or path needs to be overridden.
 
 Example:
 
 ```json
 {
   "version": 1,
-  "workerClientCommand": "/path/to/compatible-client"
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "client",
+      "model": "<model>",
+      "clientCommand": "/path/to/compatible-client"
+    }
+  ]
 }
 ```
 

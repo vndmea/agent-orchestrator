@@ -13,7 +13,7 @@ This means provider/model/base URL defaults still exist, but task execution no l
 - `openai-compatible` and `claude-compatible` are API-protocol provider families, not brand-specific adapters.
 - LiteLLM is supported through an OpenAI-compatible endpoint configuration.
 - `client`, `opencode`, `claudecode`, and `codex` are local CLI adapter paths with separate runtime contracts.
-- Worker model config lives in user-scoped `config.json` under `workerModel`.
+- Worker model config lives in user-scoped `config.json` under `workers[]`, keyed by explicit `workerId`.
 - Worker execution is gated by both named registration and `WorkerCapabilityProfile`, not only by provider/model availability.
 - Newly connected workers should pass onboarding evaluation before they receive production tasks.
 - Limited workers are restricted to qualified low-risk task types, and not-qualified workers are excluded from task types they did not qualify for.

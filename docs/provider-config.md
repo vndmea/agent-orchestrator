@@ -1,19 +1,20 @@
 # Provider Configuration
 
-`mcp-code-worker` keeps provider configuration explicit in persisted `config.json`. This document explains how to configure worker models safely and how to validate the result.
+`mcp-code-worker` keeps provider configuration explicit in persisted `config.json`. This document explains how to configure workers safely and how to validate the result.
 
 ## Configuration Surfaces
 
-The main worker model settings live in `config.json` under `workerModel`:
+The main worker settings live in `config.json` under `workers[]`:
 
+- `workerId`
 - `provider`
 - `model`
 - `baseURL`
 - `apiKey`
+- `clientCommand`
 
 Additional related settings include:
 
-- `workerClientCommand`
 - `MCP_SERVER_NAME`
 - `MCP_SERVER_VERSION`
 - `LOG_LEVEL`
@@ -24,7 +25,7 @@ Runtime configuration resolves in this order:
 2. `~/.cw/workspaces/<workspace-id>/config.json`
 3. Built-in defaults
 
-Treat `config.json` as the primary source for persisted worker settings used by both CLI and MCP flows. Persist API keys and local client commands there, and never commit real keys into repository files or logs.
+Treat `config.json` as the primary source for persisted worker settings used by both CLI and MCP flows. Persist API keys and local client commands in `config.json.workers[]`, and never commit real keys into repository files or logs.
 
 ## 3-Minute Quickstarts
 
@@ -46,10 +47,13 @@ cw init --preset=mock --allow-write
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "mock",
-    "model": "gpt-5.4-mini"
-  }
+  "workers": [
+    {
+      "workerId": "mock-local",
+      "provider": "mock",
+      "model": "gpt-5.4-mini"
+    }
+  ]
 }
 ```
 
@@ -74,32 +78,24 @@ npm i -g mcp-code-worker
 cw init --preset=deepseek --allow-write
 ```
 
-2. Persist the runtime defaults in `config.json`:
+2. Persist the worker entry in `config.json`:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "openai-compatible",
-    "model": "deepseek-v4-flash",
-    "baseURL": "https://api.deepseek.com",
-    "apiKey": "sk-..."
-  }
+  "workers": [
+    {
+      "workerId": "deepseek-flash",
+      "provider": "openai-compatible",
+      "model": "deepseek-v4-flash",
+      "baseURL": "https://api.deepseek.com",
+      "apiKey": "sk-..."
+    }
+  ]
 }
 ```
 
-3. Persist the worker secret in `config.json`:
-
-```json
-{
-  "version": 1,
-  "workerModel": {
-    "apiKey": "sk-..."
-  }
-}
-```
-
-4. Verify the resolved runtime:
+3. Verify the resolved runtime:
 
 ```bash
 cw doctor
@@ -119,32 +115,24 @@ npm i -g mcp-code-worker
 cw init --allow-write
 ```
 
-2. Persist the runtime defaults in `config.json`:
+2. Persist the worker entry in `config.json`:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "claude-compatible",
-    "model": "claude-3-5-sonnet-latest",
-    "baseURL": "https://api.anthropic.com",
-    "apiKey": "sk-ant-..."
-  }
+  "workers": [
+    {
+      "workerId": "claude-sonnet",
+      "provider": "claude-compatible",
+      "model": "claude-3-5-sonnet-latest",
+      "baseURL": "https://api.anthropic.com",
+      "apiKey": "sk-ant-..."
+    }
+  ]
 }
 ```
 
-3. Persist the worker secret in `config.json`:
-
-```json
-{
-  "version": 1,
-  "workerModel": {
-    "apiKey": "sk-ant-..."
-  }
-}
-```
-
-4. Verify the resolved runtime:
+3. Verify the resolved runtime:
 
 ```bash
 cw doctor
@@ -164,16 +152,19 @@ npm i -g mcp-code-worker
 cw init
 ```
 
-2. Persist the provider and client command in `config.json`:
+2. Persist the worker entry in `config.json`:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "client",
-    "model": "qwen3-coder"
-  },
-  "workerClientCommand": "/path/to/compatible-client"
+  "workers": [
+    {
+      "workerId": "sparkcode-local",
+      "provider": "client",
+      "model": "qwen3-coder",
+      "clientCommand": "/path/to/compatible-client"
+    }
+  ]
 }
 ```
 
@@ -197,16 +188,19 @@ npm i -g mcp-code-worker
 cw init --preset=claudecode --allow-write
 ```
 
-2. Persist the provider and optional command override in `config.json`:
+2. Persist the worker entry in `config.json`:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "claudecode",
-    "model": "sonnet"
-  },
-  "workerClientCommand": "/path/to/claude"
+  "workers": [
+    {
+      "workerId": "claudecode-local",
+      "provider": "claudecode",
+      "model": "sonnet",
+      "clientCommand": "/path/to/claude"
+    }
+  ]
 }
 ```
 
@@ -230,16 +224,19 @@ npm i -g mcp-code-worker
 cw init --preset=codex --allow-write
 ```
 
-2. Persist the provider and optional command override in `config.json`:
+2. Persist the worker entry in `config.json`:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "codex",
-    "model": "gpt-5.4"
-  },
-  "workerClientCommand": "/path/to/codex"
+  "workers": [
+    {
+      "workerId": "codex-local",
+      "provider": "codex",
+      "model": "gpt-5.4",
+      "clientCommand": "/path/to/codex"
+    }
+  ]
 }
 ```
 
@@ -272,12 +269,15 @@ Typical settings:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "openai-compatible",
-    "model": "<model>",
-    "baseURL": "<base-url>",
-    "apiKey": "<secret>"
-  }
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "openai-compatible",
+      "model": "<model>",
+      "baseURL": "<base-url>",
+      "apiKey": "<secret>"
+    }
+  ]
 }
 ```
 
@@ -297,12 +297,15 @@ Typical settings:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "claude-compatible",
-    "model": "<model>",
-    "baseURL": "https://api.anthropic.com",
-    "apiKey": "<secret>"
-  }
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "claude-compatible",
+      "model": "<model>",
+      "baseURL": "https://api.anthropic.com",
+      "apiKey": "<secret>"
+    }
+  ]
 }
 ```
 
@@ -319,12 +322,15 @@ Typical settings:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "litellm",
-    "model": "<model>",
-    "baseURL": "<gateway-base-url>",
-    "apiKey": "<secret>"
-  }
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "litellm",
+      "model": "<model>",
+      "baseURL": "<gateway-base-url>",
+      "apiKey": "<secret>"
+    }
+  ]
 }
 ```
 
@@ -337,18 +343,21 @@ Contract:
 Use a local client provider when a compatible local CLI bridges the model calls.
 
 - `sparkcode` is the default compatible command.
-- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `sparkcode`.
+- Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default local client command differs from `sparkcode`.
 
 Example:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "client",
-    "model": "<model-name>"
-  },
-  "workerClientCommand": "/path/to/compatible-client"
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "client",
+      "model": "<model-name>",
+      "clientCommand": "/path/to/compatible-client"
+    }
+  ]
 }
 ```
 
@@ -361,18 +370,21 @@ Contract:
 Use `opencode` when worker traffic should go through the dedicated OpenCode adapter instead of the generic local client protocol.
 
 - `opencode` uses `opencode run --format json` and parses the event stream directly.
-- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `opencode`.
+- Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default command differs from `opencode`.
 
 Example:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "opencode",
-    "model": "deepseek/deepseek-v4-flash"
-  },
-  "workerClientCommand": "/path/to/opencode"
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "opencode",
+      "model": "deepseek/deepseek-v4-flash",
+      "clientCommand": "/path/to/opencode"
+    }
+  ]
 }
 ```
 
@@ -385,18 +397,21 @@ Contract:
 Use `claudecode` when worker traffic should go through the dedicated Claude Code CLI adapter instead of the generic local client protocol or a hosted Anthropic-compatible API.
 
 - `claudecode` uses `claude --print --output-format json` and reads Claude Code's structured JSON result.
-- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `claude`.
+- Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default command differs from `claude`.
 
 Example:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "claudecode",
-    "model": "sonnet"
-  },
-  "workerClientCommand": "/path/to/claude"
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "claudecode",
+      "model": "sonnet",
+      "clientCommand": "/path/to/claude"
+    }
+  ]
 }
 ```
 
@@ -409,18 +424,21 @@ Contract:
 Use `codex` when worker traffic should go through the dedicated local Codex CLI adapter instead of the generic local client protocol or a hosted OpenAI-compatible API.
 
 - `codex` uses `codex exec --json` and parses the event stream directly.
-- Persist `workerClientCommand` in `config.json` whenever the executable name or path differs from `codex`.
+- Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default command differs from `codex`.
 
 Example:
 
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "codex",
-    "model": "gpt-5.4"
-  },
-  "workerClientCommand": "/path/to/codex"
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "codex",
+      "model": "gpt-5.4",
+      "clientCommand": "/path/to/codex"
+    }
+  ]
 }
 ```
 
@@ -461,7 +479,7 @@ Use these signals to narrow provider issues quickly:
 - `cw doctor --probe` shows whether the resolved worker can answer with the current runtime wiring.
 - `cw worker interview --worker=<workerId> --save` returns provider invocation failures.
 - `cw mcp serve` works but worker-routed tasks fail because the persisted worker config does not match the repo's active CW workspace.
-- A local client provider fails because `workerClientCommand` points to the wrong executable.
+- A local client provider fails because the selected `config.json.workers[]` entry points `clientCommand` at the wrong executable.
 
 If provider invocation fails during interview, do not treat the resulting unavailable outcome as a completed onboarding result. Fix connectivity or auth first, then rerun the interview.
 

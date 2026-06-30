@@ -16,11 +16,14 @@ Persist the non-secret defaults in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "claude-compatible",
-    "model": "claude-3-5-sonnet-latest",
-    "baseURL": "https://api.anthropic.com"
-  }
+  "workers": [
+    {
+      "workerId": "claude-sonnet",
+      "provider": "claude-compatible",
+      "model": "claude-3-5-sonnet-latest",
+      "baseURL": "https://api.anthropic.com"
+    }
+  ]
 }
 ```
 
@@ -33,13 +36,19 @@ Persist the provider key in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "apiKey": "sk-ant-..."
-  }
+  "workers": [
+    {
+      "workerId": "claude-sonnet",
+      "provider": "claude-compatible",
+      "model": "claude-3-5-sonnet-latest",
+      "baseURL": "https://api.anthropic.com",
+      "apiKey": "sk-ant-..."
+    }
+  ]
 }
 ```
 
-`cw` stores the Anthropic-compatible key in the generic `workerModel.apiKey` field even though upstream tooling may document `ANTHROPIC_API_KEY`.
+`cw` stores the Anthropic-compatible key on the selected `config.json.workers[]` entry as `apiKey` even though upstream tooling may document `ANTHROPIC_API_KEY`.
 
 ## Minimal Health Checks
 

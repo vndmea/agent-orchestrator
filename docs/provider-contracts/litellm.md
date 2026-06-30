@@ -17,10 +17,13 @@ Persist the non-secret defaults in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "litellm",
-    "model": "<gateway-model-name>"
-  }
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "litellm",
+      "model": "<gateway-model-name>"
+    }
+  ]
 }
 ```
 
@@ -31,19 +34,22 @@ Persist the LiteLLM gateway settings in `config.json`:
 ```json
 {
   "version": 1,
-  "workerModel": {
-    "provider": "litellm",
-    "model": "<gateway-model-name>",
-    "baseURL": "https://litellm.example.com",
-    "apiKey": "<secret>"
-  }
+  "workers": [
+    {
+      "workerId": "<workerId>",
+      "provider": "litellm",
+      "model": "<gateway-model-name>",
+      "baseURL": "https://litellm.example.com",
+      "apiKey": "<secret>"
+    }
+  ]
 }
 ```
 
 ## Required Config Fields
 
-- `workerModel.baseURL`
-- any gateway-side secret mirrored into `workerModel.apiKey`
+- `baseURL` on the selected `config.json.workers[]` entry
+- any gateway-side secret mirrored into that worker entry's `apiKey`
 
 ## Minimal Health Checks
 
@@ -85,7 +91,7 @@ Benchmark only after interview succeeds.
 ## Common Failure Signatures
 
 - gateway `404`
-  - wrong `workerModel.baseURL`
+  - wrong `baseURL` on the selected `config.json.workers[]` entry
 - gateway model not found
   - wrong LiteLLM routing model name
 - probe fails intermittently
