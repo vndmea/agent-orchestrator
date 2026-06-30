@@ -57,7 +57,11 @@ vi.mock("@mcp-code-worker/models", () => ({
   }))
 }));
 
-import { resolveWorkerProfile } from "@mcp-code-worker/models";
+import {
+  getWorkerProfile,
+  resolveWorkerProfile,
+  saveWorkerProfile
+} from "@mcp-code-worker/models";
 
 vi.mock("./worker-benchmark-workflow.js", () => ({
   applyBenchmarkCapabilityUpdate: vi.fn(() => ({
@@ -203,6 +207,67 @@ describe("worker onboarding workflow", () => {
       resolvedCommand: "C:/Program Files/nodejs/node.exe",
       resolvedPath: "C:/Program Files/nodejs/node.exe",
       source: "configured"
+    });
+  });
+
+  it("preserves benchmark-derived patch capability when interview results are re-saved", async () => {
+    vi.mocked(getWorkerProfile).mockResolvedValueOnce({
+      workerId: "mock:worker",
+      provider: "client",
+      model: "worker-model",
+      status: "qualified",
+      supportedTaskTypes: ["summarization"],
+      unsupportedTaskTypes: ["patch-generation"],
+      score: {
+        instructionFollowing: 1,
+        structuredOutput: 1,
+        reasoning: 1,
+        codeQuality: 1,
+        domainKnowledge: 1,
+        reliability: 1
+      },
+      risks: [],
+      warnings: [],
+      routingPolicy: {
+        maxTaskComplexity: "medium",
+        requiresHostReview: false,
+        allowCodegen: true,
+        allowPatchGeneration: false,
+        allowDomainTasks: true
+      },
+      evaluatedAt: new Date().toISOString(),
+      evaluationSummary: {
+        suiteName: "coding-v1",
+        suiteVersion: "2",
+        sampleCount: 4,
+        passedCount: 3,
+        failedCount: 1,
+        confidenceBand: "medium",
+        knownFailureModes: ["lint was omitted"]
+      }
+    });
+
+    const result = await runWorkerInterviewOnboarding({
+      context: {
+        cwStorageDir: "/tmp/cw",
+        rootDir: "/tmp/repo"
+      } as ExecutionContext,
+      persistProfile: true,
+      workerId: "mock:worker"
+    });
+
+    expect(result.profile.routingPolicy.allowPatchGeneration).toBe(false);
+    expect(result.profile.supportedTaskTypes).not.toContain("patch-generation");
+    expect(result.profile.unsupportedTaskTypes).toContain("patch-generation");
+    expect(result.profile.evaluationSummary?.suiteName).toBe("coding-v1");
+    expect(result.warnings.join("\n")).toContain(
+      "Preserved benchmark-derived patch-generation capability"
+    );
+    expect(vi.mocked(saveWorkerProfile).mock.calls.at(-1)?.[1]).toMatchObject({
+      workerId: "mock:worker",
+      routingPolicy: {
+        allowPatchGeneration: false
+      }
     });
   });
 

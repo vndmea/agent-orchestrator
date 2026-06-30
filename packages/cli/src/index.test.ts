@@ -1582,6 +1582,85 @@ describe("cli parsing", () => {
     });
   });
 
+  it("preserves benchmark-driven patch capability when interview profiles are re-saved", async () => {
+    await withTempCwd(async (rootDir) => {
+      await writeRegistry(rootDir, [createRegistration()]);
+      await writeProfiles(rootDir, [
+        createProfile({
+          workerId: "mock:registered-worker",
+          provider: "mock",
+          model: "registered-worker",
+          supportedTaskTypes: [
+            "summarization",
+            "log-analysis",
+            "json-extraction",
+            "review-lite",
+            "codegen",
+            "test-generation"
+          ],
+          unsupportedTaskTypes: ["patch-generation"],
+          routingPolicy: {
+            maxTaskComplexity: "medium",
+            requiresHostReview: false,
+            allowCodegen: true,
+            allowPatchGeneration: false,
+            allowDomainTasks: true
+          },
+          evaluationSummary: {
+            suiteName: "coding-v1",
+            suiteVersion: "2",
+            sampleCount: 4,
+            passedCount: 3,
+            failedCount: 1,
+            confidenceBand: "medium",
+            knownFailureModes: ["The worker omitted lint from the required checks."]
+          }
+        })
+      ]);
+      const { io, output } = createIo();
+      const cli = buildCli(io);
+
+      await cli.parseAsync([
+        "node",
+        "cw",
+        "worker",
+        "interview",
+        "--worker",
+        "mock:registered-worker",
+        "--save"
+      ]);
+
+      const savedProfiles = JSON.parse(
+        await readFile(getCwWorkspaceFilePath(rootDir, "worker-profiles.json"), "utf8")
+      ) as Array<{
+        evaluationSummary?: { suiteName?: string };
+        routingPolicy?: { allowPatchGeneration?: boolean };
+        supportedTaskTypes?: string[];
+        unsupportedTaskTypes?: string[];
+      }>;
+      const savedProfile = savedProfiles[0];
+      const result = parseLastJson<{
+        profile: {
+          evaluationSummary?: { suiteName?: string };
+          routingPolicy?: { allowPatchGeneration?: boolean };
+          supportedTaskTypes?: string[];
+          unsupportedTaskTypes?: string[];
+        };
+        warnings: string[];
+      }>(output);
+
+      expect(savedProfile?.routingPolicy?.allowPatchGeneration).toBe(false);
+      expect(savedProfile?.supportedTaskTypes).not.toContain("patch-generation");
+      expect(savedProfile?.unsupportedTaskTypes).toContain("patch-generation");
+      expect(savedProfile?.evaluationSummary?.suiteName).toBe("coding-v1");
+      expect(result.profile.routingPolicy?.allowPatchGeneration).toBe(false);
+      expect(result.profile.supportedTaskTypes).not.toContain("patch-generation");
+      expect(result.warnings.join("\n")).toContain(
+        "Preserved benchmark-derived patch-generation capability"
+      );
+    });
+  });
+
   it("reports unified worker readiness and can run an optional live probe", async () => {
     await withTempCwd(async (rootDir) => {
       const workerId = "readiness-worker";

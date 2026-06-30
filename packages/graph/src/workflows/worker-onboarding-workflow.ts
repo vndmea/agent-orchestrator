@@ -8,6 +8,7 @@ import {
   resolveWorkerProfile,
   saveWorkerProfile
 } from "@mcp-code-worker/models";
+import { CODING_V1_SUITE_NAME } from "@mcp-code-worker/core";
 
 import {
   applyBenchmarkCapabilityUpdate,
@@ -68,6 +69,69 @@ const buildProfileWarnings = (
 
 const buildExecutionProfileRefreshAction = (workerId: string): string =>
   `Run 'cw worker interview --worker ${workerId} --save' to refresh the persisted profile before routing new tasks.`;
+
+const hasBenchmarkDerivedPatchCapability = (
+  profile: WorkerCapabilityProfile | null
+): profile is WorkerCapabilityProfile =>
+  profile?.evaluationSummary?.suiteName === CODING_V1_SUITE_NAME;
+
+const preserveBenchmarkDerivedPatchCapability = (input: {
+  existingProfile: WorkerCapabilityProfile | null;
+  nextProfile: WorkerCapabilityProfile;
+}): { profile: WorkerCapabilityProfile; warning?: string } => {
+  const { existingProfile, nextProfile } = input;
+
+  if (
+    !existingProfile ||
+    !hasBenchmarkDerivedPatchCapability(existingProfile) ||
+    existingProfile.workerId !== nextProfile.workerId ||
+    existingProfile.provider !== nextProfile.provider ||
+    existingProfile.model !== nextProfile.model
+  ) {
+    return {
+      profile: nextProfile
+    };
+  }
+
+  const supportedTaskTypes = new Set(nextProfile.supportedTaskTypes);
+  const unsupportedTaskTypes = new Set(nextProfile.unsupportedTaskTypes);
+  const existingAllowsPatchGeneration =
+    existingProfile.routingPolicy.allowPatchGeneration;
+
+  if (existingAllowsPatchGeneration) {
+    supportedTaskTypes.add("patch-generation");
+    unsupportedTaskTypes.delete("patch-generation");
+  } else {
+    supportedTaskTypes.delete("patch-generation");
+    unsupportedTaskTypes.add("patch-generation");
+  }
+
+  const patchCapabilityChanged =
+    existingAllowsPatchGeneration !==
+      nextProfile.routingPolicy.allowPatchGeneration ||
+    supportedTaskTypes.size !== nextProfile.supportedTaskTypes.length ||
+    unsupportedTaskTypes.size !== nextProfile.unsupportedTaskTypes.length;
+
+  return {
+    profile: {
+      ...nextProfile,
+      supportedTaskTypes: Array.from(supportedTaskTypes),
+      unsupportedTaskTypes: Array.from(unsupportedTaskTypes),
+      routingPolicy: {
+        ...nextProfile.routingPolicy,
+        allowPatchGeneration: existingAllowsPatchGeneration
+      },
+      evaluationSummary:
+        existingProfile.evaluationSummary ?? nextProfile.evaluationSummary
+    },
+    ...(patchCapabilityChanged
+      ? {
+          warning:
+            `Preserved benchmark-derived patch-generation capability for ${nextProfile.workerId}. Re-run 'cw worker benchmark --worker ${nextProfile.workerId} --suite coding-v1 --save --update-profile-capabilities' after onboarding if you want to refresh patch routing.`
+        }
+      : {})
+  };
+};
 
 const toUnavailableExecutionProfileSource = (
   source: ResolvedWorkerProfileSource
@@ -206,15 +270,31 @@ export const runWorkerInterviewOnboarding = async (input: {
     workerId: resolvedWorker.workerId,
     modelConfig: resolvedWorker.context.workerModel
   });
+  const existingProfile =
+    input.persistProfile && result.persistenceAdvice.canPersist
+      ? await getWorkerProfile(
+          input.context.rootDir,
+          resolvedWorker.workerId,
+          input.context.cwStorageDir
+        )
+      : null;
+  const persistedProfile = preserveBenchmarkDerivedPatchCapability({
+    existingProfile,
+    nextProfile: result.profile
+  });
   const persistence = await persistInterviewProfile({
     context: input.context,
-    profile: result.profile,
+    profile: persistedProfile.profile,
     persistProfile: input.persistProfile,
     persistenceAdvice: result.persistenceAdvice
   });
 
   return {
     ...result,
+    profile: persistedProfile.profile,
+    warnings: persistedProfile.warning
+      ? [...result.warnings, persistedProfile.warning]
+      : result.warnings,
     localClientRuntime: resolvedWorker.localClientRuntime,
     persistence
   };
