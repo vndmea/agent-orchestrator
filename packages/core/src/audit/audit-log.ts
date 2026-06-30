@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
+import { loadCwConfig } from "../config/cw-config.js";
 import type { ExecutionContext } from "../runtime/execution-context.js";
 import {
   getCwWorkspaceAuditDir,
@@ -99,6 +100,40 @@ const isAuditEvent = (value: unknown): value is AuditEvent =>
   Array.isArray(value.warnings) &&
   Array.isArray(value.errors);
 
+const pruneAuditFiles = async (
+  context: ExecutionContext,
+  currentPath: string
+): Promise<void> => {
+  const config = await loadCwConfig(context.rootDir);
+  const retentionDays = config.config.sessions.retentionDays;
+  const cutoff = Date.now() - retentionDays * 86_400_000;
+  const auditDirectory = getAuditDirectory(context.rootDir, context.cwStorageDir);
+
+  try {
+    const files = await readdir(auditDirectory);
+
+    for (const fileName of files) {
+      if (!fileName.endsWith(".jsonl")) {
+        continue;
+      }
+
+      const filePath = join(auditDirectory, fileName);
+      if (filePath === currentPath) {
+        continue;
+      }
+
+      const details = await stat(filePath);
+      if (details.mtime.getTime() >= cutoff) {
+        continue;
+      }
+
+      await rm(filePath, { force: true });
+    }
+  } catch {
+    // Ignore prune failures to keep audit writing best-effort.
+  }
+};
+
 export const sanitizeAuditMetadata = (
   metadata: Record<string, unknown>
 ): Record<string, unknown> => {
@@ -145,6 +180,7 @@ export async function writeAuditEvent(
       recursive: true
     });
     await appendFile(path, `${JSON.stringify(payload)}\n`, "utf8");
+    await pruneAuditFiles(context, path);
 
     return {
       mode: "execute",

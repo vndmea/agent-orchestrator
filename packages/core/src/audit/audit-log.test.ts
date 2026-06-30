@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -132,5 +132,37 @@ describe("audit log", () => {
     const events = await listAuditEvents(rootDir, 2);
 
     expect(events.map((event) => event.id)).toEqual(["newer", "older"]);
+  });
+
+  it("automatically prunes audit files older than the default retention window", async () => {
+    const rootDir = await createRootDir();
+    const auditDir = getCwWorkspaceAuditDir(rootDir);
+    await mkdir(auditDir, { recursive: true });
+    const oldPath = join(auditDir, "2026-01-01.jsonl");
+    const recentPath = join(auditDir, "2026-06-28.jsonl");
+    await writeFile(oldPath, "", "utf8");
+    await writeFile(recentPath, "", "utf8");
+
+    const oldTime = new Date(Date.now() - 10 * 86_400_000);
+    const recentTime = new Date(Date.now() - 2 * 86_400_000);
+    await utimes(oldPath, oldTime, oldTime);
+    await utimes(recentPath, recentTime, recentTime);
+
+    const context = createExecutionContextFromEnv(undefined, {
+      allowWrite: true,
+      dryRun: false,
+      rootDir
+    });
+    await writeAuditEvent(context, {
+      actor: "tool",
+      action: "fresh-event",
+      mode: "execute",
+      inputSummary: "input",
+      warnings: [],
+      errors: []
+    });
+
+    await expect(stat(oldPath)).rejects.toThrow();
+    await expect(stat(recentPath)).resolves.toBeTruthy();
   });
 });

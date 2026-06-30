@@ -29,8 +29,8 @@ export const CwContextConfigSchema = z.object({
 });
 
 export const CwSessionConfigSchema = z.object({
-  retentionDays: z.number().int().positive().default(30),
-  maxStoredSessions: z.number().int().positive().default(100)
+  retentionDays: z.number().int().positive().default(3),
+  maxStoredSessions: z.number().int().positive().default(5)
 });
 
 const ValidationScriptMappingSchema = z.object({
@@ -72,8 +72,8 @@ export const CwConfigSchema = z.object({
     ]
   }),
   sessions: CwSessionConfigSchema.default({
-    retentionDays: 30,
-    maxStoredSessions: 100
+    retentionDays: 3,
+    maxStoredSessions: 5
   }),
   validation: CwValidationConfigSchema.default({
     autoDiscover: true,

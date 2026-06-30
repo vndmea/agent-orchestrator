@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { AgentError } from "../errors/agent-error.js";
 import type { ExecutionContext } from "../runtime/execution-context.js";
+import { loadCwConfig } from "../config/cw-config.js";
 import {
   getCwWorkspaceRunsDir,
   getCwWorkspaceRunsDirFromStorageDir
@@ -159,6 +160,78 @@ const writeSessionAuditEvent = async (
   );
 };
 
+const toTimestamp = (value: string): number => {
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const buildSessionRetentionGroupKey = (session: TaskSession): string => {
+  const metadata = session.metadata as {
+    inspectPatch?: boolean;
+    proposePatch?: boolean;
+    requestedWorkerId?: string;
+    runFix?: boolean;
+    validate?: {
+      lint?: boolean;
+      test?: boolean;
+      typecheck?: boolean;
+    };
+  };
+  const validate = metadata.validate ?? {};
+
+  return JSON.stringify({
+    goal: session.goal.trim(),
+    scope: session.scope ?? "",
+    workerId: metadata.requestedWorkerId ?? session.workerId ?? "",
+    requireProfile: session.requireProfile,
+    runFix: Boolean(metadata.runFix),
+    proposePatch: Boolean(metadata.proposePatch),
+    inspectPatch: Boolean(metadata.inspectPatch),
+    validate: {
+      typecheck: Boolean(validate.typecheck),
+      lint: Boolean(validate.lint),
+      test: Boolean(validate.test)
+    }
+  });
+};
+
+const pruneStoredTaskSessions = async (
+  context: ExecutionContext,
+  preserveTaskId?: string
+): Promise<void> => {
+  const config = await loadCwConfig(context.rootDir);
+  const maxStoredSessions = config.config.sessions.maxStoredSessions;
+  const scanned = await scanTaskSessions(context.rootDir, context.cwStorageDir);
+  const grouped = new Map<string, TaskSession[]>();
+
+  for (const session of scanned.sessions) {
+    const key = buildSessionRetentionGroupKey(session);
+    const existing = grouped.get(key) ?? [];
+    existing.push(session);
+    grouped.set(key, existing);
+  }
+
+  for (const sessions of grouped.values()) {
+    const sorted = [...sessions].sort(
+      (left, right) => toTimestamp(right.updatedAt) - toTimestamp(left.updatedAt)
+    );
+    const removable = sorted.slice(maxStoredSessions).filter(
+      (session) => session.taskId !== preserveTaskId
+    );
+
+    for (const session of removable) {
+      await rm(
+        getTaskSessionDirectory(
+          context.rootDir,
+          session.taskId,
+          context.cwStorageDir
+        ),
+        { recursive: true, force: true }
+      );
+    }
+  }
+};
+
 const writeManagedFile = async (
   context: ExecutionContext,
   path: string,
@@ -214,6 +287,10 @@ export async function createTaskSession(
     session.taskId,
     { path: result.normalizedPath }
   );
+
+  if (result.mode === "execute") {
+    await pruneStoredTaskSessions(context, session.taskId);
+  }
 
   return {
     mode: result.mode,
@@ -271,6 +348,10 @@ export async function updateTaskSession(
     nextSession.taskId,
     { path: result.normalizedPath, status: nextSession.status }
   );
+
+  if (result.mode === "execute") {
+    await pruneStoredTaskSessions(context, nextSession.taskId);
+  }
 
   Object.assign(session, nextSession);
 
