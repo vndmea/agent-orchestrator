@@ -335,6 +335,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) => ({
     "review-lite",
     "risk-analysis",
     "codegen",
+    "patch-generation",
     "test-generation",
     "validation-fix",
     "doc-generation"
@@ -1680,6 +1681,9 @@ describe("cli parsing", () => {
         createProfile({
           workerId,
           status: "not-qualified",
+          supportedTaskTypes: createProfile().supportedTaskTypes.filter(
+            (taskType) => taskType !== "patch-generation"
+          ),
           routingPolicy: {
             maxTaskComplexity: "medium",
             requiresHostReview: true,
