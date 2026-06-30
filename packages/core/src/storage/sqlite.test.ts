@@ -9,11 +9,24 @@ import { bootstrapSqliteWorkspaceStore } from "./sqlite.js";
 
 const require = createRequire(import.meta.url);
 
+interface DatabaseSyncLike {
+  close: () => void;
+  prepare: (
+    sql: string
+  ) => {
+    get: (key: string) => { value_json: string } | undefined;
+  };
+}
+
+type DatabaseSyncConstructor = new (path: string) => DatabaseSyncLike;
+
 describe("bootstrapSqliteWorkspaceStore", () => {
   it("creates the sqlite workspace store and schema metadata", async () => {
     const cwStorageDir = await mkdtemp(join(tmpdir(), "cw-sqlite-"));
     const result = await bootstrapSqliteWorkspaceStore(cwStorageDir);
-    const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
+    const { DatabaseSync } = require("node:sqlite") as {
+      DatabaseSync: DatabaseSyncConstructor;
+    };
 
     expect(result.path).toContain("data.db");
 
@@ -21,7 +34,7 @@ describe("bootstrapSqliteWorkspaceStore", () => {
     try {
       const row = db
         .prepare("SELECT value_json FROM schema_meta WHERE key = ?")
-        .get("schema_version") as { value_json: string } | undefined;
+        .get("schema_version");
       expect(row).toBeTruthy();
       expect(JSON.parse(row?.value_json ?? "{}")).toEqual({
         version: result.schemaVersion
