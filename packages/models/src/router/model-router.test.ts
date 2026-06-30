@@ -37,6 +37,15 @@ describe("model router", () => {
     expect(router.route("worker").provider.name).toBe("opencode");
   });
 
+  it("routes claudecode workers to the dedicated Claude Code provider", () => {
+    const router = new ModelRouter({
+      provider: "claudecode",
+      model: "sonnet"
+    });
+
+    expect(router.route("worker").provider.name).toBe("claudecode");
+  });
+
   it("rejects removed provider aliases instead of silently routing them", () => {
     const router = new ModelRouter({
       provider: "anthropic",

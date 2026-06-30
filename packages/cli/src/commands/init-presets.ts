@@ -1,6 +1,6 @@
 import type { ModelConfig } from "@mcp-code-worker/core";
 
-export type InitPresetId = "mock" | "deepseek" | "client" | "opencode";
+export type InitPresetId = "mock" | "deepseek" | "client" | "opencode" | "claudecode";
 
 export interface InitPresetDefinition {
   id: InitPresetId;
@@ -36,6 +36,12 @@ export const INIT_PRESETS: InitPresetDefinition[] = [
     label: "OpenCode Adapter",
     workerModel: "deepseek/deepseek-v4-flash",
     workerProvider: "opencode"
+  },
+  {
+    id: "claudecode",
+    label: "Claude Code Adapter",
+    workerModel: "sonnet",
+    workerProvider: "claudecode"
   }
 ];
 
@@ -80,6 +86,15 @@ export const detectInitPreset = (
       workerModel.clientCommand === "opencode")
   ) {
     return "opencode";
+  }
+
+  if (
+    workerModel.provider === "claudecode" &&
+    workerModel.model === "sonnet" &&
+    (!workerModel.clientCommand ||
+      workerModel.clientCommand === "claude")
+  ) {
+    return "claudecode";
   }
 
   return undefined;

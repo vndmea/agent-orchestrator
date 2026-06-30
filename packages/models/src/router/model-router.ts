@@ -8,6 +8,7 @@ import {
 
 import { AiSdkProvider } from "../providers/ai-sdk-provider.js";
 import { AnthropicProvider } from "../providers/anthropic-provider.js";
+import { ClaudeCodeProvider } from "../providers/claudecode-provider.js";
 import { LiteLlmProvider } from "../providers/litellm-provider.js";
 import { LocalClientProvider } from "../providers/local-client-provider.js";
 import { MockModelProvider } from "../providers/mock-provider.js";
@@ -31,6 +32,7 @@ export class ModelRouter {
       ["mock", new MockModelProvider()],
       ["openai-compatible", new AiSdkProvider()],
       ["claude-compatible", anthropicProvider],
+      ["claudecode", new ClaudeCodeProvider()],
       ["client", new LocalClientProvider()],
       ["opencode", new OpencodeProvider()],
       ["litellm", new LiteLlmProvider()]
