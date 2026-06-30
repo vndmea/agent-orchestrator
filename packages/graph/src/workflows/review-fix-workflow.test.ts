@@ -272,6 +272,12 @@ describe("fix-error workflow", () => {
 
     expect(result.rootCauseAnalysis).toContain("supplied error log");
     expect(result.candidateFixPlan.length).toBeGreaterThanOrEqual(3);
+    expect(
+      result.analysisResult.workerResult?.metadata.prompt
+    ).toContain("TypeError: Cannot read properties of undefined");
+    expect(
+      result.planResult.workerResult?.metadata.prompt
+    ).toContain("TypeError: Cannot read properties of undefined");
   });
 
   it("rejects traversal paths for error log files", async () => {

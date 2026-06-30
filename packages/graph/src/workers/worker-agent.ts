@@ -35,6 +35,8 @@ export interface WorkerResultOptions<T> {
 }
 
 interface TaskInputWithRepositoryContext {
+  errorLog?: string;
+  errorLogFile?: string;
   repositoryContext?: RepositoryContextPack;
 }
 
@@ -49,6 +51,12 @@ export const getRepositoryContextFromTask = (
   task: AgentTask
 ): RepositoryContextPack | null =>
   asTaskInputWithRepositoryContext(task.input).repositoryContext ?? null;
+
+export const getErrorLogFromTask = (task: AgentTask): string | null => {
+  const value = asTaskInputWithRepositoryContext(task.input).errorLog;
+
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+};
 
 export const buildRepositoryContextPromptLines = (
   task: AgentTask

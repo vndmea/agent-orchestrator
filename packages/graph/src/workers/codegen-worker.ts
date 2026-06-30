@@ -4,12 +4,14 @@ import type { ExecutionContext, WorkerCapability } from "@mcp-code-worker/core";
 
 import {
   buildRepositoryContextPromptLines,
+  getErrorLogFromTask,
   getRepositoryContextFromTask,
   WorkerAgent,
   type WorkerExecutionInput
 } from "./worker-agent.js";
 
 const inputSchema = z.object({
+  errorLog: z.string().optional(),
   goal: z.string(),
   scope: z.string().optional()
 });
@@ -36,6 +38,7 @@ export class CodegenWorker extends WorkerAgent {
 
   public async execute(input: WorkerExecutionInput) {
     const repositoryContext = getRepositoryContextFromTask(input.task);
+    const errorLog = getErrorLogFromTask(input.task);
     const selectedPaths = repositoryContext?.selectedFiles
       .map((file) => file.path) ?? [];
     const fallbackOutput = {
@@ -66,6 +69,7 @@ export class CodegenWorker extends WorkerAgent {
         "Reference concrete repository file paths from the provided context.",
         `Goal: ${input.task.goal}`,
         input.scope ? `Scope: ${input.scope}` : "Scope: not provided",
+        errorLog ? `Error log:\n${errorLog}` : "Error log: not provided",
         ...buildRepositoryContextPromptLines(input.task)
       ].join("\n"),
       outputSchema,
