@@ -4,6 +4,9 @@
   "private": true,
   "description": "Controlled execution runtime for multi-model engineering workflows via CLI and MCP.",
   "type": "module",
+  "bin": {
+    "cw": "./packages/cli/dist/main.js"
+  },
   "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=22"
@@ -28,6 +31,7 @@
     "example:host-worker-basic": "pnpm --filter @mcp-code-worker/example-host-worker-basic dev"
   },
   "devDependencies": {
+    "@mcp-code-worker/cli": "workspace:*",
     "@changesets/cli": "^2.31.0",
     "@eslint/js": "^9.39.4",
     "@types/node": "^26.0.0",
