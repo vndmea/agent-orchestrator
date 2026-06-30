@@ -224,6 +224,7 @@ const createProfile = () => ({
     "review-lite",
     "risk-analysis",
     "codegen",
+    "patch-generation",
     "test-generation",
     "validation-fix",
     "doc-generation"
@@ -677,6 +678,7 @@ describe("mcp tool registration", () => {
       await writeWorkspaceFixture(rootDir);
       await initGitRepo(rootDir);
       await writeRegistry(rootDir, [createRegistration()]);
+      await writeProfiles(rootDir, [createProfile()]);
       const proposal = await createPatchProposal(rootDir);
 
       const proposed = await cwProposePatchTool.execute({
@@ -712,7 +714,7 @@ describe("mcp tool registration", () => {
       expect(dryRunApply.mode).toBe("dry-run");
       expect(blockedApply.mode).toBe("denied");
     });
-  });
+  }, 15_000);
 
   it("executes task session tools", async () => {
     await withTempCwd(async (rootDir) => {

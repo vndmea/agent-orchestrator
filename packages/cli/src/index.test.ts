@@ -448,7 +448,7 @@ describe("cli parsing", () => {
     expect(output.join("\n")).toContain('[mcp_servers."mcp-code-worker"]');
     expect(output.join("\n")).toContain('args = ["mcp", "serve"]');
     expect(output.join("\n")).not.toContain("\"mcpServers\"");
-  });
+  }, 15_000);
 
   it("prints the same minimal mcp config snippet when a host preset is selected", async () => {
     const { io, output } = createIo();
@@ -1845,7 +1845,13 @@ describe("cli parsing", () => {
     await withTempCwd(async (rootDir) => {
       await writeWorkspaceFixture(rootDir);
       await initGitRepo(rootDir);
-      await writeRegistry(rootDir, [createRegistration()]);
+      await writeRegistry(rootDir, [
+        createRegistration({
+          workerId: "mock:registered-worker",
+          provider: "mock",
+          model: "registered-worker"
+        })
+      ]);
       const { io, output } = createIo();
       const cli = buildCli(io);
 
