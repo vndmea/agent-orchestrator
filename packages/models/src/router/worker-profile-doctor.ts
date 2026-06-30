@@ -1,5 +1,6 @@
 import type { DoctorCheck, ExecutionContext } from "@mcp-code-worker/core";
 
+import { readLocalOpencodeConfigSummary } from "../providers/opencode-config.js";
 import { resolveWorkerProfile } from "./worker-profile-resolution.js";
 import { readWorkerRegistry } from "./worker-registry-store.js";
 import { readPersistedWorkerProfiles } from "./worker-profile-store.js";
@@ -96,6 +97,10 @@ export const createWorkerProfileDoctorChecks = async (
     for (const registration of registry.workers.filter(
       (item) => item.enabled
     )) {
+      const opencodeConfig =
+        registration.provider === "opencode"
+          ? await readLocalOpencodeConfigSummary()
+          : null;
       const registeredResolution = await resolveWorkerProfile({
         context,
         workerId: registration.workerId,
@@ -113,9 +118,38 @@ export const createWorkerProfileDoctorChecks = async (
         metadata: {
           source: registeredResolution.source,
           workerId: registration.workerId,
-          shouldReinterview: registeredResolution.freshness.shouldReinterview
+          shouldReinterview: registeredResolution.freshness.shouldReinterview,
+          ...(opencodeConfig
+            ? {
+                localOpencodeConfigPath: opencodeConfig.path,
+                localOpencodeDefaultModel: opencodeConfig.model
+              }
+            : {})
         }
       });
+
+      if (
+        registration.provider === "opencode" &&
+        opencodeConfig?.exists &&
+        opencodeConfig.model &&
+        opencodeConfig.model !== registration.model
+      ) {
+        checks.push({
+          name: "registered-worker-profile",
+          status: "warning",
+          message:
+            `Registered worker ${registration.workerId} is pinned to ${registration.model}, ` +
+            `but local OpenCode defaults to ${opencodeConfig.model}. cw will keep using the registry model until you re-register or update workers.json.`,
+          metadata: {
+            workerId: registration.workerId,
+            registeredModel: registration.model,
+            localOpencodeConfigPath: opencodeConfig.path,
+            localOpencodeDefaultModel: opencodeConfig.model,
+            shouldReinterview: true,
+            source: "opencode-model-mismatch"
+          }
+        });
+      }
     }
   }
   return checks;

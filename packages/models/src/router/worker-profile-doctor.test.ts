@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createExecutionContextFromEnv } from "@mcp-code-worker/core";
 import {
@@ -48,6 +48,10 @@ const createRegistration = (overrides: Record<string, unknown> = {}) => {
     ...overrides
   };
 };
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("worker profile doctor checks", () => {
   it("warns when the worker registry is missing", async () => {
@@ -163,5 +167,54 @@ describe("worker profile doctor checks", () => {
       )
     ).toBe(true);
   });
-});
 
+  it("warns when an opencode registration disagrees with the local opencode default model", async () => {
+    const rootDir = await createRootDir();
+    const configHome = await mkdtemp(join(tmpdir(), "cw-opencode-config-"));
+    const opencodeConfigPath = join(configHome, "opencode", "opencode.json");
+    await mkdir(dirname(opencodeConfigPath), { recursive: true });
+    await writeFile(
+      opencodeConfigPath,
+      JSON.stringify(
+        {
+          model: "deepseek/deepseek-v4-flash"
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+    vi.stubEnv("XDG_CONFIG_HOME", configHome);
+
+    await writeRegistry(rootDir, {
+      version: 1,
+      workers: [
+        createRegistration({
+          workerId: "opencode-local",
+          provider: "opencode",
+          model: "sudocode/gpt-5.4"
+        })
+      ]
+    });
+    const context = createExecutionContextFromEnv(undefined, {
+      rootDir,
+      workerModel: {
+        provider: "opencode",
+        model: "sudocode/gpt-5.4"
+      }
+    });
+
+    const checks = await createWorkerProfileDoctorChecks(context);
+
+    expect(
+      checks.some(
+        (check) =>
+          check.name === "registered-worker-profile" &&
+          check.metadata?.source === "opencode-model-mismatch" &&
+          check.metadata?.registeredModel === "sudocode/gpt-5.4" &&
+          check.metadata?.localOpencodeDefaultModel ===
+            "deepseek/deepseek-v4-flash"
+      )
+    ).toBe(true);
+  });
+});
