@@ -139,7 +139,7 @@ export const createWorkerProfileDoctorChecks = async (
           status: "warning",
           message:
             `Registered worker ${registration.workerId} is pinned to ${registration.model}, ` +
-            `but local OpenCode defaults to ${opencodeConfig.model}. cw will keep using the registry model until you re-register or update workers.json.`,
+            `but local OpenCode defaults to ${opencodeConfig.model}. cw will keep using the registry model until you re-register or update config.json.`,
           metadata: {
             workerId: registration.workerId,
             registeredModel: registration.model,

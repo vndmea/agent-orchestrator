@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 import {
   bootstrapSqliteWorkspaceStore,
+  getCwWorkspaceDir,
   openSqliteWorkspaceStore,
   WorkerBenchmarkResultSchema,
   qualifiesPatchGenerationCapability,
@@ -23,7 +24,12 @@ export const getWorkerBenchmarkStorePath = (
   rootDir: string,
   cwStorageDir?: string
 ): string =>
-  resolve(cwStorageDir ?? rootDir, "data.db#worker_benchmarks");
+  resolve(cwStorageDir ?? getCwWorkspaceDir(rootDir), "data.db#worker_benchmarks");
+
+const resolveStorageDir = (
+  rootDir: string,
+  cwStorageDir?: string
+): string => cwStorageDir ?? getCwWorkspaceDir(rootDir);
 
 const mapBenchmarkRecord = (row: {
   benchmark_json: string;
@@ -48,13 +54,10 @@ export const listWorkerBenchmarks = async (
   workerId: string,
   cwStorageDir?: string
 ): Promise<WorkerBenchmarkRecord[]> => {
-  if (!cwStorageDir) {
-    void rootDir;
-    return [];
-  }
+  const storageDir = resolveStorageDir(rootDir, cwStorageDir);
 
-  await bootstrapSqliteWorkspaceStore(cwStorageDir);
-  const db = await openSqliteWorkspaceStore(cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
     const rows = db.prepare(
       `SELECT id, worker_id, suite_name, benchmark_json, patch_generation_qualified, created_at, updated_at
@@ -83,12 +86,10 @@ export const getLatestWorkerBenchmark = async (input: {
   suiteName: string;
   workerId: string;
 }): Promise<WorkerBenchmarkRecord | null> => {
-  if (!input.cwStorageDir) {
-    return null;
-  }
+  const storageDir = resolveStorageDir(input.rootDir, input.cwStorageDir);
 
-  await bootstrapSqliteWorkspaceStore(input.cwStorageDir);
-  const db = await openSqliteWorkspaceStore(input.cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
     const row = db.prepare(
       `SELECT id, worker_id, suite_name, benchmark_json, patch_generation_qualified, created_at, updated_at
@@ -135,8 +136,9 @@ export const saveWorkerBenchmark = async (
     };
   }
 
-  await bootstrapSqliteWorkspaceStore(context.cwStorageDir);
-  const db = await openSqliteWorkspaceStore(context.cwStorageDir);
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
     const now = new Date().toISOString();
     db.prepare(

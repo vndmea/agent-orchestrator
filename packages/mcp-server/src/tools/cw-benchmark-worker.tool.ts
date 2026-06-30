@@ -4,7 +4,10 @@ import {
   runWorkerBenchmarkOnboarding
 } from "@mcp-code-worker/graph";
 
-import { resolveToolContext } from "./tool-runtime.js";
+import {
+  createAllowWriteCliOverrides,
+  resolveToolContext
+} from "./tool-runtime.js";
 import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
@@ -37,7 +40,9 @@ export const cwBenchmarkWorkerTool: CwToolDefinition<
       throw new Error("updateProfileCapabilities requires persistArtifact.");
     }
 
-    const context = await resolveToolContext();
+    const context = await resolveToolContext({
+      cliOverrides: createAllowWriteCliOverrides(args.persistArtifact ?? false)
+    });
     const result = await runWorkerBenchmarkOnboarding({
       baseURL: args.baseURL,
       context,

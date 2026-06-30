@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 import {
   bootstrapSqliteWorkspaceStore,
+  getCwWorkspaceDir,
   openSqliteWorkspaceStore,
   WorkerCapabilityProfileSchema
 } from "@mcp-code-worker/core";
@@ -22,7 +23,12 @@ export const getWorkerProfileStorePath = (
   rootDir: string,
   cwStorageDir?: string
 ): string =>
-  resolve(cwStorageDir ?? rootDir, "data.db#worker_profiles");
+  resolve(cwStorageDir ?? getCwWorkspaceDir(rootDir), "data.db#worker_profiles");
+
+const resolveStorageDir = (
+  rootDir: string,
+  cwStorageDir?: string
+): string => cwStorageDir ?? getCwWorkspaceDir(rootDir);
 
 const getInMemoryWorkspaceProfiles = (
   rootDir: string,
@@ -40,16 +46,6 @@ const getInMemoryWorkspaceProfiles = (
   return created;
 };
 
-const safeParseProfiles = (value: string): WorkerCapabilityProfile[] => {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    const schemaResult = WorkerCapabilityProfileSchema.array().safeParse(parsed);
-    return schemaResult.success ? schemaResult.data : [];
-  } catch {
-    return [];
-  }
-};
-
 export const listPersistedWorkerProfiles = async (
   rootDir: string,
   cwStorageDir?: string
@@ -63,16 +59,10 @@ export const readPersistedWorkerProfiles = async (
   cwStorageDir?: string
 ): Promise<PersistedWorkerProfilesReadResult> => {
   const path = getWorkerProfileStorePath(rootDir, cwStorageDir);
-  if (!cwStorageDir) {
-    return {
-      exists: false,
-      path,
-      profiles: []
-    };
-  }
+  const storageDir = resolveStorageDir(rootDir, cwStorageDir);
 
-  await bootstrapSqliteWorkspaceStore(cwStorageDir);
-  const db = await openSqliteWorkspaceStore(cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
     const rows = db.prepare("SELECT profile_json FROM worker_profiles").all() as Array<{
       profile_json: string;
@@ -157,8 +147,9 @@ export const saveWorkerProfile = async (
     };
   }
 
-  await bootstrapSqliteWorkspaceStore(context.cwStorageDir);
-  const db = await openSqliteWorkspaceStore(context.cwStorageDir);
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
     const now = new Date().toISOString();
     db.prepare(

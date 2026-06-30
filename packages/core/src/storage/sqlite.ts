@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname } from "node:path";
 
 import { getCwWorkspaceDatabasePathFromStorageDir } from "./cw-paths.js";
@@ -13,14 +14,31 @@ export interface BootstrapSqliteWorkspaceStoreResult {
   schemaVersion: number;
 }
 
-const loadDatabaseSync = async (): Promise<
-  typeof import("node:sqlite")["DatabaseSync"]
-> => (await import("node:sqlite")).DatabaseSync;
+interface SqliteStatement {
+  all: (...args: unknown[]) => unknown[];
+  get: (...args: unknown[]) => unknown;
+  run: (...args: unknown[]) => unknown;
+}
+
+export interface SqliteDatabase {
+  close: () => void;
+  exec: (sql: string) => void;
+  prepare: (sql: string) => SqliteStatement;
+}
+
+type DatabaseSyncConstructor = new (path: string) => SqliteDatabase;
+
+const require = createRequire(import.meta.url);
+
+const loadDatabaseSync = (): DatabaseSyncConstructor => {
+  return (require("node:sqlite") as { DatabaseSync: DatabaseSyncConstructor })
+    .DatabaseSync;
+};
 
 export const openSqliteWorkspaceStore = async (
   cwStorageDir: string
-): Promise<InstanceType<typeof import("node:sqlite")["DatabaseSync"]>> => {
-  const DatabaseSync = await loadDatabaseSync();
+): Promise<SqliteDatabase> => {
+  const DatabaseSync = await Promise.resolve(loadDatabaseSync());
   return new DatabaseSync(getCwWorkspaceDatabasePathFromStorageDir(cwStorageDir));
 };
 
@@ -29,7 +47,7 @@ export const bootstrapSqliteWorkspaceStore = async (
 ): Promise<BootstrapSqliteWorkspaceStoreResult> => {
   const path = getCwWorkspaceDatabasePathFromStorageDir(cwStorageDir);
   await mkdir(dirname(path), { recursive: true });
-  const DatabaseSync = await loadDatabaseSync();
+  const DatabaseSync = loadDatabaseSync();
   const db = new DatabaseSync(path);
 
   try {

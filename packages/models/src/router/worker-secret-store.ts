@@ -1,5 +1,6 @@
 import {
   bootstrapSqliteWorkspaceStore,
+  getCwWorkspaceDir,
   openSqliteWorkspaceStore,
   type ExecutionContext
 } from "@mcp-code-worker/core";
@@ -12,14 +13,19 @@ const readSecretRow = (
     .prepare("SELECT api_key FROM worker_secrets WHERE worker_id = ?")
     .get(workerId) as { api_key: string } | undefined;
 
+const resolveStorageDir = (
+  rootDir: string,
+  cwStorageDir?: string
+): string => cwStorageDir ?? getCwWorkspaceDir(rootDir);
+
 export const getWorkerSecret = async (
   rootDir: string,
   workerId: string,
-  cwStorageDir: string
+  cwStorageDir?: string
 ): Promise<string | undefined> => {
-  void rootDir;
-  await bootstrapSqliteWorkspaceStore(cwStorageDir);
-  const db = await openSqliteWorkspaceStore(cwStorageDir);
+  const storageDir = resolveStorageDir(rootDir, cwStorageDir);
+  await bootstrapSqliteWorkspaceStore(storageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
 
   try {
     return readSecretRow(db, workerId)?.api_key;
@@ -38,7 +44,8 @@ export const saveWorkerSecret = async (
     "secret-write",
     explicitAllowWrite
   );
-  const { path } = await bootstrapSqliteWorkspaceStore(context.cwStorageDir);
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  const { path } = await bootstrapSqliteWorkspaceStore(storageDir);
 
   if (evaluation.mode !== "execute") {
     return {
@@ -47,7 +54,7 @@ export const saveWorkerSecret = async (
     };
   }
 
-  const db = await openSqliteWorkspaceStore(context.cwStorageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
   try {
     const now = new Date().toISOString();
     db.prepare(

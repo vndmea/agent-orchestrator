@@ -4,12 +4,12 @@ import { dirname, isAbsolute, relative } from "node:path";
 import {
   AgentError,
   type AvailabilityStatus,
+  bootstrapSqliteWorkspaceStore,
   CwConfigSchema,
   type CwWorkerConfig,
   createExecutionContextWithWorkerModel,
   getCwConfigPath,
-  getCwWorkspaceAuditDirFromStorageDir,
-  getCwWorkspaceRunsDirFromStorageDir,
+  getCwWorkspaceDatabasePathFromStorageDir,
   loadCwConfig,
   normalizeCommandInput,
   resolveExecutionContext,
@@ -30,6 +30,7 @@ import {
   inspectLocalClientCommand,
   readPersistedWorkerProfiles,
   readWorkerRegistry,
+  saveWorkerSecret,
   saveWorkerRegistration
 } from "@mcp-code-worker/models";
 
@@ -593,6 +594,27 @@ const runSetupWorkerPlan = async (input: {
     });
   }
 
+  if (input.plan.apiKey) {
+    const secretResult = await saveWorkerSecret(
+      input.context,
+      input.plan.workerId,
+      input.plan.apiKey,
+      true
+    );
+    steps.push({
+      id: buildWorkerStepId("persist-worker-secret", input.plan),
+      status: secretResult.mode === "execute" ? "completed" : "dry-run",
+      path: relativePath(input.context.rootDir, secretResult.path),
+      summary:
+        secretResult.mode === "execute"
+          ? `Persisted API key for worker ${input.plan.workerId} in SQLite.`
+          : `Would persist API key for worker ${input.plan.workerId} in SQLite.`,
+      details: {
+        workerId: input.plan.workerId
+      }
+    });
+  }
+
   if (input.plan.probeWorker) {
     if (!registrationAvailable) {
       summary.probeStatus = "unavailable";
@@ -855,8 +877,7 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
     context.cwStorageDir
   );
   const cwDir = context.cwStorageDir;
-  const auditDir = getCwWorkspaceAuditDirFromStorageDir(cwDir);
-  const runsDir = getCwWorkspaceRunsDirFromStorageDir(cwDir);
+  const databasePath = getCwWorkspaceDatabasePathFromStorageDir(cwDir);
   const configPath = getCwConfigPath(context.rootDir);
   const registryPath = getWorkerRegistryPath(
     context.rootDir,
@@ -868,8 +889,9 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
   );
 
   const cwDirResult = await ensureDirectory(context, cwDir, normalizedOptions.allowWrite);
-  const auditDirResult = await ensureDirectory(context, auditDir, normalizedOptions.allowWrite);
-  const runsDirResult = await ensureDirectory(context, runsDir, normalizedOptions.allowWrite);
+  const bootstrappedStore = normalizedOptions.allowWrite
+    ? await bootstrapSqliteWorkspaceStore(cwDir)
+    : null;
 
   steps.push({
     id: "workspace-scaffold",
@@ -879,8 +901,10 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
       : "Would ensure the user-scoped cw workspace has config.json and data.db ready.",
     details: {
       cwDir: relativePath(context.rootDir, cwDirResult.path),
-      auditDir: relativePath(context.rootDir, auditDirResult.path),
-      runsDir: relativePath(context.rootDir, runsDirResult.path)
+      databasePath: relativePath(
+        context.rootDir,
+        bootstrappedStore?.path ?? databasePath
+      )
     }
   });
 
@@ -921,26 +945,16 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
       }
     });
   } else {
-    const registryWrite = await writeManagedJson(
-      context,
-      registryPath,
-      {
-        version: 1,
-        workers: registryState.workers
-      },
-      normalizedOptions.allowWrite,
-      "setup-write-worker-registry"
-    );
     steps.push({
       id: "worker-registry-store",
-      status: registryWrite.mode === "execute" ? "completed" : "dry-run",
-      path: relativePath(context.rootDir, registryWrite.path),
+      status: normalizedOptions.allowWrite ? "completed" : "dry-run",
+      path: relativePath(context.rootDir, registryPath),
       summary:
         registryState.exists
-          ? "Worker registry store is ready."
-          : registryWrite.mode === "execute"
-            ? "Created an empty worker registry store."
-            : "Would create an empty worker registry store.",
+          ? "Worker registry is ready in config.json."
+          : normalizedOptions.allowWrite
+            ? "Worker registry will be created inside config.json."
+            : "Would create the worker registry inside config.json.",
       details: {
         workerCount: registryState.workers.length
       }
@@ -960,23 +974,19 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
       }
     });
   } else {
-    const profileWrite = await writeManagedJson(
-      context,
-      profilesPath,
-      profileState.profiles,
-      normalizedOptions.allowWrite,
-      "setup-write-worker-profiles"
-    );
+    if (normalizedOptions.allowWrite) {
+      await bootstrapSqliteWorkspaceStore(cwDir);
+    }
     steps.push({
       id: "worker-profile-store",
-      status: profileWrite.mode === "execute" ? "completed" : "dry-run",
-      path: relativePath(context.rootDir, profileWrite.path),
+      status: normalizedOptions.allowWrite ? "completed" : "dry-run",
+      path: relativePath(context.rootDir, profilesPath),
       summary:
         profileState.exists
-          ? "Worker profile store is ready."
-          : profileWrite.mode === "execute"
-            ? "Created an empty worker profile store."
-            : "Would create an empty worker profile store.",
+          ? "Worker profile store is ready in data.db."
+          : normalizedOptions.allowWrite
+            ? "Created an empty worker profile store in data.db."
+            : "Would create an empty worker profile store in data.db.",
       details: {
         profileCount: profileState.profiles.length
       }

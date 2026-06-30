@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { runWorkerInterviewOnboarding } from "@mcp-code-worker/graph";
 
-import { resolveToolContext } from "./tool-runtime.js";
+import {
+  createAllowWriteCliOverrides,
+  resolveToolContext
+} from "./tool-runtime.js";
 import type { CwToolDefinition } from "./tool-types.js";
 
 const inputSchema = z.object({
@@ -20,7 +23,9 @@ type WorkerInterviewToolResult = Awaited<
 const executeWorkerInterview = async (
   args: z.infer<typeof inputSchema>
 ): Promise<WorkerInterviewToolResult> => {
-  const context = await resolveToolContext();
+  const context = await resolveToolContext({
+    cliOverrides: createAllowWriteCliOverrides(args.persistProfile ?? false)
+  });
   return runWorkerInterviewOnboarding({
     baseURL: args.baseURL,
     context,

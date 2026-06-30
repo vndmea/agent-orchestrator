@@ -8,7 +8,6 @@ import {
   getCwWorkspaceAuditDirFromStorageDir,
   getCwWorkspaceRunsDir,
   getCwWorkspaceRunsDirFromStorageDir,
-  loadCwConfig,
   writeAuditEvent
 } from "@mcp-code-worker/core";
 
@@ -198,7 +197,6 @@ const registerCleanupSubcommand = (
           allowWrite: options.allowWrite,
           writeMode: "require-flag"
         });
-        const config = await loadCwConfig(context.rootDir);
         const retentionDays = Number.parseInt(
           options.olderThanDays ?? "30",
           10
