@@ -104,8 +104,7 @@ const pruneAuditFiles = async (
   context: ExecutionContext,
   currentPath: string
 ): Promise<void> => {
-  const config = await loadCwConfig(context.rootDir);
-  const retentionDays = config.config.sessions.retentionDays;
+  const retentionDays = 30;
   const cutoff = Date.now() - retentionDays * 86_400_000;
   const auditDirectory = getAuditDirectory(context.rootDir, context.cwStorageDir);
 

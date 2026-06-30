@@ -27,21 +27,24 @@ describe("cw config", () => {
     const result = await loadCwConfig(rootDir);
 
     expect(result.exists).toBe(false);
-    expect(result.config.version).toBe(1);
+    expect(result.config.version).toBe(2);
     expect(result.config.safety.dryRun).toBe(true);
   });
 
   it("loads valid config and resolves persisted per-worker model settings", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 1,
+      version: 2,
       workers: [
         {
           workerId: "deepseek-flash",
           provider: "litellm",
           model: "qwen3-coder-mini",
-          apiKey: "persisted-secret",
-          clientCommand: "custom-client"
+          clientCommand: "custom-client",
+          enabled: true,
+          tags: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
       ],
       safety: {
@@ -58,7 +61,6 @@ describe("cw config", () => {
     expect(result.exists).toBe(true);
     expect(result.error).toBeUndefined();
     expect(worker?.provider).toBe("litellm");
-    expect(worker?.apiKey).toBe("persisted-secret");
     expect(worker?.clientCommand).toBe("custom-client");
     expect(context.workerModel.provider).toBe("mock");
     expect(context.allowWrite).toBe(true);
@@ -71,7 +73,7 @@ describe("cw config", () => {
     const linkRootDir = await mkdtemp(join(tmpdir(), "cw-config-link-"));
     const aliasRootDir = join(linkRootDir, "workspace");
     await writeConfig(rootDir, {
-      version: 1,
+      version: 2,
       safety: {
         dryRun: false,
         allowWrite: true,
@@ -97,7 +99,7 @@ describe("cw config", () => {
   it("returns clear errors for invalid config and falls back to defaults", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 1,
+      version: 2,
       workers: [
         {
           workerId: "bad-worker",
@@ -118,14 +120,17 @@ describe("cw config", () => {
   it("applies precedence cli overrides > defaults for active runtime settings", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 1,
+      version: 2,
       workers: [
         {
           workerId: "config-worker",
           provider: "litellm",
           model: "config-worker",
-          apiKey: "config-secret",
-          clientCommand: "config-client"
+          clientCommand: "config-client",
+          enabled: true,
+          tags: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
       ],
       safety: {
@@ -203,7 +208,7 @@ describe("cw config", () => {
   it("resolves context selection settings from config", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 1,
+      version: 2,
       context: {
         ignoredPaths: ["generated", "tmp/cache"],
         strictFiles: true
@@ -218,14 +223,19 @@ describe("cw config", () => {
 
   it("resolves per-worker client command mappings from config", async () => {
     const rootDir = await createWorkspace();
+    const now = new Date().toISOString();
     await writeConfig(rootDir, {
-      version: 1,
+      version: 2,
       workers: [
         {
           workerId: "opencode-local",
           provider: "opencode",
           model: "deepseek/deepseek-v4-flash",
-          clientCommand: "C:/tools/opencode.exe"
+          clientCommand: "C:/tools/opencode.exe",
+          enabled: true,
+          tags: [],
+          createdAt: now,
+          updatedAt: now
         }
       ]
     });

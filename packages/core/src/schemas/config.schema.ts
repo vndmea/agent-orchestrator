@@ -10,9 +10,20 @@ export const CwModelConfigSchema = z.object({
   maxTokens: z.number().int().positive().optional()
 });
 
-export const CwWorkerModelConfigSchema = CwModelConfigSchema.extend({
-  workerId: z.string().min(1)
-});
+export const CwWorkerConfigSchema = z.object({
+  workerId: z.string().min(1),
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  baseURL: z.string().url().optional(),
+  clientCommand: z.string().min(1).optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().positive().optional(),
+  enabled: z.boolean().default(true),
+  tags: z.array(z.string()).default([]),
+  notes: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime()
+}).strict();
 
 export const CwSafetyConfigSchema = z.object({
   dryRun: z.boolean().default(true),
@@ -33,9 +44,18 @@ export const CwContextConfigSchema = z.object({
   ])
 });
 
-export const CwSessionConfigSchema = z.object({
-  retentionDays: z.number().int().positive().default(3),
-  maxStoredSessions: z.number().int().positive().default(5)
+export const CwStorageConfigSchema = z.object({
+  engine: z.literal("sqlite").default("sqlite"),
+  runs: z.object({
+    maxPerKind: z.number().int().min(1).max(5).default(5)
+  }).default({
+    maxPerKind: 5
+  }),
+  audit: z.object({
+    maxPerType: z.number().int().min(1).max(5).default(5)
+  }).default({
+    maxPerType: 5
+  })
 });
 
 const ValidationScriptMappingSchema = z.object({
@@ -56,8 +76,8 @@ export const CwValidationConfigSchema = z.object({
 });
 
 export const CwConfigSchema = z.object({
-  version: z.literal(1),
-  workers: z.array(CwWorkerModelConfigSchema).optional(),
+  version: z.literal(2),
+  workers: z.array(CwWorkerConfigSchema).default([]),
   safety: CwSafetyConfigSchema.default({
     dryRun: true,
     allowWrite: false,
@@ -75,9 +95,14 @@ export const CwConfigSchema = z.object({
       ".next"
     ]
   }),
-  sessions: CwSessionConfigSchema.default({
-    retentionDays: 3,
-    maxStoredSessions: 5
+  storage: CwStorageConfigSchema.default({
+    engine: "sqlite",
+    runs: {
+      maxPerKind: 5
+    },
+    audit: {
+      maxPerType: 5
+    }
   }),
   validation: CwValidationConfigSchema.default({
     autoDiscover: true,
@@ -91,5 +116,5 @@ export const CwConfigSchema = z.object({
 });
 
 export type CwModelConfig = z.infer<typeof CwModelConfigSchema>;
-export type CwWorkerModelConfig = z.infer<typeof CwWorkerModelConfigSchema>;
+export type CwWorkerConfig = z.infer<typeof CwWorkerConfigSchema>;
 export type CwConfig = z.infer<typeof CwConfigSchema>;

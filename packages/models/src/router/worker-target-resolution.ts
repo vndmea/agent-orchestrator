@@ -8,6 +8,7 @@ import {
 } from "@mcp-code-worker/core";
 
 import { getWorkerRegistration } from "./worker-registry-store.js";
+import { getWorkerSecret } from "./worker-secret-store.js";
 
 export interface ResolveWorkerTargetInput {
   baseURL?: string;
@@ -61,7 +62,7 @@ const assertApiKeyIfNeeded = (
   if (requiresApiKey(modelConfig) && !modelConfig.apiKey) {
     throw new AgentError(
       "WORKER_API_KEY_MISSING",
-      `Worker ${workerId ?? "the selected worker"} requires an apiKey entry in config.json workers[] before it can run.`,
+      `Worker ${workerId ?? "the selected worker"} requires a persisted API key before it can run.`,
       workerId ? { workerId } : undefined
     );
   }
@@ -119,9 +120,17 @@ export const resolveWorkerTarget = async (
     configResult.config,
     chosenWorkerId
   );
+  const apiKey = await getWorkerSecret(
+    input.context.rootDir,
+    chosenWorkerId,
+    input.context.cwStorageDir
+  );
 
   const modelConfig = mergeTargetModelConfig(
-    modelConfigFromRegistration(registration, input.context, configuredModel),
+    {
+      ...modelConfigFromRegistration(registration, input.context, configuredModel),
+      apiKey
+    },
     input
   );
   assertApiKeyIfNeeded(chosenWorkerId, modelConfig);

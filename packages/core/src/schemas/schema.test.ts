@@ -353,22 +353,26 @@ describe("core schemas", () => {
 
     expect(() =>
       CwConfigSchema.parse({
-        version: 1,
+        version: 2,
         safety: {},
         context: {},
-        sessions: {}
+        storage: {}
       })
     ).not.toThrow();
 
     expect(() =>
       CwConfigSchema.parse({
-        version: 1,
+        version: 2,
         workers: [
           {
             workerId: "litellm-qwen",
             provider: "litellm",
             model: "qwen3-coder",
-            baseURL: "not-a-url"
+            baseURL: "not-a-url",
+            enabled: true,
+            tags: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           }
         ]
       })

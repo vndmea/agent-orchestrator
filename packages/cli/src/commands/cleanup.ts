@@ -201,13 +201,13 @@ const registerCleanupSubcommand = (
         });
         const config = await loadCwConfig(context.rootDir);
         const retentionDays = Number.parseInt(
-          options.olderThanDays ?? `${config.config.sessions.retentionDays}`,
+          options.olderThanDays ?? "30",
           10
         );
         const cleanupTargets = await listCleanupTargets(
           context.rootDir,
           target,
-          Number.isNaN(retentionDays) ? config.config.sessions.retentionDays : retentionDays,
+          Number.isNaN(retentionDays) ? 30 : retentionDays,
           context.cwStorageDir
         );
         const deletion = await deleteTargets(cleanupTargets.targets, options.allowWrite);

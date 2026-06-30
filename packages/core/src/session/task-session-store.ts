@@ -200,7 +200,7 @@ const pruneStoredTaskSessions = async (
   preserveTaskId?: string
 ): Promise<void> => {
   const config = await loadCwConfig(context.rootDir);
-  const maxStoredSessions = config.config.sessions.maxStoredSessions;
+  const maxStoredSessions = config.config.storage.runs.maxPerKind;
   const scanned = await scanTaskSessions(context.rootDir, context.cwStorageDir);
   const grouped = new Map<string, TaskSession[]>();
 

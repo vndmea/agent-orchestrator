@@ -3,10 +3,9 @@ import { dirname } from "node:path";
 
 import {
   AgentError,
-  getCwWorkspaceFilePath,
-  getCwWorkspaceFilePathFromStorageDir,
+  CwConfigSchema,
+  getCwConfigPath,
   WorkerRegistrationSchema,
-  WorkerRegistrySchema,
   writeAuditEvent,
   type ExecutionContext,
   type WorkerRegistration
@@ -23,9 +22,7 @@ export const getWorkerRegistryPath = (
   rootDir: string,
   cwStorageDir?: string
 ): string =>
-  cwStorageDir
-    ? getCwWorkspaceFilePathFromStorageDir(cwStorageDir, "workers.json")
-    : getCwWorkspaceFilePath(rootDir, "workers.json");
+  (void cwStorageDir, getCwConfigPath(rootDir));
 
 export const readWorkerRegistry = async (
   rootDir: string,
@@ -36,21 +33,23 @@ export const readWorkerRegistry = async (
   try {
     const contents = await readFile(path, "utf8");
     const parsed = JSON.parse(contents) as unknown;
-    const registry = WorkerRegistrySchema.safeParse(parsed);
+    const config = CwConfigSchema.safeParse(parsed);
 
-    if (!registry.success) {
+    if (!config.success) {
       return {
         exists: true,
         path,
         workers: [],
-        error: registry.error.issues.map((issue) => issue.message).join("; ")
+        error: config.error.issues.map((issue) => issue.message).join("; ")
       };
     }
 
     return {
       exists: true,
       path,
-      workers: registry.data.workers
+      workers: config.data.workers.map((worker) =>
+        WorkerRegistrationSchema.parse(worker)
+      )
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -132,7 +131,10 @@ export const saveWorkerRegistration = async (
 ): Promise<{ mode: "execute" | "dry-run"; path: string }> => {
   const parsed = parseRegistration(registration);
   const path = getWorkerRegistryPath(context.rootDir, context.cwStorageDir);
-  const evaluation = context.writePolicy.evaluate(path, explicitAllowWrite);
+  const evaluation = context.storageWritePolicy.evaluate(
+    "config-write",
+    explicitAllowWrite
+  );
 
   if (!evaluation.allowed || evaluation.mode === "blocked") {
     await writeAuditEvent(context, {
@@ -149,7 +151,7 @@ export const saveWorkerRegistration = async (
       }
     });
     throw new AgentError("WRITE_BLOCKED", evaluation.reason, {
-      path: evaluation.normalizedPath
+      path
     });
   }
 
@@ -177,24 +179,49 @@ export const saveWorkerRegistration = async (
 
     return {
       mode: "dry-run",
-      path: evaluation.normalizedPath
+      path
     };
   }
 
   const merged = new Map(existing.workers.map((worker) => [worker.workerId, worker]));
   merged.set(parsed.workerId, parsed);
 
-  await mkdir(dirname(evaluation.normalizedPath), { recursive: true });
+  const configContents = await readFile(path, "utf8").catch(() => "{\"version\":2}");
+  const parsedConfig = CwConfigSchema.parse(JSON.parse(configContents) as unknown);
+  const nextConfig = CwConfigSchema.parse({
+    ...parsedConfig,
+    workers: Array.from(merged.values()).map((worker) => ({
+      ...worker,
+      ...(parsedConfig.workers.find((entry) => entry.workerId === worker.workerId)?.clientCommand
+        ? {
+            clientCommand: parsedConfig.workers.find(
+              (entry) => entry.workerId === worker.workerId
+            )?.clientCommand
+          }
+        : {}),
+      ...(parsedConfig.workers.find((entry) => entry.workerId === worker.workerId)?.temperature !==
+      undefined
+        ? {
+            temperature: parsedConfig.workers.find(
+              (entry) => entry.workerId === worker.workerId
+            )?.temperature
+          }
+        : {}),
+      ...(parsedConfig.workers.find((entry) => entry.workerId === worker.workerId)?.maxTokens !==
+      undefined
+        ? {
+            maxTokens: parsedConfig.workers.find(
+              (entry) => entry.workerId === worker.workerId
+            )?.maxTokens
+          }
+        : {})
+    }))
+  });
+
+  await mkdir(dirname(path), { recursive: true });
   await writeFile(
-    evaluation.normalizedPath,
-    JSON.stringify(
-      {
-        version: 1,
-        workers: Array.from(merged.values())
-      },
-      null,
-      2
-    ),
+    path,
+    JSON.stringify(nextConfig, null, 2),
     "utf8"
   );
   await writeAuditEvent(context, {
@@ -213,7 +240,7 @@ export const saveWorkerRegistration = async (
 
   return {
     mode: "execute",
-    path: evaluation.normalizedPath
+    path
   };
 };
 
@@ -223,7 +250,10 @@ export const removeWorkerRegistration = async (
   explicitAllowWrite = false
 ): Promise<{ mode: "execute" | "dry-run"; path: string; removed: boolean }> => {
   const path = getWorkerRegistryPath(context.rootDir, context.cwStorageDir);
-  const evaluation = context.writePolicy.evaluate(path, explicitAllowWrite);
+  const evaluation = context.storageWritePolicy.evaluate(
+    "config-write",
+    explicitAllowWrite
+  );
 
   if (!evaluation.allowed || evaluation.mode === "blocked") {
     await writeAuditEvent(context, {
@@ -240,7 +270,7 @@ export const removeWorkerRegistration = async (
       }
     });
     throw new AgentError("WRITE_BLOCKED", evaluation.reason, {
-      path: evaluation.normalizedPath
+      path
     });
   }
 
@@ -261,7 +291,7 @@ export const removeWorkerRegistration = async (
 
     return {
       mode: "dry-run",
-      path: evaluation.normalizedPath,
+      path,
       removed: false
     };
   }
@@ -277,17 +307,17 @@ export const removeWorkerRegistration = async (
   );
   const removed = nextWorkers.length !== existing.workers.length;
 
-  await mkdir(dirname(evaluation.normalizedPath), { recursive: true });
+  const configContents = await readFile(path, "utf8").catch(() => "{\"version\":2}");
+  const parsedConfig = CwConfigSchema.parse(JSON.parse(configContents) as unknown);
+  const nextConfig = CwConfigSchema.parse({
+    ...parsedConfig,
+    workers: parsedConfig.workers.filter((worker) => worker.workerId !== workerId)
+  });
+
+  await mkdir(dirname(path), { recursive: true });
   await writeFile(
-    evaluation.normalizedPath,
-    JSON.stringify(
-      {
-        version: 1,
-        workers: nextWorkers
-      },
-      null,
-      2
-    ),
+    path,
+    JSON.stringify(nextConfig, null, 2),
     "utf8"
   );
   await writeAuditEvent(context, {
@@ -309,7 +339,7 @@ export const removeWorkerRegistration = async (
 
   return {
     mode: "execute",
-    path: evaluation.normalizedPath,
+    path,
     removed
   };
 };

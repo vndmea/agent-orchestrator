@@ -16,7 +16,7 @@
     "package.json"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "build": "tsup",

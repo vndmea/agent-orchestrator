@@ -14,7 +14,7 @@ import {
   CwConfigSchema,
   type CwConfig,
   type CwModelConfig,
-  type CwWorkerModelConfig
+  type CwWorkerConfig
 } from "../schemas/config.schema.js";
 
 export interface LoadCwConfigResult {
@@ -36,7 +36,7 @@ export const getCwConfigPath = (
 
 const buildDefaultConfig = (): CwConfig =>
   CwConfigSchema.parse({
-    version: 1
+    version: 2
   });
 
 const resolveRootDir = (options: ResolveExecutionContextOptions): string => {
@@ -102,7 +102,7 @@ export const resolveWorkerClientCommand = (
 export const resolveConfiguredWorkerModel = (
   config: CwConfig,
   workerId: string
-): CwWorkerModelConfig | undefined => {
+): CwWorkerConfig | undefined => {
   const matched = config.workers?.find((entry) => entry.workerId === workerId);
 
   if (!matched) {

@@ -43,7 +43,7 @@ export const getCwWorkspaceId = (rootDir: string): string => {
 
 export const getCwWorkspaceDir = (
   rootDir: string
-): string => join(getCwHomeDir(), "workspaces", getCwWorkspaceId(rootDir));
+): string => join(getCwHomeDir(), getCwWorkspaceId(rootDir));
 
 export const getCwWorkspaceFilePathFromStorageDir = (
   cwStorageDir: string,
@@ -55,6 +55,14 @@ export const getCwWorkspaceFilePath = (
   fileName: string
 ): string =>
   getCwWorkspaceFilePathFromStorageDir(getCwWorkspaceDir(rootDir), fileName);
+
+export const getCwWorkspaceDatabasePathFromStorageDir = (
+  cwStorageDir: string
+): string => getCwWorkspaceFilePathFromStorageDir(cwStorageDir, "data.db");
+
+export const getCwWorkspaceDatabasePath = (
+  rootDir: string
+): string => getCwWorkspaceDatabasePathFromStorageDir(getCwWorkspaceDir(rootDir));
 
 export const getCwWorkspaceRunsDirFromStorageDir = (
   cwStorageDir: string

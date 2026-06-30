@@ -1,6 +1,7 @@
 import { getCwWorkspaceDir } from "../storage/cw-paths.js";
 import type { ModelConfig } from "../types/workflow.js";
 import { SafetyPolicy } from "../policies/safety-policy.js";
+import { StorageWritePolicy } from "../policies/storage-write-policy.js";
 import { WritePolicy } from "../policies/write-policy.js";
 import { normalizeFileSystemPath } from "./path-input.js";
 
@@ -19,6 +20,7 @@ export interface ExecutionContext {
   serverVersion: string;
   logLevel: string;
   safetyPolicy: SafetyPolicy;
+  storageWritePolicy: StorageWritePolicy;
   writePolicy: WritePolicy;
 }
 
@@ -96,6 +98,10 @@ export const createExecutionContextFromEnv = (
     dryRun,
     rootDir
   });
+  const storageWritePolicy = new StorageWritePolicy({
+    allowWrite,
+    dryRun
+  });
 
   return {
     cwStorageDir,
@@ -109,6 +115,7 @@ export const createExecutionContextFromEnv = (
     serverVersion: overrides.serverVersion ?? env.MCP_SERVER_VERSION ?? "0.1.0",
     logLevel: overrides.logLevel ?? env.LOG_LEVEL ?? "info",
     safetyPolicy,
+    storageWritePolicy,
     writePolicy
   };
 };

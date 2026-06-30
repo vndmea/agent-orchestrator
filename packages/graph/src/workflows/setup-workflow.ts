@@ -5,7 +5,7 @@ import {
   AgentError,
   type AvailabilityStatus,
   CwConfigSchema,
-  type CwWorkerModelConfig,
+  type CwWorkerConfig,
   createExecutionContextWithWorkerModel,
   getCwConfigPath,
   getCwWorkspaceAuditDirFromStorageDir,
@@ -162,13 +162,14 @@ const relativePath = (rootDir: string, path: string): string =>
 const mergeWorkerConfigs = (
   existing: CwConfig["workers"],
   workerPlans: SetupWorkerPlan[]
-): CwWorkerModelConfig[] | undefined => {
-  const next = new Map<string, CwWorkerModelConfig>(
+): CwWorkerConfig[] | undefined => {
+  const next = new Map<string, CwWorkerConfig>(
     (existing ?? []).map((entry) => [entry.workerId, entry])
   );
 
   for (const plan of workerPlans) {
     const current = next.get(plan.workerId);
+    const now = new Date().toISOString();
     next.set(plan.workerId, {
       workerId: plan.workerId,
       provider: plan.workerProvider,
@@ -177,11 +178,6 @@ const mergeWorkerConfigs = (
         ? { baseURL: plan.baseUrl }
         : current?.baseURL
           ? { baseURL: current.baseURL }
-          : {}),
-      ...(plan.apiKey
-        ? { apiKey: plan.apiKey }
-        : current?.apiKey
-          ? { apiKey: current.apiKey }
           : {}),
       ...(plan.clientCommand
         ? { clientCommand: plan.clientCommand }
@@ -193,7 +189,12 @@ const mergeWorkerConfigs = (
         : {}),
       ...(current?.maxTokens !== undefined
         ? { maxTokens: current.maxTokens }
-        : {})
+        : {}),
+      enabled: current?.enabled ?? true,
+      tags: current?.tags ?? [],
+      ...(current?.notes ? { notes: current.notes } : {}),
+      createdAt: current?.createdAt ?? now,
+      updatedAt: now
     });
   }
 
@@ -208,7 +209,7 @@ const buildDesiredConfig = (
 ): CwConfig =>
   CwConfigSchema.parse({
     ...existing,
-    version: 1,
+    version: 2,
     workers: mergeWorkerConfigs(existing.workers, workerPlans),
     safety:
       options.repositoryWriteMode === "allow-write"
@@ -1115,14 +1116,13 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
       ...(configToWrite.workers ?? [])
         .filter(
           (worker) =>
-            !worker.apiKey &&
             !["mock", "client", "opencode", "claudecode", "codex"].includes(
               worker.provider
             )
         )
         .map(
           (worker) =>
-            `Persist apiKey for worker '${worker.workerId}' in config.json workers[] before running it.`
+            `Persist API key for worker '${worker.workerId}' with setup or worker management before running it.`
         )
     ]),
     minimalSuccessPath,

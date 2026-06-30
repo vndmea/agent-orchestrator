@@ -1,9 +1,8 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import {
-  getCwWorkspaceFilePath,
-  getCwWorkspaceFilePathFromStorageDir,
+  bootstrapSqliteWorkspaceStore,
+  openSqliteWorkspaceStore,
   WorkerCapabilityProfileSchema
 } from "@mcp-code-worker/core";
 import type {
@@ -23,9 +22,7 @@ export const getWorkerProfileStorePath = (
   rootDir: string,
   cwStorageDir?: string
 ): string =>
-  cwStorageDir
-    ? getCwWorkspaceFilePathFromStorageDir(cwStorageDir, "worker-profiles.json")
-    : getCwWorkspaceFilePath(rootDir, "worker-profiles.json");
+  resolve(cwStorageDir ?? rootDir, "data.db#worker_profiles");
 
 const getInMemoryWorkspaceProfiles = (
   rootDir: string,
@@ -66,35 +63,39 @@ export const readPersistedWorkerProfiles = async (
   cwStorageDir?: string
 ): Promise<PersistedWorkerProfilesReadResult> => {
   const path = getWorkerProfileStorePath(rootDir, cwStorageDir);
+  if (!cwStorageDir) {
+    return {
+      exists: false,
+      path,
+      profiles: []
+    };
+  }
 
+  await bootstrapSqliteWorkspaceStore(cwStorageDir);
+  const db = await openSqliteWorkspaceStore(cwStorageDir);
   try {
-    const contents = await readFile(path, "utf8");
-    const parsed = safeParseProfiles(contents);
-    const raw = JSON.parse(contents) as unknown;
-    const schemaResult = WorkerCapabilityProfileSchema.array().safeParse(raw);
+    const rows = db.prepare("SELECT profile_json FROM worker_profiles").all() as Array<{
+      profile_json: string;
+    }>;
+    const profiles = rows
+      .map((row) => WorkerCapabilityProfileSchema.safeParse(JSON.parse(row.profile_json)))
+      .filter((result) => result.success)
+      .map((result) => result.data);
 
     return {
       exists: true,
       path,
-      profiles: parsed,
-      ...(schemaResult.success
-        ? {}
-        : {
-            error: schemaResult.error.issues
-              .map((issue) => issue.message)
-              .join("; ")
-          })
+      profiles
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const isMissing = /ENOENT/u.test(message);
-
     return {
-      exists: !isMissing,
+      exists: true,
       path,
       profiles: [],
-      ...(isMissing ? {} : { error: message })
+      error: error instanceof Error ? error.message : String(error)
     };
+  } finally {
+    db.close();
   }
 };
 
@@ -144,28 +145,32 @@ export const saveWorkerProfile = async (
     context.rootDir,
     context.cwStorageDir
   );
-  const evaluation = context.writePolicy.evaluate(storePath, explicitAllowWrite);
+  const evaluation = context.storageWritePolicy.evaluate(
+    "profile-write",
+    explicitAllowWrite
+  );
 
-  if (evaluation.mode === "dry-run") {
+  if (evaluation.mode !== "execute") {
     return {
       mode: "dry-run",
       path: storePath
     };
   }
 
-  const existing = await listPersistedWorkerProfiles(
-    context.rootDir,
-    context.cwStorageDir
-  );
-  const merged = new Map(existing.map((item) => [item.workerId, item]));
-  merged.set(profile.workerId, profile);
-
-  await mkdir(dirname(storePath), { recursive: true });
-  await writeFile(
-    storePath,
-    JSON.stringify(Array.from(merged.values()), null, 2),
-    "utf8"
-  );
+  await bootstrapSqliteWorkspaceStore(context.cwStorageDir);
+  const db = await openSqliteWorkspaceStore(context.cwStorageDir);
+  try {
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO worker_profiles(worker_id, profile_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(worker_id) DO UPDATE SET
+         profile_json = excluded.profile_json,
+         updated_at = excluded.updated_at`
+    ).run(profile.workerId, JSON.stringify(profile), now, now);
+  } finally {
+    db.close();
+  }
 
   return {
     mode: "execute",
