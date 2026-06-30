@@ -65,6 +65,8 @@ const buildCommandCandidates = (
   env: NodeJS.ProcessEnv
 ): string[] => {
   const isWindows = process.platform === "win32";
+  const isPathLike =
+    hasPathSeparator(command) || hasWindowsDrivePrefix(command);
   const pathExt = isWindows
     ? (env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD")
         .split(";")
@@ -72,9 +74,14 @@ const buildCommandCandidates = (
         .filter((ext) => ext.length > 0)
     : [];
   const hasExplicitExtension = /\.[^./\\]+$/u.test(command);
-  const suffixes = hasExplicitExtension || !isWindows ? [""] : ["", ...pathExt];
+  const suffixes =
+    hasExplicitExtension || !isWindows
+      ? [""]
+      : isPathLike
+        ? ["", ...pathExt]
+        : [...pathExt, ""];
   const bases =
-    hasPathSeparator(command) || hasWindowsDrivePrefix(command)
+    isPathLike
       ? [command]
       : (env.PATH ?? "")
           .split(delimiter)
