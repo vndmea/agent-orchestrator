@@ -120,7 +120,8 @@ Legacy repository-local `.cw/` directories are unsupported and ignored by curren
 
 `config.json` keeps editable worker definitions and runtime defaults. `data.db`
 is the SQLite store for worker secrets, worker profiles, latest benchmark
-records per worker and suite, task sessions, task artifacts, and audit events.
+records per worker and suite, worker execution records, task sessions, task
+artifacts, and audit events.
 
 ## CLI usage
 
@@ -141,7 +142,7 @@ cw mcp serve
 cw mcp list-tools
 ```
 
-`cw review files --strict-files` and `cw_run_host_worker` now expose debug evidence for host-managed worker runs, including requested files, selected files, worker metadata, and structured-output failure details.
+`cw review files --strict-files` and `cw_run_host_worker` expose debug evidence for host-managed worker runs, including requested files, selected files, worker metadata, worker trust profile, worker execution record id, structured-output mode, repair attempts, failure kind, and semantic rejection details.
 
 ## Worker onboarding
 
@@ -224,7 +225,7 @@ cw worker list
 cw worker profile qwen-local
 ```
 
-Current behavior is conservative: if a workflow is started without an explicit profile object, the system can re-run the interview instead of blindly trusting an old capability record.
+Current behavior is trust-aware rather than endpoint-trusting: persisted profiles, interviews, and benchmarks influence the worker trust profile, recommended mode, warnings, and patch-generation eligibility. Missing or stale evidence should push exploratory work toward dry-run or host-review mode instead of silently accepting a worker result.
 
 ## Worker registry flow
 
@@ -437,6 +438,7 @@ Persist the non-secret worker settings in `config.json`, for example:
 - Shell execution is allowlisted.
 - Read-only git inspection commands such as `git diff` can still execute inside dry-run so review workflows keep working without enabling writes.
 - `cw init`, `cw cleanup`, worker registry writes, and task session persistence remain local-only inside CW-managed storage.
+- Worker execution records are local CW storage records and remain dry-run until the execution context permits managed storage writes.
 - Repository reads stay inside the repo root and block secret-like files such as `.env` and private keys.
 - Dedicated review and fix flows return structured JSON and do not apply patches.
 - Patch proposal, inspection, and apply are separated to keep write actions reviewable.
@@ -445,7 +447,7 @@ Persist the non-secret worker settings in `config.json`, for example:
 - `cw audit list` exposes the local audit trail for workflow, file, and command events.
 - `cw cleanup runs` and `cw cleanup audit` only delete local CW artifacts and never touch project source files.
 - In host-driven flows, worker outputs are not final until the host accepts them.
-- Workers must pass onboarding evaluation before they should receive production tasks.
+- Workers should have reviewed onboarding or benchmark evidence before higher-risk production tasks; missing evidence lowers trust and should require dry-run or host review.
 - Workers that fail structured output or reliability checks become `not-qualified`. Environment or configuration failures keep the worker unavailable for formal tasks until the runtime issue is fixed.
 - Worker secrets should be persisted in the user-scoped CW SQLite store and should never be logged.
 

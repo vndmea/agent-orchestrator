@@ -20,8 +20,8 @@ Typical CW-managed workspace files include:
 
 `config.json` remains human-editable and stores worker definitions plus runtime
 defaults. `data.db` is the SQLite store for worker secrets, worker profiles,
-latest benchmark records per worker and suite, task sessions, task artifacts,
-and audit events.
+latest benchmark records per worker and suite, worker execution records, task
+sessions, task artifacts, and audit events.
 
 ## Task Session Artifacts
 
@@ -61,6 +61,34 @@ Worker qualification state is stored in user-scoped CW storage:
 Benchmark retention keeps only the latest persisted row per
 `(worker_id, suite_name)`.
 
+## Worker Execution Records
+
+Host-owned contract runs are represented as execution records in SQLite:
+
+```text
+~/.code-worker/<workspace-id>/data.db#worker_task_executions
+```
+
+Each `WorkerTaskExecutionRecord` stores:
+
+- the `WorkerTaskEnvelope` requested by the host
+- the `WorkerResultEnvelope` returned to the host
+- the `WorkerTrustProfile` used for the run
+- structured-output mode, repair attempts, fallback reason, and failure kind
+- semantic validation status and reasons
+- artifact references such as patch proposal ids or worker debug artifacts
+
+Execution artifact references are tracked in:
+
+```text
+~/.code-worker/<workspace-id>/data.db#artifact_records
+```
+
+`cleanup_runs` records cleanup bookkeeping for local retention workflows. The
+current cleanup commands prune task sessions and audit events; execution-record
+retention should be treated as local CW-managed state and not as repository
+source.
+
 ## Audit Artifacts
 
 Audit events are local CW artifacts in:
@@ -70,6 +98,10 @@ Audit events are local CW artifacts in:
 ```
 
 Dry-run does not create persisted audit rows by default for ordinary evaluation paths, but explicit audit-writing paths still remain local to CW storage.
+
+Worker execution records follow the same local-managed storage principle:
+dry-run contexts can return a candidate record id for traceability, but records
+are only persisted when the execution context allows managed storage writes.
 
 ## Cleanup Scope
 
@@ -91,5 +123,6 @@ When something looks “missing,” verify:
 - the active CW storage root under `~/.code-worker`
 - the derived workspace id
 - whether the state was created by `cw init`, task sessions, or audit-producing actions
+- whether the workflow ran in dry-run mode, which can return execution metadata without persisting it
 
 The most common source of confusion is not data loss but a different effective root or CW home path.

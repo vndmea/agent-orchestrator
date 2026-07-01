@@ -91,6 +91,18 @@ Interview output produces a `WorkerCapabilityProfile` that affects routing.
 The profile status is not just descriptive. It changes how routing and policy checks behave.
 Run `cw worker readiness --worker=<workerId>` for the separate runtime answer about whether that named worker is currently ready or unavailable for formal tasks.
 
+## Trust Levels
+
+Runtime execution records carry a `WorkerTrustProfile` separate from the capability profile:
+
+- `unknown`: no usable persisted evidence or the profile is not qualified
+- `interviewed`: onboarding evidence exists, but no task-specific benchmark evidence is available
+- `benchmarked`: the profile supports the task type and has task score evidence
+- `verified`: reserved for stronger future certification evidence
+
+Trust controls recommended mode and warnings. It does not bypass patch inspection,
+repository write gates, or host acceptance.
+
 ## Persisted Artifacts
 
 By default, onboarding-related state is stored under:
@@ -104,6 +116,7 @@ Typical files include:
 - `config.json`
 - `data.db#worker_profiles`
 - `data.db#worker_benchmarks`
+- `data.db#worker_task_executions`
 
 Persisted benchmark retention keeps only the latest row per
 `(worker_id, suite_name)`.

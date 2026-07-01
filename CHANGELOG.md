@@ -4,6 +4,19 @@ All notable changes to `mcp-code-worker` should be documented in this file.
 
 The current internal trial line follows semantic-style version labels even while the repository remains private.
 
+## Unreleased
+
+### Added
+
+- Host-owned worker contract execution records with task/result envelopes, worker trust metadata, structured-output diagnostics, semantic validation status, and artifact refs.
+- SQLite `worker_task_executions`, `artifact_records`, and `cleanup_runs` storage boundaries for local execution observability.
+- Documentation for the contract-first worker path, trust levels, execution-record write policy, and failure triage.
+
+### Changed
+
+- Host-worker and patch proposal docs now describe trust-aware execution rather than treating endpoint availability as qualification.
+- Roadmap now treats execution-record retention and inspection commands as the next observability follow-up.
+
 ## [0.1.0-internal-trial] - 2026-06-26
 
 ### Added

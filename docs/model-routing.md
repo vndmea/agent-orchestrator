@@ -17,3 +17,5 @@ This means provider/model/base URL defaults still exist, but task execution no l
 - Worker execution is gated by both named registration and `WorkerCapabilityProfile`, not only by provider/model availability.
 - Newly connected workers should pass onboarding evaluation before they receive production tasks.
 - Limited workers are restricted to qualified low-risk task types, and not-qualified workers are excluded from task types they did not qualify for.
+- Model-specific structured-output behavior is resolved through `ModelBehaviorProfile`; workflow code should not add provider-specific JSON or repair branches.
+- Runtime trust is captured separately as `WorkerTrustProfile`. Trust levels (`unknown`, `interviewed`, `benchmarked`, `verified`) influence recommended mode, warnings, and review posture without bypassing host acceptance or patch gates.

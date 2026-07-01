@@ -6,6 +6,7 @@
 
 - `read-only`: repository reads, diff inspection, task/status/report reads, and validation planning.
 - `session-write`: local task-session persistence in `cwStorageDir/data.db`.
+- `execution-record-write`: local worker contract execution records in `cwStorageDir/data.db`.
 - `project-write`: repository file writes when a command explicitly supports them.
 - `patch-apply`: the second gate for mutating source files through patch application.
 - `audit-write`: local audit events in `cwStorageDir/data.db`.
@@ -13,14 +14,14 @@
 ## Default Behavior
 
 - Default mode is dry-run.
-- Dry-run does not create audit files by default for ordinary evaluation paths.
+- Dry-run does not create audit or worker execution records by default for ordinary evaluation paths.
 - Repository reads and safe inspection commands can still run in dry-run mode.
 - Worker outputs are not accepted until host review completes.
 
 ## Gates
 
 - `--allow-write-session` allows task-session persistence in `cwStorageDir/data.db` only.
-- `--allow-write` allows commands with write support to modify local managed files or repository files, depending on the command.
+- `--allow-write` allows commands with write support to modify local managed files or repository files, depending on the command. For host-worker and patch proposal workflows, this can include local `worker_task_executions` rows; it still does not apply repository patches by itself.
 - `--confirm-apply` is required in addition to `--allow-write` before `patch apply` can touch project files.
 
 Patch apply stays explicitly two-step:
@@ -45,7 +46,8 @@ Local-managed artifacts include:
 - `config.json`
 - `data.db`
 
-`benchmark` artifacts are local CW artifacts stored in SQLite, not project source files.
+`benchmark` artifacts, worker execution records, artifact references, and audit
+events are local CW artifacts stored in SQLite, not project source files.
 
 ## What Can Modify Project Files
 

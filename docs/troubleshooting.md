@@ -132,6 +132,21 @@ Patch proposal, inspection, and apply are intentionally separate steps.
 - `--allow-write-session` only permits task-session persistence in SQLite
 - It does **not** enable repository writes
 - Repository writes remain gated behind explicit write-enabled commands
+- Host-worker and patch proposal workflows can return a worker execution record id even in dry-run; the corresponding `worker_task_executions` row is only persisted when managed storage writes are allowed.
+
+## Worker Output Was Rejected After Valid JSON
+
+### Symptoms
+
+- structured JSON parsed successfully, but the workflow returns `needs_review`, `needs_more_context`, `blocked`, or `invalid_output`
+- patch proposal became a `[PLACEHOLDER]` even though the model produced JSON
+
+### Checks
+
+- Inspect structured-output diagnostics: mode, repair attempts, fallback reason, and failure kind.
+- Inspect semantic validation reasons for missing requested files, out-of-scope references, unsupported validation claims, or unsafe patch boundaries.
+- Inspect worker trust metadata. `unknown` or missing evidence should keep the host in dry-run or review mode.
+- For patch generation, confirm the worker profile includes `patch-generation`, `routingPolicy.allowPatchGeneration=true`, and a qualifying benchmark-backed capability update when required.
 
 ## Clean-up Commands Did Not Touch Source Files
 

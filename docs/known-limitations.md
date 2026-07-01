@@ -47,3 +47,5 @@ This document lists current product boundaries and non-goals that users should u
 - `patch-generation` should only be promoted after explicit benchmark review and capability update.
 - A weaker worker model is not automatically cheaper in total token cost if a stronger host model still has to verify or redo most of its output.
 - Token savings are more realistic when workers are constrained to narrow, low-risk, mechanically verifiable subtasks.
+- Worker execution records are local SQLite diagnostics, not a user-facing acceptance decision or a patch-apply permission.
+- `cleanup_runs` exists as a storage boundary for retention bookkeeping, but current cleanup commands only prune task sessions and audit events.

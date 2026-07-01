@@ -20,6 +20,7 @@ Named worker execution is explicit over MCP as well:
 - `cw_review_repository`, `cw_review_diff`, `cw_review_files`, and `cw_fix_error` require `workerId`
 
 When you need a narrower host-managed worker check, use `cw_run_host_worker` or `cw_review_files` with explicit files and `strictFiles=true`. Those paths now expose debug evidence such as requested files, selected files, worker metadata, and `worker-debug.json` artifacts.
+`cw_run_host_worker` also returns worker trust metadata and a worker execution record id in the final result metadata; persistence still follows the local storage write policy.
 
 ## Root Directory Resolution
 
@@ -149,6 +150,8 @@ Typical artifacts include:
 - `patch-inspection.json`
 - `patch-apply-result.json`
 - `worker-debug.json` within worker result artifacts when a host-managed worker task runs
+
+Host-managed worker and patch proposal workflows can also persist `worker_task_executions` rows in `data.db` when managed writes are allowed. Those records link the task envelope, result envelope, worker trust profile, structured-output diagnostics, semantic validation result, and artifact refs.
 
 Use `cw_read_task_artifact` for the minimum safe artifact-read path when a task response only returns refs.
 

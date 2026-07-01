@@ -18,6 +18,7 @@ Client expectations:
 
 - `cw_start_task` and `cw_resume_task` are thin orchestration wrappers; the structured artifacts remain the source of truth.
 - `requireProfile=true` should be used when a client needs explicit worker qualification before delegated coding work.
+- When present, surface `workerTrustProfile`, `workerExecutionRecordId`, and semantic validation reasons to the operator before accepting a worker-produced result.
 - Recovery guidance from `patchApplyResult.recovery` must be shown verbatim or faithfully summarized when validation fails after apply.
 - Worker onboarding and coding qualification are separate signals:
   - Interviewed profiles establish baseline routing safety.

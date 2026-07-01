@@ -17,6 +17,7 @@ When to use `cw_run_host_worker`:
 - Use it only when Codex wants one explicit worker task such as `review-lite` or `summarization`.
 - Treat it as a narrow worker invocation surface, not as a second planning or acceptance layer.
 - If the task needs multi-step orchestration or patch lifecycle management, go back to `cw_start_task`.
+- Read `finalResult.metadata.workerTrustProfile` and `finalResult.metadata.workerExecutionRecordId` when diagnosing why a worker result was accepted, downgraded, blocked, or marked for host review.
 
 > Warning:
 > Delegating to a weaker worker does not automatically reduce total token usage. If Codex still has to re-read the same evidence, rewrite the answer, or re-run the reasoning, the combined cost can be higher than doing the work directly.
@@ -46,3 +47,9 @@ Worker evaluation layers:
 - `cw worker benchmark --suite=coding-v1 --worker=<workerId> --save` records coding benchmark results in the workspace SQLite store.
 - `cw worker benchmark --suite=coding-v1 --worker=<workerId> --save --update-profile-capabilities` is the explicit step that can enable `patch-generation` on an existing persisted profile when the benchmark passes the required fixtures.
 - Benchmark results alone do not bypass patch inspection, dry-run apply, `allowWrite`, or `confirmApply`.
+
+Failure triage:
+
+- First check structured-output diagnostics: mode, fallback reason, repair attempts, and failure kind.
+- Then check semantic validation issues: missing context, blocked constraints, unsupported validation claims, or out-of-scope patch files.
+- Finally check trust metadata: `unknown` or stale evidence should keep the host in dry-run or review posture even if the model returned schema-valid JSON.

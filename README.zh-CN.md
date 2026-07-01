@@ -119,7 +119,8 @@ cw mcp config
 
 其中 `config.json` 保存可编辑的 worker 定义和运行时默认值，`data.db`
 则作为 SQLite 存储，承载 worker secret、worker profile、每个 worker / suite
-最新一条 benchmark 结果、task session、task artifact 和 audit event。
+最新一条 benchmark 结果、worker execution record、task session、task artifact
+和 audit event。
 
 ## CLI 用法
 
@@ -140,7 +141,7 @@ cw mcp serve
 cw mcp list-tools
 ```
 
-`cw review files --strict-files` 和 `cw_run_host_worker` 现在会暴露 host-managed worker 调试证据，包括 requested files、selected files、worker metadata，以及 structured output 失败细节。
+`cw review files --strict-files` 和 `cw_run_host_worker` 会暴露 host-managed worker 调试证据，包括 requested files、selected files、worker metadata、worker trust profile、worker execution record id、structured-output mode、repair attempts、failure kind，以及 semantic rejection 细节。
 
 ## Worker 接入评估
 
@@ -223,7 +224,7 @@ cw worker list
 cw worker profile qwen-local
 ```
 
-当前行为仍然偏保守：如果 workflow 启动时没有显式传入 profile object，系统可以重新执行 interview，而不是盲目信任旧的能力记录。
+当前行为是 trust-aware，而不是只要 endpoint 可用就默认可信：持久化 profile、interview 和 benchmark 会影响 worker trust profile、recommended mode、warning 和 patch-generation eligibility。缺失或过期的证据应把探索性任务压到 dry-run 或 host-review 模式，而不是静默接受 worker 结果。
 
 ## Worker registry 流程
 
@@ -432,6 +433,7 @@ cw mcp list-tools
 - Shell 执行通过 allowlist 控制。
 - `git diff` 这类只读 git 检查命令即使在 dry-run 下也允许执行，因此 review workflow 不需要开启写权限。
 - `cw init`、`cw cleanup`、worker registry 写入和 task session 持久化都只作用于 CW 本地存储。
+- Worker execution record 也是 CW 本地存储记录，只有执行上下文允许 managed storage 写入时才会真正落盘。
 - 仓库读取必须留在 repo root 内，并会阻止 `.env`、私钥等 secret-like 文件进入上下文。
 - 专用 review / fix 流程只返回结构化 JSON，不会自动应用 patch。
 - patch proposal / inspection / apply 被显式拆开，保证写入动作始终可审查。
@@ -440,7 +442,7 @@ cw mcp list-tools
 - `cw audit list` 可查看本地 workflow、文件与命令事件。
 - `cw cleanup runs` 和 `cw cleanup audit` 只删除本地 CW 产物，不会碰项目源代码。
 - 宿主驱动场景里，worker 输出在宿主接受前都不能视为最终结果。
-- Worker 在进入生产任务前应先通过 onboarding evaluation。
+- 高风险生产任务应先具备已审查的 onboarding 或 benchmark 证据；证据缺失时应降低 trust，并要求 dry-run 或 host review。
 - structured output 或可靠性不达标的 worker 会进入 `not-qualified` 状态；如果是环境或配置问题，则该 worker 在修复前应视为不可用。
 - 密钥应持久化在用户级 SQLite 存储中，且绝不能写入日志。
 
