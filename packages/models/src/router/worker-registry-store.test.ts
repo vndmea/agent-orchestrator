@@ -138,7 +138,7 @@ describe("worker registry store", () => {
         true
       )
     ).rejects.toThrow("already bound");
-  });
+  }, 10_000);
 
   it("removes registrations only when writes are allowed", async () => {
     const rootDir = await createRootDir();

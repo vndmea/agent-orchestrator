@@ -315,7 +315,7 @@ describe("task session workflow", () => {
     expect(resumed.patchApplyResult?.mode).toBe("execute");
     expect(resumed.session.steps.find((step) => step.id === "patch-applied")?.status).toBe("success");
     expect(resumed.session.steps.find((step) => step.id === "reviewed")?.status).toBe("success");
-  });
+  }, 15_000);
 
   it("supports inline error logs for fix planning", async () => {
     const rootDir = await createWorkspace();

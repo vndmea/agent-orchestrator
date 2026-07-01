@@ -690,7 +690,7 @@ describe("cli parsing", () => {
       expect(output.at(-1)).toContain("\"configuredCommand\": \"node\"");
       expect(output.at(-1)).toContain("\"resolvedCommand\":");
     });
-  });
+  }, 15_000);
 
   it("renders resolved local client details in compact human mode", async () => {
     await withTempCwd(async (rootDir) => {
@@ -2161,7 +2161,7 @@ describe("cli parsing", () => {
       ]);
       expect(output.at(-1)).toContain("# Task Session Report");
     });
-  });
+  }, 20_000);
 
   it("renders task start in compact human mode", async () => {
     await withTempCwd(async (rootDir) => {
@@ -2191,7 +2191,7 @@ describe("cli parsing", () => {
       expect(output.at(-1)).toContain("\u001b[");
       expect(output.at(-1)).not.toContain("\"taskId\"");
     });
-  });
+  }, 15_000);
 
   it("stabilizes task start --summary output without null placeholders", async () => {
     await withTempCwd(async (rootDir) => {

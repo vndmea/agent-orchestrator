@@ -67,7 +67,9 @@ const runRepoShimCli = async (
   cwd: string,
   env?: NodeJS.ProcessEnv
 ): Promise<{ stderr: string; stdout: string }> =>
-  runCommand(repoShimPath, args, cwd, env);
+  process.platform === "win32"
+    ? runCommand(repoShimPath, args, cwd, env)
+    : execFile("sh", [repoShimPath, ...args], { cwd, env });
 
 const createCommandEnv = (homeDir: string): NodeJS.ProcessEnv => ({
   ...process.env,
