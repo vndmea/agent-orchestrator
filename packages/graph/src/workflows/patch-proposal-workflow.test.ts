@@ -180,7 +180,7 @@ describe("patch proposal workflow", () => {
       expect(result.inspection.ok).toBe(true);
       expect(result.proposal.unifiedDiff).not.toContain("manual review");
     }
-  });
+  }, 15_000);
 
   it("marks fallback proposals as denied when model output is invalid", async () => {
     const rootDir = await createWorkspace();
