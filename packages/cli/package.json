@@ -6,12 +6,13 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "cw": "./dist/main.js"
+    "cw": "./bin/cw.js"
   },
   "exports": {
     ".": "./dist/index.js"
   },
   "files": [
+    "bin",
     "dist",
     "package.json"
   ],
