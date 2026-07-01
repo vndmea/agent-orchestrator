@@ -2368,13 +2368,12 @@ describe("cli parsing", () => {
         "--allow-write-output",
         "--summary"
       ]);
-      const persistedProposal = PatchProposalSchema.parse(
-        JSON.parse(
-          await readFile(join(rootDir, "tmp", "generated-proposal.patch"), "utf8")
-        ) as unknown
+      const persistedProposal = await readFile(
+        join(rootDir, "tmp", "generated-proposal.patch"),
+        "utf8"
       );
-      expect(persistedProposal.unifiedDiff).toContain("diff --git");
-      expect(persistedProposal.title.length).toBeGreaterThan(0);
+      expect(persistedProposal).toContain("diff --git");
+      expect(persistedProposal.trimStart().startsWith("{")).toBe(false);
 
       await cli.parseAsync([
         "node",

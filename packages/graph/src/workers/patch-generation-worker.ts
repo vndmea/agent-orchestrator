@@ -96,7 +96,7 @@ const buildExampleUnifiedDiff = (
         "diff --git a/README.md b/README.md",
         "--- a/README.md",
         "+++ b/README.md",
-        "@@ -1 +1 @@",
+        "@@ -1,1 +1,1 @@",
         "-Placeholder line",
         "+Updated placeholder line"
       ].join("\n")
@@ -120,14 +120,14 @@ const buildExampleUnifiedDiff = (
 
   return {
     path: target.path,
-    diffText: [
-      `diff --git a/${target.path} b/${target.path}`,
-      `--- a/${target.path}`,
-      `+++ b/${target.path}`,
-      "@@ -1 +1 @@",
-      `-${firstLine}`,
-      `+${firstLine} // sample patch`
-    ].join("\n")
+      diffText: [
+        `diff --git a/${target.path} b/${target.path}`,
+        `--- a/${target.path}`,
+        `+++ b/${target.path}`,
+        "@@ -1,1 +1,1 @@",
+        `-${firstLine}`,
+        `+${firstLine} // sample patch`
+      ].join("\n")
   };
 };
 

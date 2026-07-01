@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { extname } from "node:path";
 
 import { PatchProposalSchema, resolveExecutionContext } from "@mcp-code-worker/core";
 import {
@@ -170,6 +171,19 @@ const parsePatchProposalFile = async (patchFile: string, rootDir: string) => {
   }
 };
 
+const serializePatchProposalOutput = (
+  proposal: { unifiedDiff: string },
+  outputPath?: string
+): string => {
+  const extension = outputPath ? extname(outputPath).toLowerCase() : "";
+
+  if (extension === ".patch" || extension === ".diff") {
+    return proposal.unifiedDiff;
+  }
+
+  return JSON.stringify(proposal, null, 2);
+};
+
 export const registerPatchCommand = (program: Command, io: CliIo): void => {
   const patch = program.command("patch").description("Inspect, propose, and apply gated patch artifacts.");
 
@@ -288,7 +302,10 @@ export const registerPatchCommand = (program: Command, io: CliIo): void => {
           workerId: options.worker,
           requireProfile: options.requireProfile
         });
-        const serialized = JSON.stringify(result.proposal, null, 2);
+        const serialized = serializePatchProposalOutput(
+          result.proposal,
+          options.output
+        );
 
         if (options.output && options.allowWriteOutput) {
           await writeRepositoryFile(

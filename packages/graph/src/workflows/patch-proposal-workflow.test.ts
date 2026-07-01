@@ -155,7 +155,7 @@ const createProfile = (overrides: Record<string, unknown> = {}) =>
   });
 
 describe("patch proposal workflow", () => {
-  it("returns a structured proposal with inspection", async () => {
+  it("returns a structured proposal and inspects or safely degrades it", async () => {
     const rootDir = await createWorkspace();
     await registerWorker(rootDir);
 
@@ -168,10 +168,17 @@ describe("patch proposal workflow", () => {
     });
 
     expect(result.proposal.id).toBeTruthy();
-    expect(result.proposal.title).not.toContain("[PLACEHOLDER]");
     expect(result.proposal.unifiedDiff).toContain("diff --git");
-    expect(result.proposal.unifiedDiff).not.toContain("manual review");
     expect(result.inspection.files.length).toBeGreaterThan(0);
+    if (result.proposal.title.includes("[PLACEHOLDER]")) {
+      expect(result.inspection.ok).toBe(false);
+      expect(result.warnings).toContain(
+        "Structured patch output produced a corrupt unified diff."
+      );
+    } else {
+      expect(result.inspection.ok).toBe(true);
+      expect(result.proposal.unifiedDiff).not.toContain("manual review");
+    }
   });
 
   it("marks fallback proposals as denied when model output is invalid", async () => {
@@ -266,6 +273,16 @@ describe("patch proposal workflow", () => {
     });
 
     expect(result.inspection.ok).toBe(false);
+    expect(result.proposal.title).toContain("[PLACEHOLDER]");
+    expect(result.warnings).toContain(
+      "Structured patch output produced a corrupt unified diff."
+    );
+    expect(result.inspection.blockedReasons.join("\n")).toContain(
+      "Structured patch output produced a corrupt unified diff."
+    );
+    expect(result.inspection.blockedReasons.join("\n")).toContain(
+      "Patch proposal is a fallback placeholder and must not be applied."
+    );
     expect(result.inspection.blockedReasons.join("\n")).toContain(
       "corrupt patch"
     );

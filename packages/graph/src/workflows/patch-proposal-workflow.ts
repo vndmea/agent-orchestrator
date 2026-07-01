@@ -46,6 +46,8 @@ export interface PatchProposalWorkflowOutput {
 export const PATCH_PLACEHOLDER_REASON =
   "Patch proposal is a fallback placeholder and must not be applied.";
 
+const CORRUPT_PATCH_REASON_FRAGMENT = "corrupt patch";
+
 export const isPlaceholderPatchProposal = (input: {
   inspection?: Pick<PatchInspection, "blockedReasons">;
   proposal?: Pick<PatchProposal, "title">;
@@ -85,6 +87,11 @@ const buildDeniedPatchProposalOutput = async (input: {
     warnings: [input.reason]
   };
 };
+
+const hasCorruptPatchReason = (inspection: PatchInspection): boolean =>
+  inspection.blockedReasons.some((reason) =>
+    reason.toLowerCase().includes(CORRUPT_PATCH_REASON_FRAGMENT)
+  );
 
 export const runPatchProposalWorkflow = async (
   input: PatchProposalWorkflowInput
@@ -162,7 +169,7 @@ export const runPatchProposalWorkflow = async (
     workerId,
     workerProfile: routedWorkerProfile
   });
-  const proposal = generation.proposal;
+  let proposal = generation.proposal;
   let inspection = await inspectPatch(context, proposal, {
     scope: effectiveScope
   });
@@ -178,6 +185,25 @@ export const runPatchProposalWorkflow = async (
         ...generation.errors
       ]
     });
+  }
+
+  if (generation.structuredOutputOk && !inspection.ok && hasCorruptPatchReason(inspection)) {
+    const denied = await buildDeniedPatchProposalOutput({
+      context,
+      fallbackProposal,
+      reason: "Structured patch output produced a corrupt unified diff.",
+      scope: effectiveScope
+    });
+
+    proposal = denied.proposal;
+    inspection = PatchInspectionSchema.parse({
+      ...denied.inspection,
+      blockedReasons: [
+        ...denied.inspection.blockedReasons,
+        ...inspection.blockedReasons
+      ]
+    });
+    warnings.push("Structured patch output produced a corrupt unified diff.");
   }
 
   await writeAuditEvent(context, {
