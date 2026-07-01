@@ -7,6 +7,7 @@ import {
   invokeStructured,
   type ModelInvocationRequest,
   type ModelInvocationResult,
+  type ModelStructuredOutputMode,
   type ModelProvider
 } from "@mcp-code-worker/models";
 
@@ -22,7 +23,12 @@ class SequenceProvider implements ModelProvider {
   public requests: ModelInvocationRequest[] = [];
 
   public constructor(
-    private readonly responses: Array<ModelInvocationResult | Error>
+    private readonly responses: Array<
+      | (Omit<ModelInvocationResult, "structuredOutputMode"> & {
+          structuredOutputMode?: ModelStructuredOutputMode;
+        })
+      | Error
+    >
   ) {}
 
   public invoke(
@@ -40,7 +46,10 @@ class SequenceProvider implements ModelProvider {
     }
 
     if (response) {
-      return Promise.resolve(response);
+      return Promise.resolve({
+        structuredOutputMode: "native-json-schema",
+        ...response
+      });
     }
 
     const fallback = this.responses[this.responses.length - 1];
@@ -48,7 +57,10 @@ class SequenceProvider implements ModelProvider {
       throw new Error("No valid mock response configured.");
     }
 
-    return Promise.resolve(fallback);
+    return Promise.resolve({
+      structuredOutputMode: "native-json-schema",
+      ...fallback
+    });
   }
 }
 
@@ -83,6 +95,7 @@ describe("invokeStructured", () => {
         message: "ok",
         count: 2
       },
+      structuredOutputMode: "native-json-schema",
       attempts: 1
     });
   });
@@ -196,6 +209,7 @@ describe("invokeStructured", () => {
     expect(provider.calls).toBe(2);
     expect(result.ok).toBe(true);
     expect(result.ok && result.data.message).toBe("retried");
+    expect(result.structuredOutputMode).toBe("native-json-schema");
     expect(result.errors).toHaveLength(1);
     expect(provider.requests[1]?.prompt).toContain("Your previous response did not satisfy the required JSON schema.");
   });
@@ -251,6 +265,32 @@ describe("invokeStructured", () => {
     expect(provider.requests).toHaveLength(1);
     expect(provider.requests[0]?.responseFormat).toBe("json");
     expect(provider.requests[0]?.responseSchema).toBe(schema);
+  });
+
+  it("surfaces prompt-only JSON mode from provider fallback", async () => {
+    const provider = new SequenceProvider([
+      {
+        provider: "sequence",
+        model: "mock-model",
+        structuredOutputFallbackReason: "json_schema unsupported",
+        structuredOutputMode: "prompt-only-json",
+        text: JSON.stringify({
+          message: "fallback",
+          count: 6
+        })
+      }
+    ]);
+
+    const result = await invokeStructured({
+      provider,
+      config,
+      schema,
+      prompt: "Return JSON"
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.structuredOutputMode).toBe("prompt-only-json");
+    expect(result.structuredOutputFallbackReason).toBe("json_schema unsupported");
   });
 
   it("stays compatible with the mock provider", async () => {

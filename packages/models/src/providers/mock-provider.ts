@@ -5,6 +5,7 @@ import type {
   ModelInvocationResult,
   ModelProvider
 } from "../types/model-provider.js";
+import { resolveStructuredOutputMode } from "../types/model-provider.js";
 
 const summarizePrompt = (prompt: string) =>
   prompt.replaceAll(/\s+/gu, " ").trim().slice(0, 160);
@@ -28,6 +29,10 @@ export class MockModelProvider implements ModelProvider {
     return Promise.resolve({
       provider: this.name,
       model: config.model,
+      structuredOutputMode: resolveStructuredOutputMode(
+        request,
+        "native-json-schema"
+      ),
       text: typeof body === "string" ? body : JSON.stringify(body, null, 2),
       raw: body,
       usage: {

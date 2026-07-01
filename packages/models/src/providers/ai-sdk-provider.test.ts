@@ -76,6 +76,8 @@ describe("AiSdkProvider", () => {
     expect(generateTextMock.mock.calls[0]?.[0]).toHaveProperty("output.schema");
     expect(generateTextMock.mock.calls[1]?.[0]).not.toHaveProperty("output");
     expect(result.text).toBe("{\"message\":\"fallback\",\"count\":2}");
+    expect(result.structuredOutputFallbackReason).toContain("response_format");
+    expect(result.structuredOutputMode).toBe("prompt-only-json");
     expect(result.usage).toEqual({
       inputTokens: 11,
       outputTokens: 7
@@ -121,5 +123,31 @@ describe("AiSdkProvider", () => {
     expect(generateTextMock.mock.calls[0]?.[0]).not.toHaveProperty(
       "maxOutputTokens"
     );
+  });
+
+  it("reports native structured mode when schema output succeeds", async () => {
+    generateTextMock.mockResolvedValueOnce({
+      output: {
+        message: "native",
+        count: 1
+      },
+      response: {
+        id: "native"
+      }
+    });
+
+    const provider = new AiSdkProvider();
+    const result = await provider.invoke(config, {
+      prompt: "Return JSON",
+      responseFormat: "json",
+      responseSchema: z.object({
+        message: z.string(),
+        count: z.number()
+      })
+    });
+
+    expect(result.structuredOutputMode).toBe("native-json-schema");
+    expect(result.structuredOutputFallbackReason).toBeUndefined();
+    expect(result.text).toBe("{\"message\":\"native\",\"count\":1}");
   });
 });

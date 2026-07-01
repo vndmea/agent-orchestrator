@@ -72,6 +72,8 @@ describe("AnthropicProvider", () => {
     expect(generateTextMock.mock.calls[0]?.[0]).toHaveProperty("output.schema");
     expect(generateTextMock.mock.calls[1]?.[0]).not.toHaveProperty("output");
     expect(result.text).toBe("{\"message\":\"fallback\",\"count\":2}");
+    expect(result.structuredOutputFallbackReason).toContain("structured output");
+    expect(result.structuredOutputMode).toBe("prompt-only-json");
     expect(result.usage).toEqual({
       inputTokens: 11,
       outputTokens: 7

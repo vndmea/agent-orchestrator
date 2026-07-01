@@ -7,6 +7,7 @@ import type {
   ModelInvocationResult,
   ModelProvider
 } from "../types/model-provider.js";
+import { resolveStructuredOutputMode } from "../types/model-provider.js";
 import { parseOpencodeEventStream } from "./opencode-event-stream.js";
 import {
   inspectConfiguredOpencodeCommand,
@@ -32,6 +33,10 @@ const buildMockResult = (
   return {
     provider: config.provider,
     model: config.model,
+    structuredOutputMode: resolveStructuredOutputMode(
+      request,
+      "prompt-only-json"
+    ),
     text: typeof body === "string" ? body : JSON.stringify(body, null, 2),
     raw: body,
     usage: {
@@ -193,6 +198,10 @@ export class OpencodeProvider implements ModelProvider {
     return {
       provider: config.provider,
       model: config.model,
+      structuredOutputMode: resolveStructuredOutputMode(
+        request,
+        "prompt-only-json"
+      ),
       text: parsed.text,
       raw: parsed.events,
       usage: {

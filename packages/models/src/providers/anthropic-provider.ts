@@ -8,6 +8,7 @@ import type {
   ModelInvocationResult,
   ModelProvider
 } from "../types/model-provider.js";
+import { resolveStructuredOutputMode } from "../types/model-provider.js";
 
 const extractUsage = (
   usage: Awaited<ReturnType<typeof generateText>>["usage"] | undefined
@@ -24,6 +25,9 @@ const isStructuredOutputCompatibilityError = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error);
   return /response_format|json_schema|json tool|structured output/iu.test(message);
 };
+
+const formatUnknownError = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 export class AnthropicProvider implements ModelProvider {
   public readonly name = "anthropic";
@@ -55,6 +59,7 @@ export class AnthropicProvider implements ModelProvider {
         return {
           provider: config.provider,
           model: config.model,
+          structuredOutputMode: "native-json-schema",
           text: JSON.stringify(result.output),
           raw: {
             output: result.output,
@@ -66,6 +71,26 @@ export class AnthropicProvider implements ModelProvider {
         if (!isStructuredOutputCompatibilityError(error)) {
           throw error;
         }
+        const fallbackReason = formatUnknownError(error);
+        const result = await generateText({
+          model: client(config.model),
+          system: request.systemPrompt,
+          prompt: request.prompt,
+          temperature: config.temperature,
+          ...(config.maxTokens !== undefined
+            ? { maxOutputTokens: config.maxTokens }
+            : {})
+        });
+
+        return {
+          provider: config.provider,
+          model: config.model,
+          structuredOutputFallbackReason: fallbackReason,
+          structuredOutputMode: "prompt-only-json",
+          text: result.text,
+          raw: result.response,
+          usage: extractUsage(result.usage)
+        };
       }
     }
 
@@ -82,6 +107,10 @@ export class AnthropicProvider implements ModelProvider {
     return {
       provider: config.provider,
       model: config.model,
+      structuredOutputMode: resolveStructuredOutputMode(
+        request,
+        "prompt-only-json"
+      ),
       text: result.text,
       raw: result.response,
       usage: extractUsage(result.usage)

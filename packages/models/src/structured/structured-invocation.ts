@@ -3,6 +3,7 @@ import type * as z from "zod";
 
 import type {
   ModelInvocationResult,
+  ModelStructuredOutputMode,
   ModelProvider
 } from "../types/model-provider.js";
 
@@ -25,6 +26,8 @@ export interface StructuredInvocationSuccess<T> {
   raw?: unknown;
   attempts: number;
   usage?: ModelInvocationResult["usage"];
+  structuredOutputFallbackReason?: string;
+  structuredOutputMode: ModelStructuredOutputMode;
   errors: string[];
 }
 
@@ -40,6 +43,8 @@ export interface StructuredInvocationFailure {
   raw?: unknown;
   attempts: number;
   usage?: ModelInvocationResult["usage"];
+  structuredOutputFallbackReason?: string;
+  structuredOutputMode: ModelStructuredOutputMode;
   errors: string[];
   failureKind: StructuredInvocationFailureKind;
 }
@@ -120,6 +125,8 @@ export async function invokeStructured<T>(
   let rawText = "";
   let raw: unknown;
   let usage: ModelInvocationResult["usage"];
+  let structuredOutputFallbackReason: string | undefined;
+  let structuredOutputMode: ModelStructuredOutputMode = "none";
   let failureKind: StructuredInvocationFailureKind = "provider-invocation";
   let currentPrompt = options.prompt;
 
@@ -139,6 +146,8 @@ export async function invokeStructured<T>(
       rawText = result.text;
       raw = result.raw;
       usage = result.usage;
+      structuredOutputFallbackReason = result.structuredOutputFallbackReason;
+      structuredOutputMode = result.structuredOutputMode;
 
       let parsed: unknown;
       try {
@@ -172,6 +181,8 @@ export async function invokeStructured<T>(
         raw: result.raw,
         attempts: attempt,
         usage: result.usage,
+        structuredOutputFallbackReason: result.structuredOutputFallbackReason,
+        structuredOutputMode: result.structuredOutputMode,
         errors
       };
     } catch (error) {
@@ -182,6 +193,8 @@ export async function invokeStructured<T>(
         raw,
         attempts: attempt,
         usage,
+        structuredOutputFallbackReason,
+        structuredOutputMode,
         errors,
         failureKind: "provider-invocation"
       };
@@ -194,6 +207,8 @@ export async function invokeStructured<T>(
     raw,
     attempts: maxAttempts,
     usage,
+    structuredOutputFallbackReason,
+    structuredOutputMode,
     errors,
     failureKind
   };

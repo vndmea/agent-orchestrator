@@ -1,6 +1,11 @@
 import type { ModelConfig } from "@mcp-code-worker/core";
 import type * as z from "zod";
 
+export type ModelStructuredOutputMode =
+  | "none"
+  | "native-json-schema"
+  | "prompt-only-json";
+
 export interface ModelInvocationRequest {
   prompt: string;
   systemPrompt?: string;
@@ -13,6 +18,8 @@ export interface ModelInvocationRequest {
 export interface ModelInvocationResult {
   provider: string;
   model: string;
+  structuredOutputFallbackReason?: string;
+  structuredOutputMode: ModelStructuredOutputMode;
   text: string;
   raw?: unknown;
   usage?: {
@@ -30,3 +37,9 @@ export interface ModelProvider {
     request: ModelInvocationRequest
   ): Promise<ModelInvocationResult>;
 }
+
+export const resolveStructuredOutputMode = (
+  request: Pick<ModelInvocationRequest, "responseFormat">,
+  modeWhenJson: Exclude<ModelStructuredOutputMode, "none">
+): ModelStructuredOutputMode =>
+  request.responseFormat === "json" ? modeWhenJson : "none";

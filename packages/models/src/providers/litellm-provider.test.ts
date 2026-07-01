@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import type { ModelConfig } from "@mcp-code-worker/core";
 
@@ -61,5 +62,30 @@ describe("LiteLlmProvider", () => {
     expect(generateTextMock.mock.calls[0]?.[0]).not.toHaveProperty(
       "maxOutputTokens"
     );
+  });
+
+  it("reports prompt-only JSON mode when structured output is unsupported", async () => {
+    generateTextMock
+      .mockRejectedValueOnce(new Error("json_schema is not supported"))
+      .mockResolvedValueOnce({
+        text: "{\"message\":\"fallback\",\"count\":2}",
+        response: {
+          id: "fallback"
+        }
+      });
+
+    const provider = new LiteLlmProvider();
+    const result = await provider.invoke(config, {
+      prompt: "Return JSON",
+      responseFormat: "json",
+      responseSchema: z.object({
+        message: z.string(),
+        count: z.number()
+      })
+    });
+
+    expect(generateTextMock).toHaveBeenCalledTimes(2);
+    expect(result.structuredOutputFallbackReason).toContain("json_schema");
+    expect(result.structuredOutputMode).toBe("prompt-only-json");
   });
 });
