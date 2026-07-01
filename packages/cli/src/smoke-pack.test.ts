@@ -116,7 +116,6 @@ describe("cli packed tarball smoke", () => {
         ...process.env,
         HOME: homeDir,
         USERPROFILE: homeDir,
-        CW_STORAGE_DIR: undefined,
         HOMEDRIVE: undefined,
         HOMEPATH: undefined
       };

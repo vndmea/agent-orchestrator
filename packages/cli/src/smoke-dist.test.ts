@@ -75,7 +75,6 @@ const createCommandEnv = (homeDir: string): NodeJS.ProcessEnv => ({
   ...process.env,
   HOME: homeDir,
   USERPROFILE: homeDir,
-  CW_STORAGE_DIR: undefined,
   HOMEDRIVE: undefined,
   HOMEPATH: undefined
 });

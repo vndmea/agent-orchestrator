@@ -10,12 +10,18 @@ if (!globalThis.crypto) {
   });
 }
 
-if (!process.env.CW_STORAGE_DIR) {
-  process.env.CW_STORAGE_DIR = join(tmpdir(), `cw-vitest-home-${process.pid}`);
+const testHomeDir = join(tmpdir(), `cw-vitest-home-${process.pid}`);
+
+if (!process.env.HOME) {
+  process.env.HOME = testHomeDir;
+}
+
+if (!process.env.USERPROFILE) {
+  process.env.USERPROFILE = testHomeDir;
 }
 
 const cleanupStorageDir = () => {
-  const storageDir = process.env.CW_STORAGE_DIR;
+  const storageDir = process.env.USERPROFILE ?? process.env.HOME;
 
   if (!storageDir) {
     return;

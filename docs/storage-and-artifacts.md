@@ -8,8 +8,7 @@ The default base path is:
 ~/.code-worker/<workspace-id>/
 ```
 
-By default CW uses `~/.code-worker` for user-scoped state. Set
-`CW_STORAGE_DIR` to override that base directory. `--root` on supported CLI
+CW uses `~/.code-worker` for user-scoped state. `--root` on supported CLI
 commands changes which repository path maps to `<workspace-id>`.
 
 ## Common Files And Directories
