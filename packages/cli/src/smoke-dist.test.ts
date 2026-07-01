@@ -17,6 +17,12 @@ const tsxPath = join(
   ".bin",
   process.platform === "win32" ? "tsx.cmd" : "tsx"
 );
+const repoShimPath = join(
+  repoRoot,
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? "cw.cmd" : "cw"
+);
 
 const withTempCwd = async (
   callback: (rootDir: string) => Promise<void>
@@ -56,12 +62,12 @@ const runDistCli = async (
 ): Promise<{ stderr: string; stdout: string }> =>
   execFile(process.execPath, [distCliPath, ...args], { cwd, env });
 
-const runPnpmExecCli = async (
+const runRepoShimCli = async (
   args: string[],
   cwd: string,
   env?: NodeJS.ProcessEnv
 ): Promise<{ stderr: string; stdout: string }> =>
-  runCommand("pnpm", ["exec", "cw", ...args], cwd, env);
+  runCommand(repoShimPath, args, cwd, env);
 
 const createCommandEnv = (homeDir: string): NodeJS.ProcessEnv => ({
   ...process.env,
@@ -233,14 +239,14 @@ describe("cli dist smoke", () => {
     });
   }, 15_000);
 
-  it("keeps repo-root pnpm exec cw aligned with the built worker command surface", async () => {
-    const [pnpmExecHelp, distHelp] = await Promise.all([
-      runPnpmExecCli(["worker", "--help"], repoRoot),
+  it("keeps the repo-root cw bin shim aligned with the built worker command surface", async () => {
+    const [shimHelp, distHelp] = await Promise.all([
+      runRepoShimCli(["worker", "--help"], repoRoot),
       runDistCli(["worker", "--help"], repoRoot)
     ]);
 
-    expect(pnpmExecHelp.stdout).toContain("readiness [options]");
-    expect(pnpmExecHelp.stdout).toBe(distHelp.stdout);
+    expect(shimHelp.stdout).toContain("readiness [options]");
+    expect(shimHelp.stdout).toBe(distHelp.stdout);
   }, 20_000);
 
   it("tests live MCP launch and tool discovery through doctor --mcp", async () => {
