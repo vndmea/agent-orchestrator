@@ -67,6 +67,7 @@ const createCommandEnv = (homeDir: string): NodeJS.ProcessEnv => ({
   ...process.env,
   HOME: homeDir,
   USERPROFILE: homeDir,
+  CW_STORAGE_DIR: undefined,
   HOMEDRIVE: undefined,
   HOMEPATH: undefined
 });
@@ -108,21 +109,6 @@ const writeCwConfig = async (
     ),
     "utf8"
   );
-};
-
-const createWorkerConfig = (overrides: Record<string, unknown> = {}) => {
-  const now = new Date().toISOString();
-
-  return {
-    workerId: "mock:registered-worker",
-    provider: "mock",
-    model: "gpt-5.4-mini",
-    enabled: true,
-    tags: [],
-    createdAt: now,
-    updatedAt: now,
-    ...overrides
-  };
 };
 
 const normalizeDoctorReport = (stdout: string) => {
@@ -336,15 +322,21 @@ describe("cli dist smoke", () => {
       await withTempHome(async (homeDir) => {
         const workerId = "parity-worker";
         const env = createCommandEnv(homeDir);
-        await writeCwConfig(rootDir, homeDir, {
-          workers: [
-            createWorkerConfig({
-              workerId,
-              provider: "mock",
-              model: "gpt-5.4-mini"
-            })
-          ]
-        });
+        await runDistCli(
+          [
+            "worker",
+            "register",
+            "--worker",
+            workerId,
+            "--provider",
+            "mock",
+            "--model",
+            "gpt-5.4-mini",
+            "--allow-write"
+          ],
+          rootDir,
+          env
+        );
 
         const [sourceInterview, distInterview] = await Promise.all([
           runSourceCli(["worker", "interview", "--worker", workerId], rootDir, env),
