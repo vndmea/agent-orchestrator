@@ -77,6 +77,30 @@ const createContext = (
     dryRun: options.dryRun ?? true
   });
 
+type RepositoryContextSummaryArtifact = {
+  selectedFileCount: number;
+  selectedFiles: Array<{
+    path: string;
+    sizeBytes: number;
+    truncated: boolean;
+  }>;
+  selectionReasons: string[];
+  requestedFiles: string[];
+  skippedFiles: string[];
+};
+
+const isRepositoryContextSummaryArtifact = (
+  value: string | RepositoryContextSummaryArtifact | null | undefined
+): value is RepositoryContextSummaryArtifact =>
+  Boolean(
+    value &&
+      typeof value === "object" &&
+      Array.isArray(value.selectedFiles) &&
+      Array.isArray(value.selectionReasons) &&
+      Array.isArray(value.requestedFiles) &&
+      Array.isArray(value.skippedFiles)
+  );
+
 const workerId = "mock:task-worker";
 
 const createProfile = () =>
@@ -187,10 +211,11 @@ describe("task session workflow", () => {
     });
 
     const persisted = await readTaskSession(rootDir, result.session.taskId);
-    const repositoryContextArtifact = await readTaskArtifact(
+    const repositoryContextArtifact =
+      await readTaskArtifact<RepositoryContextSummaryArtifact>(
       rootDir,
       result.session.taskId,
-      "repository-context.json"
+      "repository-context.summary.json"
     );
     const validationArtifact = await readTaskArtifact(
       rootDir,
@@ -211,11 +236,26 @@ describe("task session workflow", () => {
     expect(persisted?.artifacts["report.md"]).toContain("data.db#task_sessions");
     expect(result.persistence.sessionPersisted).toBe(true);
     expect(result.persistence.artifactRegistryComplete).toBe(true);
-    expect(persisted?.artifacts["repository-context.json"]).toContain("data.db#task_sessions");
-    expect(persisted?.artifacts["review-result.json"]).toContain("data.db#task_sessions");
+    expect(persisted?.artifacts["repository-context.summary.json"]).toContain("data.db#task_sessions");
+    expect(persisted?.artifacts["review-result.summary.json"]).toContain("data.db#task_sessions");
     expect(persisted?.artifacts["validation-report.json"]).toContain("data.db#task_sessions");
     expect(persisted?.artifacts["fix-result.json"]).toContain("data.db#task_sessions");
     expect(repositoryContextArtifact.exists).toBe(true);
+    const repositoryContextSummary = repositoryContextArtifact.value;
+    expect(isRepositoryContextSummaryArtifact(repositoryContextSummary)).toBe(true);
+    if (!isRepositoryContextSummaryArtifact(repositoryContextSummary)) {
+      throw new Error("Expected repository context summary artifact payload");
+    }
+    expect(typeof repositoryContextSummary.selectedFileCount).toBe("number");
+    expect(Array.isArray(repositoryContextSummary.selectedFiles)).toBe(true);
+    expect(Array.isArray(repositoryContextSummary.selectionReasons)).toBe(true);
+    expect(Array.isArray(repositoryContextSummary.requestedFiles)).toBe(true);
+    expect(Array.isArray(repositoryContextSummary.skippedFiles)).toBe(true);
+    const firstSelectedFile = repositoryContextSummary.selectedFiles[0];
+    expect(typeof firstSelectedFile?.path).toBe("string");
+    expect(typeof firstSelectedFile?.sizeBytes).toBe("number");
+    expect(typeof firstSelectedFile?.truncated).toBe("boolean");
+    expect(firstSelectedFile).not.toHaveProperty("content");
     expect(validationArtifact.exists).toBe(true);
     expect(fixArtifact.exists).toBe(true);
     expect(persisted?.steps.some((step) => step.id === "fix-planned" && step.status === "success")).toBe(true);

@@ -2,7 +2,6 @@ import type {
   PatchApplyResult,
   PatchInspection,
   PatchProposal,
-  RepositoryContextPack,
   ValidationReport,
   WorkspaceBindingSummary
 } from "../index.js";
@@ -86,6 +85,40 @@ const summarizeValidation = (
   validationReport: ValidationReport | undefined
 ): string => {
   return summarizeValidationOutcome(validationReport).summary;
+};
+
+const summarizeRepositoryContext = (repositoryContext: unknown): string => {
+  if (!repositoryContext || typeof repositoryContext !== "object") {
+    return "- No repository context artifact recorded.";
+  }
+
+  const value = repositoryContext as {
+    coverageGapDetected?: boolean;
+    requestedFileCount?: number;
+    requestedFiles?: unknown[];
+    selectedFileCount?: number;
+    selectedFiles?: unknown[];
+    skippedFileCount?: number;
+    skippedFiles?: unknown[];
+    strictFiles?: boolean;
+    warningCount?: number;
+    warnings?: unknown[];
+  };
+
+  const selectedFiles = Array.isArray(value.selectedFiles)
+    ? value.selectedFiles.length
+    : value.selectedFileCount;
+  const requestedFiles = Array.isArray(value.requestedFiles)
+    ? value.requestedFiles.length
+    : value.requestedFileCount;
+  const skippedFiles = Array.isArray(value.skippedFiles)
+    ? value.skippedFiles.length
+    : value.skippedFileCount;
+  const warnings = Array.isArray(value.warnings)
+    ? value.warnings.length
+    : value.warningCount;
+
+  return `- Selected Files: ${selectedFiles ?? 0}\n- Requested Files: ${requestedFiles ?? 0}\n- Skipped Files: ${skippedFiles ?? 0}\n- Coverage Gap: ${value.coverageGapDetected ? "yes" : "no"}\n- Strict Files: ${value.strictFiles ? "yes" : "no"}\n- Warnings: ${warnings ?? 0}`;
 };
 
 const summarizePatch = (
@@ -227,7 +260,7 @@ export function renderTaskSessionReport(input: {
   patchApplyResult?: PatchApplyResult;
   patchInspection?: PatchInspection;
   patchProposal?: PatchProposal;
-  repositoryContext?: RepositoryContextPack;
+  repositoryContext?: unknown;
   repositoryWriteMode?: "execute" | "dry-run";
   reviewResult?: unknown;
   rootDir?: string;
@@ -302,7 +335,7 @@ export function renderTaskSessionReport(input: {
     ``,
     `## Repository Context`,
     repositoryContext
-      ? `- Selected Files: ${repositoryContext.selectedFiles.length}\n- Requested Files: ${repositoryContext.requestedFiles.length}\n- Skipped Files: ${repositoryContext.skippedFiles.length}\n- Coverage Gap: ${repositoryContext.coverageGapDetected ? "yes" : "no"}\n- Strict Files: ${repositoryContext.strictFiles ? "yes" : "no"}\n- Warnings: ${repositoryContext.warnings.length}`
+      ? summarizeRepositoryContext(repositoryContext)
       : `- No repository context artifact recorded.`,
     ``,
     `## Step Summary`,

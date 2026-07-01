@@ -74,7 +74,7 @@ describe("task session store", () => {
     const artifact = await writeTaskArtifact(
       context,
       created.session.taskId,
-      "review-result.json",
+      "review-result.summary.json",
       {
         ok: true
       },
@@ -84,7 +84,7 @@ describe("task session store", () => {
     const storedArtifact = await readTaskArtifact<{ ok: boolean }>(
       rootDir,
       created.session.taskId,
-      "review-result.json"
+      "review-result.summary.json"
     );
 
     expect(created.mode).toBe("execute");
@@ -96,7 +96,7 @@ describe("task session store", () => {
     expect(storedArtifact.value).toEqual({ ok: true });
     expect(updated.path).toBe(getTaskSessionPath(rootDir, created.session.taskId));
     expect(artifact.path).toBe(
-      getTaskArtifactPath(rootDir, created.session.taskId, "review-result.json")
+      getTaskArtifactPath(rootDir, created.session.taskId, "review-result.summary.json")
     );
   });
 

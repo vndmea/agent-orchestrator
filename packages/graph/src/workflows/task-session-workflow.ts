@@ -143,8 +143,8 @@ const STEP_IDS = [
 type TaskStepId = (typeof STEP_IDS)[number];
 
 const ARTIFACT_NAMES = {
-  repositoryContext: "repository-context.json",
-  reviewResult: "review-result.json",
+  repositoryContext: "repository-context.summary.json",
+  reviewResult: "review-result.summary.json",
   validationReport: "validation-report.json",
   fixResult: "fix-result.json",
   patchProposal: "patch-proposal.json",
@@ -152,6 +152,97 @@ const ARTIFACT_NAMES = {
   patchApplyResult: "patch-apply-result.json",
   report: "report.md"
 } as const;
+
+const summarizeSelectedFiles = (repositoryContext: RepositoryContextPack) =>
+  repositoryContext.selectedFiles.map((file) => ({
+    path: file.path,
+    sizeBytes: file.sizeBytes,
+    truncated: file.truncated
+  }));
+
+const summarizeRepositoryContextBase = (
+  repositoryContext: RepositoryContextPack
+) => ({
+  scope: repositoryContext.scope,
+  selectedFileCount: repositoryContext.selectedFiles.length,
+  requestedFileCount: repositoryContext.requestedFiles.length,
+  skippedFileCount: repositoryContext.skippedFiles.length,
+  coverageGapDetected: repositoryContext.coverageGapDetected,
+  selectedFiles: summarizeSelectedFiles(repositoryContext),
+  selectionReasons: repositoryContext.selectionReasons,
+  requestedFiles: repositoryContext.requestedFiles,
+  skippedFiles: repositoryContext.skippedFiles
+});
+
+const summarizeRepositoryContextArtifact = (
+  repositoryContext: RepositoryContextPack
+) => ({
+  rootDir: repositoryContext.rootDir,
+  ...summarizeRepositoryContextBase(repositoryContext),
+  strictFiles: repositoryContext.strictFiles,
+  warningCount: repositoryContext.warnings.length,
+  packageMetadata: repositoryContext.packageMetadata
+    ? {
+        packageJsonPath: repositoryContext.packageMetadata.packageJsonPath,
+        packageManager: repositoryContext.packageMetadata.packageManager,
+        workspaceCount: repositoryContext.packageMetadata.workspaces.length,
+        scriptNames: Object.keys(repositoryContext.packageMetadata.scripts).sort()
+      }
+    : undefined,
+  gitDiff: repositoryContext.gitDiff
+    ? {
+        base: repositoryContext.gitDiff.base,
+        head: repositoryContext.gitDiff.head,
+        changedFileCount: repositoryContext.gitDiff.changedFiles.length,
+        changedFilesPreview: repositoryContext.gitDiff.changedFiles.slice(0, 25),
+        truncated: repositoryContext.gitDiff.truncated
+      }
+    : undefined,
+  generatedAt: repositoryContext.generatedAt
+});
+
+const summarizeReviewResultArtifact = (reviewResult: ReviewWorkflowOutput) => ({
+  accepted: reviewResult.accepted,
+  answerStatus: reviewResult.answerStatus,
+  workflowStatus: reviewResult.workflowStatus,
+  warningCount: reviewResult.warnings.length,
+  errorCount: reviewResult.errors.length,
+  qualityGate: {
+    answered: reviewResult.qualityGate.answered,
+    answerStatus: reviewResult.qualityGate.answerStatus,
+    workflowStatus: reviewResult.qualityGate.workflowStatus,
+    reasonCount: reviewResult.qualityGate.reasons.length,
+    reasons: reviewResult.qualityGate.reasons
+  },
+  reviewSummary: {
+    summary: reviewResult.reviewSummary.summary,
+    architectureImpact: reviewResult.reviewSummary.architectureImpact,
+    riskLevel: reviewResult.reviewSummary.riskLevel,
+    mustFixCount: reviewResult.reviewSummary.mustFixItems.length,
+    mustFixItems: reviewResult.reviewSummary.mustFixItems,
+    shouldFixCount: reviewResult.reviewSummary.shouldFixItems.length,
+    shouldFixItems: reviewResult.reviewSummary.shouldFixItems,
+    missingTestCount: reviewResult.reviewSummary.missingTests.length,
+    missingTests: reviewResult.reviewSummary.missingTests
+  },
+  repositoryContext: summarizeRepositoryContextBase(reviewResult.repositoryContext),
+  validation: {
+    ok: reviewResult.validationReport.ok,
+    checkCount: reviewResult.validationReport.checks.length,
+    failedChecks: reviewResult.validationReport.checks
+      .filter((check) => check.status === "failure")
+      .map((check) => check.name),
+    warningCount: reviewResult.validationReport.warnings.length
+  },
+  debug: {
+    failureStages: reviewResult.debug.qualityGate.failureStages,
+    selectedFileCount: reviewResult.debug.repositoryContext?.selectedFiles.length ?? 0,
+    selectedFilesPreview:
+      reviewResult.debug.repositoryContext?.selectedFiles.slice(0, 25) ?? [],
+    requestedFiles: reviewResult.debug.repositoryContext?.requestedFiles ?? [],
+    skippedFiles: reviewResult.debug.repositoryContext?.skippedFiles ?? []
+  }
+});
 
 const TASK_STEP_LABELS: Record<TaskStepId, string> = {
   "context-built": "Repository context built",
@@ -705,14 +796,14 @@ const executeReviewStep = async (input: {
     input.context,
     input.session,
     ARTIFACT_NAMES.repositoryContext,
-    reviewResult.repositoryContext,
+    summarizeRepositoryContextArtifact(reviewResult.repositoryContext),
     input.allowWriteSession
   );
   const reviewArtifactPath = await persistArtifact(
     input.context,
     input.session,
     ARTIFACT_NAMES.reviewResult,
-    reviewResult,
+    summarizeReviewResultArtifact(reviewResult),
     input.allowWriteSession
   );
   finalizeStep(
@@ -808,7 +899,7 @@ const executeFixStep = async (input: {
     input.context,
     input.session,
     ARTIFACT_NAMES.repositoryContext,
-    fixResult.repositoryContext,
+    summarizeRepositoryContextArtifact(fixResult.repositoryContext),
     input.allowWriteSession
   );
   const validationArtifactPath = await persistArtifact(
