@@ -47,14 +47,14 @@ export const CwContextConfigSchema = z.object({
 export const CwStorageConfigSchema = z.object({
   engine: z.literal("sqlite").default("sqlite"),
   runs: z.object({
-    maxPerKind: z.number().int().min(1).max(5).default(5)
+    maxPerKind: z.number().int().min(1).max(5).default(1)
   }).default({
-    maxPerKind: 5
+    maxPerKind: 1
   }),
   audit: z.object({
-    maxPerType: z.number().int().min(1).max(5).default(5)
+    maxPerType: z.number().int().min(1).max(5).default(3)
   }).default({
-    maxPerType: 5
+    maxPerType: 3
   })
 });
 
@@ -98,10 +98,10 @@ export const CwConfigSchema = z.object({
   storage: CwStorageConfigSchema.default({
     engine: "sqlite",
     runs: {
-      maxPerKind: 5
+      maxPerKind: 1
     },
     audit: {
-      maxPerType: 5
+      maxPerType: 3
     }
   }),
   validation: CwValidationConfigSchema.default({

@@ -160,7 +160,7 @@ describe("task session store", () => {
     ).rejects.toThrow("Unsafe task id");
   });
 
-  it.skip("automatically prunes same-kind sessions beyond the latest five", async () => {
+  it.skip("automatically prunes same-kind sessions beyond the latest retained run", async () => {
     const rootDir = await createWorkspace();
     const context = createContext(rootDir, {
       allowWrite: true,
@@ -256,7 +256,7 @@ describe("task session store", () => {
     const listed = await listTaskSessions(rootDir, 30);
     const sameKind = listed.filter((session) => session.goal === "Repeatable review");
 
-    expect(sameKind).toHaveLength(5);
+    expect(sameKind).toHaveLength(1);
     expect(sameKind.some((session) => session.taskId === current.session.taskId)).toBe(true);
     expect(listed.some((session) => session.taskId === "task-old-6")).toBe(false);
     expect(listed.some((session) => session.taskId === "task-other")).toBe(true);
