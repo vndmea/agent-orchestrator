@@ -31,6 +31,32 @@ const resolveStorageDir = (
   cwStorageDir?: string
 ): string => cwStorageDir ?? getCwWorkspaceDir(rootDir);
 
+const pruneWorkerBenchmarks = async (
+  rootDir: string,
+  workerId: string,
+  suiteName: string,
+  cwStorageDir?: string
+): Promise<void> => {
+  const storageDir = resolveStorageDir(rootDir, cwStorageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
+  try {
+    db.prepare(
+      `DELETE FROM worker_benchmarks
+       WHERE worker_id = ?
+         AND suite_name = ?
+         AND id NOT IN (
+           SELECT id
+           FROM worker_benchmarks
+           WHERE worker_id = ? AND suite_name = ?
+           ORDER BY updated_at DESC, id DESC
+           LIMIT 1
+         )`
+    ).run(workerId, suiteName, workerId, suiteName);
+  } finally {
+    db.close();
+  }
+};
+
 const mapBenchmarkRecord = (row: {
   benchmark_json: string;
   created_at: string;
@@ -162,6 +188,13 @@ export const saveWorkerBenchmark = async (
   } finally {
     db.close();
   }
+
+  await pruneWorkerBenchmarks(
+    context.rootDir,
+    benchmark.workerId,
+    benchmark.suiteName,
+    context.cwStorageDir
+  );
 
   return {
     mode: "execute",
