@@ -30,6 +30,7 @@ import { TestWorker } from "../workers/test-worker.js";
 import { resolveWorkflowWorkerContext } from "./worker-context-resolution.js";
 import { resolveWorkerCapabilityProfileForExecution } from "./worker-onboarding-workflow.js";
 import { buildWorkerTrustProfile } from "./worker-trust-profile.js";
+import { runPatchProposalWorkflow } from "./patch-proposal-workflow.js";
 
 export interface HostWorkerWorkflowInput {
   additionalTaskInput?: Record<string, unknown>;
@@ -41,7 +42,7 @@ export interface HostWorkerWorkflowInput {
   requireProfile?: boolean;
   scope?: string;
   strictFiles?: boolean;
-  taskType: Exclude<WorkerTaskType, "patch-generation">;
+  taskType: WorkerTaskType;
   workerCapabilityProfile?: WorkerCapabilityProfile | null;
   workerId?: string;
 }
@@ -295,7 +296,7 @@ const buildQualityGate = (
 };
 
 const resolveWorkerAgent = (
-  taskType: HostWorkerWorkflowInput["taskType"],
+  taskType: Exclude<WorkerTaskType, "patch-generation">,
   context: ExecutionContext
 ) => {
   switch (taskType) {
@@ -341,7 +342,7 @@ const asStructuredOutputMode = (
 const buildWorkerResultEnvelope = (input: {
   execution: HostWorkerExecutionInfo;
   qualityGate: HostWorkerWorkflowQualityGate;
-  taskType: Exclude<WorkerTaskType, "patch-generation">;
+  taskType: WorkerTaskType;
   taskEnvelopeId: string;
   workerResult: AgentResult | null;
 }): WorkerResultEnvelope => {
@@ -387,9 +388,198 @@ const buildWorkerResultEnvelope = (input: {
   };
 };
 
+const runPatchGenerationThroughHostWorker = async (
+  input: HostWorkerWorkflowInput
+): Promise<HostWorkerWorkflowOutput> => {
+  const context = input.context ?? await resolveExecutionContext();
+  const patchResult = await runPatchProposalWorkflow({
+    context,
+    errorLog:
+      typeof input.additionalTaskInput?.errorLog === "string"
+        ? input.additionalTaskInput.errorLog
+        : undefined,
+    fixResult: input.additionalTaskInput?.fixResult,
+    goal: input.goal,
+    repositoryContext: input.repositoryContext,
+    requireProfile: input.requireProfile,
+    reviewResult: input.additionalTaskInput?.reviewResult,
+    scope: input.scope,
+    validationReport: getValidationReportFromInput(input),
+    workerId: input.workerId
+  });
+  const repositoryContext = patchResult.repositoryContext;
+  const resolvedWorker = await resolveWorkflowWorkerContext({
+    activity: "host-managed patch generation",
+    context,
+    workerId: input.workerId
+  });
+  const resolvedWorkerId = resolvedWorker.workerId;
+  const execution: HostWorkerExecutionInfo = {
+    allowedByPolicy: patchResult.inspection.ok,
+    forceExecution: false,
+    overrideApplied: false,
+    policyReason: patchResult.inspection.ok
+      ? "Patch generation completed and inspection passed."
+      : patchResult.inspection.blockedReasons[0] ??
+        patchResult.warnings[0] ??
+        "Patch generation requires host review.",
+    requiresHostReview: !patchResult.inspection.ok,
+    state: patchResult.proposal.title.includes("[PLACEHOLDER]")
+      ? "blocked_by_policy"
+      : "executed"
+  };
+  const structuredOutputOk =
+    !patchResult.proposal.title.includes("[PLACEHOLDER]");
+  const reasons = [
+    ...patchResult.inspection.blockedReasons,
+    ...patchResult.semanticValidation.issues.map((issue) => issue.reason)
+  ];
+  const uniqueReasons = [...new Set(reasons)];
+  const failureStages = [
+    ...new Set<HostWorkerFailureStage>(
+      patchResult.semanticValidation.issues.map((issue) => issue.stage)
+    )
+  ];
+
+  if (execution.state === "blocked_by_policy") {
+    failureStages.unshift("worker-blocked-by-policy");
+  }
+
+  const qualityGate: HostWorkerWorkflowQualityGate = {
+    answered: patchResult.inspection.ok && uniqueReasons.length === 0,
+    answerStatus:
+      patchResult.inspection.ok && uniqueReasons.length === 0
+        ? "complete"
+        : "incomplete",
+    coverageGapDetected: patchResult.semanticValidation.coverageGapDetected,
+    execution,
+    failureStages,
+    genericFallbackDetected: patchResult.semanticValidation.genericFallbackDetected,
+    mentionedFiles: patchResult.semanticValidation.mentionedFiles,
+    missingRequestedFiles: patchResult.semanticValidation.missingRequestedFiles,
+    requiresHostReview: !patchResult.inspection.ok,
+    resultStatus: patchResult.semanticValidation.resultStatus,
+    skippedFiles: patchResult.semanticValidation.skippedFiles,
+    reasons: uniqueReasons,
+    structuredFailureKind: structuredOutputOk ? null : "schema-validation",
+    structuredOutputAttempts: 1,
+    structuredOutputOk,
+    structuredOutputStatus: structuredOutputOk ? "valid" : "invalid",
+    templateFallbackDetected: patchResult.semanticValidation.templateFallbackDetected,
+    workflowStatus: patchResult.inspection.ok ? "completed" : "needs_review"
+  };
+  const workerResult: AgentResult = {
+    taskId: patchResult.proposal.id,
+    agentId: "worker.patch-generation",
+    role: "worker",
+    status: patchResult.inspection.ok ? "success" : "needs_review",
+    output: patchResult.proposal,
+    confidence: patchResult.inspection.ok ? 0.76 : 0.42,
+    risks: [
+      ...patchResult.proposal.risks,
+      ...uniqueReasons
+    ],
+    artifacts: [
+      {
+        name: `${patchResult.proposal.id}.patch`,
+        type: "text/x-diff",
+        content: patchResult.proposal.unifiedDiff
+      }
+    ],
+    metadata: {
+      inspection: patchResult.inspection,
+      semanticValidation: patchResult.semanticValidation,
+      structuredOutputOk,
+      taskType: "patch-generation"
+    }
+  };
+  const finalResult: AgentResult = {
+    taskId: patchResult.proposal.id,
+    agentId: "host-worker.finalizer",
+    role: "reviewer",
+    status: patchResult.inspection.ok ? "success" : "needs_review",
+    output: {
+      execution,
+      inspection: patchResult.inspection,
+      proposal: patchResult.proposal,
+      qualityGate,
+      repositoryContext: {
+        scope: repositoryContext.scope,
+        requestedFiles: repositoryContext.requestedFiles,
+        skippedFiles: repositoryContext.skippedFiles,
+        coverageGapDetected: repositoryContext.coverageGapDetected,
+        selectedFiles: repositoryContext.selectedFiles.map((file) => file.path),
+        strictFiles: repositoryContext.strictFiles
+      }
+    },
+    confidence: patchResult.inspection.ok ? 0.76 : 0.42,
+    risks: uniqueReasons,
+    artifacts: workerResult.artifacts,
+    metadata: {
+      patchProposalId: patchResult.proposal.id,
+      taskType: "patch-generation",
+      workerId: resolvedWorkerId
+    }
+  };
+
+  return {
+    debug: {
+      qualityGate: {
+        answerStatus: qualityGate.answerStatus,
+        coverageGapDetected: qualityGate.coverageGapDetected,
+        execution: qualityGate.execution,
+        failureStages: qualityGate.failureStages,
+        reasons: qualityGate.reasons,
+        resultStatus: qualityGate.resultStatus,
+        structuredFailureKind: qualityGate.structuredFailureKind,
+        structuredOutputAttempts: qualityGate.structuredOutputAttempts,
+        structuredOutputOk: qualityGate.structuredOutputOk,
+        structuredOutputStatus: qualityGate.structuredOutputStatus,
+        workflowStatus: qualityGate.workflowStatus
+      },
+      promptTransparency: {
+        hostPrompt: input.goal,
+        promptTransformation: "augmented",
+        workerPrompt: null
+      },
+      repositoryContext: {
+        requestedFiles: repositoryContext.requestedFiles,
+        skippedFiles: repositoryContext.skippedFiles,
+        scope: repositoryContext.scope,
+        selectedFiles: repositoryContext.selectedFiles.map((file) => file.path),
+        coverageGapDetected: repositoryContext.coverageGapDetected,
+        strictFiles: repositoryContext.strictFiles,
+        warnings: repositoryContext.warnings
+      },
+      workerExecution: execution,
+      worker: {
+        artifacts: workerResult.artifacts,
+        metadata: workerResult.metadata,
+        output: workerResult.output,
+        status: workerResult.status
+      }
+    },
+    execution,
+    errors: [],
+    finalResult,
+    qualityGate,
+    repositoryContext,
+    warnings: [
+      ...repositoryContext.warnings,
+      ...patchResult.warnings
+    ],
+    workerCapabilityProfile: null,
+    workerResult
+  };
+};
+
 export const runHostWorkerWorkflow = async (
   input: HostWorkerWorkflowInput
 ): Promise<HostWorkerWorkflowOutput> => {
+  if (input.taskType === "patch-generation") {
+    return runPatchGenerationThroughHostWorker(input);
+  }
+
   const context = input.context ?? await resolveExecutionContext();
   const resolvedWorker = await resolveWorkflowWorkerContext({
     activity: "host-managed worker execution",

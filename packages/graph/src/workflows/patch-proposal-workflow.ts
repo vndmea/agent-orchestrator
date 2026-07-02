@@ -53,6 +53,7 @@ export interface PatchProposalWorkflowInput {
 export interface PatchProposalWorkflowOutput {
   inspection: PatchInspection;
   proposal: PatchProposal;
+  repositoryContext: RepositoryContextPack;
   semanticValidation: HostSemanticValidationResult;
   warnings: string[];
 }
@@ -118,6 +119,7 @@ const buildDeniedPatchProposalOutput = async (input: {
   return {
     proposal: input.fallbackProposal,
     inspection,
+    repositoryContext: input.repositoryContext,
     semanticValidation: createPatchSemanticValidation({
       executionState: "blocked_by_policy",
       inspection,
@@ -445,6 +447,7 @@ export const runPatchProposalWorkflow = async (
   return {
     proposal,
     inspection,
+    repositoryContext,
     semanticValidation,
     warnings
   };

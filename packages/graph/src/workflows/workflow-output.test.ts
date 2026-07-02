@@ -6,6 +6,20 @@ import {
 } from "./workflow-output.js";
 import type { TaskSessionWorkflowOutput } from "./task-session-workflow.js";
 
+const repositoryContext = {
+  rootDir: "/tmp/repo",
+  scope: "packages/core",
+  files: [],
+  selectedFiles: [],
+  selectionReasons: [],
+  requestedFiles: [],
+  skippedFiles: [],
+  coverageGapDetected: false,
+  strictFiles: false,
+  warnings: [],
+  generatedAt: "2026-06-29T00:00:00.000Z"
+};
+
 describe("formatTaskSessionWorkflowOutput", () => {
   it("includes resolved local client details in summary mode", () => {
     const summary = formatTaskSessionWorkflowOutput({
@@ -114,6 +128,7 @@ describe("formatTaskSessionWorkflowOutput", () => {
         skippedFiles: [],
         templateFallbackDetected: false
       },
+      repositoryContext,
       warnings: [
         "Worker mock:worker is not allowed to generate patch proposals."
       ]

@@ -55,11 +55,67 @@ export type StructuredInvocationResult<T> =
 
 const fencedJsonPattern = /^```(?:json)?\s*([\s\S]*?)\s*```$/iu;
 
+const findFirstBalancedJsonObject = (text: string): string | null => {
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (start === -1) {
+      if (char === "{") {
+        start = index;
+        depth = 1;
+      }
+      continue;
+    }
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = inString;
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
+};
+
 export const extractJsonCandidate = (text: string): string => {
   const trimmed = text.trim();
   const fencedMatch = fencedJsonPattern.exec(trimmed);
 
-  return fencedMatch?.[1]?.trim() ?? trimmed;
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim();
+  }
+
+  return findFirstBalancedJsonObject(trimmed)?.trim() ?? trimmed;
 };
 
 export const tryParseJson = (text: string): unknown =>

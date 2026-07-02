@@ -51,7 +51,8 @@ const createProfile = (
     "codegen",
     "test-generation",
     "validation-fix",
-    "doc-generation"
+    "doc-generation",
+    "patch-generation"
   ],
   unsupportedTaskTypes: [],
   score: {
@@ -392,6 +393,32 @@ describe("host worker workflow", () => {
     expect(result.finalResult.status).toBe("needs_review");
     expect(result.warnings.join("\n")).toContain("Policy override enabled");
   });
+
+  it("routes patch-generation through the host worker entrypoint", async () => {
+    const rootDir = await createWorkspace();
+    await registerWorker(rootDir);
+
+    const result = await runHostWorkerWorkflow({
+      context: createExecutionContextFromEnv(undefined, {
+        dryRun: true,
+        allowWrite: false,
+        rootDir
+      }),
+      goal: "Generate a safe patch for packages/core",
+      taskType: "patch-generation",
+      workerId,
+      scope: "packages/core"
+    });
+
+    expect(result.workerResult).not.toBeNull();
+    const patchOutput = result.workerResult?.output as {
+      unifiedDiff?: unknown;
+    };
+    expect(patchOutput.unifiedDiff).toEqual(expect.stringContaining("diff --git"));
+    expect(result.finalResult.metadata.taskType).toBe("patch-generation");
+    expect(result.qualityGate.execution.state).toBe("executed");
+    expect(result.debug.worker?.metadata.taskType).toBe("patch-generation");
+  }, 15_000);
 });
 
 describe("worker interview workflow", () => {

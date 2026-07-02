@@ -120,6 +120,55 @@ describe("invokeStructured", () => {
     expect(result.ok && result.data.count).toBe(3);
   });
 
+  it("extracts the first JSON object from surrounding prose", async () => {
+    const provider = new SequenceProvider([
+      {
+        provider: "sequence",
+        model: "mock-model",
+        text: 'Here is the result:\n{"message":"ok {still text}","count":8}\nDone.'
+      }
+    ]);
+
+    const result = await invokeStructured({
+      provider,
+      config,
+      schema,
+      prompt: "Return prose plus JSON"
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.data).toEqual({
+      message: "ok {still text}",
+      count: 8
+    });
+  });
+
+  it("extracts nested JSON objects without swallowing trailing prose", async () => {
+    const nestedSchema = z.object({
+      message: z.string(),
+      nested: z.object({
+        count: z.number().int()
+      })
+    });
+    const provider = new SequenceProvider([
+      {
+        provider: "sequence",
+        model: "mock-model",
+        text: 'prefix {"message":"ok","nested":{"count":10}} suffix {"message":"ignored","nested":{"count":0}}'
+      }
+    ]);
+
+    const result = await invokeStructured({
+      provider,
+      config,
+      schema: nestedSchema,
+      prompt: "Return nested JSON with prose"
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.data.nested.count).toBe(10);
+  });
+
   it("returns a parse failure for invalid JSON", async () => {
     const provider = new SequenceProvider([
       {
