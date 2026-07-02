@@ -1,4 +1,5 @@
 import {
+  createExecutionContextWithWorkerModel,
   type DoctorCapability,
   runDoctor,
   type DoctorCheck,
@@ -12,6 +13,7 @@ import {
   buildWorkerAvailabilitySnapshot
 } from "./worker-availability.js";
 import { createWorkerDoctorChecks } from "./worker-doctor.js";
+import { resolveWorkerTarget } from "./worker-target-resolution.js";
 
 export const HOST_MCP_CHECK_NAMES = [
   "host-config-present",
@@ -196,7 +198,24 @@ export const buildDoctorReport = async (input: {
   probe?: boolean;
   workerId?: string;
 }): Promise<DoctorReport> => {
-  const report = await runDoctor(input.context, {
+  let doctorContext = input.context;
+
+  if (input.workerId) {
+    try {
+      const resolvedWorker = await resolveWorkerTarget({
+        context: input.context,
+        workerId: input.workerId
+      });
+      doctorContext = createExecutionContextWithWorkerModel(
+        input.context,
+        resolvedWorker.modelConfig
+      );
+    } catch {
+      doctorContext = input.context;
+    }
+  }
+
+  const report = await runDoctor(doctorContext, {
     skipLocalClientCommandCheck: true,
     additionalChecks: [
       ...(await createWorkerDoctorChecks(input.context, {

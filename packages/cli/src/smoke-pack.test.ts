@@ -174,7 +174,7 @@ describe("cli packed tarball smoke", () => {
       ) as {
         version?: number;
       };
-      expect(storedConfig.version).toBe(2);
+      expect(storedConfig.version).toBe(1);
     } finally {
       await rm(tarballPath, { force: true });
     }

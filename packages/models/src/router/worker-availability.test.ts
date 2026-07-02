@@ -242,4 +242,43 @@ describe("buildWorkerAvailabilitySnapshot", () => {
     expect(snapshot.checks.probe.detail).not.toContain("provider mock");
     expect(snapshot.summary).toContain("worker resolution failed");
   });
+
+  it("does not call a worker ready when the probe passes but the profile is missing", async () => {
+    const rootDir = await createRootDir();
+    const context = createExecutionContextFromEnv(undefined, {
+      rootDir,
+      dryRun: true,
+      allowWrite: false,
+      workerModel: {
+        provider: "mock",
+        model: "worker-model"
+      }
+    });
+
+    await saveWorkerRegistration(
+      context,
+      {
+        workerId,
+        provider: "mock",
+        model: "worker-model",
+        enabled: true,
+        tags: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      true
+    );
+
+    const snapshot = await buildWorkerAvailabilitySnapshot({
+      context,
+      workerId,
+      probe: true
+    });
+
+    expect(snapshot.status).toBe("unavailable");
+    expect(snapshot.checks.probe.status).toBe("passed");
+    expect(snapshot.checks.profile.status).toBe("missing");
+    expect(snapshot.summary).toContain("until a persisted worker profile exists");
+    expect(snapshot.summary).not.toContain("ready for formal tasks");
+  });
 });

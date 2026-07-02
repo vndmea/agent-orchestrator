@@ -186,7 +186,7 @@ export const saveWorkerRegistration = async (
   const merged = new Map(existing.workers.map((worker) => [worker.workerId, worker]));
   merged.set(parsed.workerId, parsed);
 
-  const configContents = await readFile(path, "utf8").catch(() => "{\"version\":2}");
+  const configContents = await readFile(path, "utf8").catch(() => "{\"version\":1}");
   const parsedConfig = CwConfigSchema.parse(JSON.parse(configContents) as unknown);
   const nextConfig = CwConfigSchema.parse({
     ...parsedConfig,

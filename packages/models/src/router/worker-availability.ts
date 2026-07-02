@@ -423,15 +423,12 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
   const canRunFormalTasks = status === "ready";
   const canRunPatchGeneration =
     canRunFormalTasks && checks.patchGeneration.status === "allowed";
-  const workerAvailabilitySummary =
-    checks.registry.status === "registered" && checks.probe.status === "passed"
-      ? `Worker ${resolvedWorkerId} is ready for formal tasks.`
-      : buildSummary({
-          workerId: resolvedWorkerId,
-          status,
-          unavailableReasonType,
-          canRunPatchGeneration
-        });
+  const workerAvailabilitySummary = buildSummary({
+    workerId: resolvedWorkerId,
+    status,
+    unavailableReasonType,
+    canRunPatchGeneration
+  });
 
   return WorkerAvailabilitySnapshotSchema.parse({
     workerId: resolvedWorkerId,

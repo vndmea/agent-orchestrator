@@ -64,6 +64,15 @@ export class StorageWritePolicy {
       };
     }
 
+    if (isDryRunUntilExplicit && explicitAllowWrite) {
+      return {
+        allowed: true,
+        domain,
+        mode: "execute",
+        reason: `${domain} is allowed to persist managed state.`
+      };
+    }
+
     if (domain === "session-write") {
       return {
         allowed: true,

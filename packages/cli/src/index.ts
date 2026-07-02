@@ -19,6 +19,7 @@ import { registerReviewCommand } from "./commands/review.js";
 import { registerTaskCommand } from "./commands/task.js";
 import { registerValidateCommand } from "./commands/validate.js";
 import { registerWorkerCommand } from "./commands/worker.js";
+import { installCliWarningFilter } from "./warnings.js";
 
 export interface CliIo {
   outputMode?: "human" | "json";
@@ -46,6 +47,7 @@ export const buildCli = (
   io: CliIo = defaultIo,
   dependencies: CliDependencies = {}
 ): Command => {
+  installCliWarningFilter();
   const program = new Command();
 
   program

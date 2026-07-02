@@ -1,8 +1,10 @@
 export const CW_SQLITE_SCHEMA_VERSION = 2;
 
 export const CW_SQLITE_PRAGMAS: string[] = [
+  "PRAGMA busy_timeout = 5000",
   "PRAGMA foreign_keys = ON",
-  "PRAGMA journal_mode = DELETE",
+  "PRAGMA journal_mode = WAL",
+  "PRAGMA synchronous = NORMAL",
   "PRAGMA temp_store = MEMORY"
 ];
 

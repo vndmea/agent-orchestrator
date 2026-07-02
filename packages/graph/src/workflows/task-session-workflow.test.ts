@@ -260,6 +260,8 @@ describe("task session workflow", () => {
     expect(fixArtifact.exists).toBe(true);
     expect(persisted?.steps.some((step) => step.id === "fix-planned" && step.status === "success")).toBe(true);
     expect(report.report).toContain("Task Session Report");
+    expect(report.report).toContain("- Status: completed");
+    expect(report.report).not.toContain("Task status is running");
   }, 15_000);
 
   it("blocks patch apply without explicit confirmation gates", async () => {

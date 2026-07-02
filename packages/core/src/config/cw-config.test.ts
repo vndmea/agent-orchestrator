@@ -28,7 +28,7 @@ describe("cw config", () => {
     const result = await loadCwConfig(rootDir);
 
     expect(result.exists).toBe(false);
-    expect(result.config.version).toBe(2);
+    expect(result.config.version).toBe(1);
     expect(result.config.safety.dryRun).toBe(true);
   });
 

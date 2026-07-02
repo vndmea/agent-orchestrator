@@ -39,7 +39,13 @@ export const openSqliteWorkspaceStore = async (
   cwStorageDir: string
 ): Promise<SqliteDatabase> => {
   const DatabaseSync = await Promise.resolve(loadDatabaseSync());
-  return new DatabaseSync(getCwWorkspaceDatabasePathFromStorageDir(cwStorageDir));
+  const db = new DatabaseSync(getCwWorkspaceDatabasePathFromStorageDir(cwStorageDir));
+
+  for (const pragma of CW_SQLITE_PRAGMAS) {
+    db.exec(pragma);
+  }
+
+  return db;
 };
 
 export const bootstrapSqliteWorkspaceStore = async (

@@ -362,6 +362,21 @@ export const runDoctor = async (
     }
   });
 
+  if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+    addCheck(checks, {
+      name: "tls-verification",
+      status: "warning",
+      message:
+        "NODE_TLS_REJECT_UNAUTHORIZED=0 is set; HTTPS certificate verification is disabled for this process.",
+      metadata: {
+        nodeTlsRejectUnauthorized: "0"
+      }
+    });
+    recommendedActions.push(
+      "Unset NODE_TLS_REJECT_UNAUTHORIZED before running real provider calls unless you are intentionally debugging a trusted local TLS environment."
+    );
+  }
+
   const config = await loadCwConfig(context.rootDir);
   addCheck(checks, {
     name: "runtime-bootstrap",

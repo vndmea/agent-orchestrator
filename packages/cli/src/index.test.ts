@@ -2378,6 +2378,7 @@ describe("cli parsing", () => {
 
       await cli.parseAsync(["node", "cw", "doctor"]);
       await cli.parseAsync(["node", "cw", "audit", "list", "--limit", "5"]);
+      await cli.parseAsync(["node", "cw", "audit", "list", "--max", "5"]);
 
       expect(output.at(-1)).toContain("audit events");
       expect(output.at(-1)).toContain("\u001b[");

@@ -1182,7 +1182,27 @@ const finalizeTaskWorkflowOutput = async (input: {
     input.validationReport ?? input.reviewResult.validationReport;
   const workspaceBinding = buildWorkspaceBindingSummary(input.context.rootDir);
   const repositoryWriteMode = getRepositoryWriteMode(input.context);
-  const initialReport = buildSessionReport({
+  await syncSessionState(
+    input.context,
+    input.session,
+    input.finalStatus,
+    input.allowWriteSession
+  );
+  const preliminaryPersistence = buildPersistenceState({
+    session: input.session,
+    sessionWriteMode: input.sessionWriteMode,
+    expectedArtifactNames: getExpectedArtifactNames({
+      reviewResult: input.reviewResult,
+      repositoryContext,
+      validationReport,
+      fixResult: input.fixResult,
+      patchProposal: input.patchProposal,
+      patchInspection: input.patchInspection,
+      patchApplyResult: input.patchApplyResult,
+      report: ""
+    })
+  });
+  const preliminaryReport = buildSessionReport({
     session: input.session,
     reviewResult: input.reviewResult,
     repositoryContext,
@@ -1195,12 +1215,14 @@ const finalizeTaskWorkflowOutput = async (input: {
     workspaceBinding,
     repositoryWriteMode,
     sessionWriteMode: input.sessionWriteMode,
-    sessionPersisted: input.sessionWriteMode === "execute"
+    sessionPersisted: preliminaryPersistence.sessionPersisted,
+    artifactsReadable: preliminaryPersistence.artifactsReadable,
+    artifactRegistryComplete: preliminaryPersistence.artifactRegistryComplete
   });
   await persistReport(
     input.context,
     input.session,
-    initialReport,
+    preliminaryReport,
     input.allowWriteSession
   );
   const persistence = buildPersistenceState({
@@ -1214,7 +1236,7 @@ const finalizeTaskWorkflowOutput = async (input: {
       patchProposal: input.patchProposal,
       patchInspection: input.patchInspection,
       patchApplyResult: input.patchApplyResult,
-      report: initialReport
+      report: preliminaryReport
     })
   });
   const report = buildSessionReport({
@@ -1235,16 +1257,9 @@ const finalizeTaskWorkflowOutput = async (input: {
     artifactRegistryComplete: persistence.artifactRegistryComplete
   });
 
-  if (report !== initialReport) {
+  if (report !== preliminaryReport) {
     await persistReport(input.context, input.session, report, input.allowWriteSession);
   }
-
-  await syncSessionState(
-    input.context,
-    input.session,
-    input.finalStatus,
-    input.allowWriteSession
-  );
 
   const nextRecommendedActions = buildNextRecommendedActions({
     session: input.session,

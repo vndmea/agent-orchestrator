@@ -39,6 +39,21 @@ describe("StorageWritePolicy", () => {
     expect(result.mode).toBe("execute");
   });
 
+  it("executes explicit managed-state writes even when repository writes stay dry-run", () => {
+    const policy = new StorageWritePolicy({
+      allowWrite: false,
+      dryRun: true
+    });
+
+    const profile = policy.evaluate("profile-write", true);
+    const config = policy.evaluate("config-write", true);
+    const benchmark = policy.evaluate("benchmark-write", true);
+
+    expect(profile.mode).toBe("execute");
+    expect(config.mode).toBe("execute");
+    expect(benchmark.mode).toBe("execute");
+  });
+
   it("treats execution records like audit writes in dry-run mode", () => {
     const policy = new StorageWritePolicy({
       allowWrite: true,
