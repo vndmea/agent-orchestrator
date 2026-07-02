@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { basename, extname, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import { statSync } from "node:fs";
 
 import {
   AgentError,
@@ -56,6 +57,7 @@ export interface SelectRepositoryFilesOptions {
 
 interface ResolvedRepositoryScope {
   effectiveScope?: string;
+  implicitFiles?: string[];
   warnings: string[];
 }
 
@@ -131,7 +133,14 @@ export const resolveRepositoryScope = (
     return rootDir;
   }
 
-  return ensureInsideRoot(rootDir, scope);
+  const resolvedScope = ensureInsideRoot(rootDir, scope);
+
+  try {
+    const scopeStat = statSync(resolvedScope);
+    return scopeStat.isFile() ? dirname(resolvedScope) : resolvedScope;
+  } catch {
+    return resolvedScope;
+  }
 };
 
 export const resolveRepositoryPath = (
@@ -182,8 +191,7 @@ const ensureInsideScope = (
 
 const resolveSelectionScope = async (
   rootDir: string,
-  scope: string | undefined,
-  hasExplicitFiles: boolean
+  scope: string | undefined
 ): Promise<ResolvedRepositoryScope> => {
   if (!scope) {
     return {
@@ -191,33 +199,40 @@ const resolveSelectionScope = async (
     };
   }
 
-  const resolvedScope = resolveRepositoryScope(rootDir, scope);
-
-  if (!hasExplicitFiles) {
-    return {
-      effectiveScope: scope,
-      warnings: []
-    };
-  }
-
-  try {
-    await stat(resolvedScope);
-    return {
-      effectiveScope: scope,
-      warnings: []
-    };
-  } catch (error) {
+  const resolvedScope = ensureInsideRoot(rootDir, scope);
+  const scopeStat = await stat(resolvedScope).catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
     if (!/ENOENT/u.test(message)) {
       throw error;
     }
 
+    return null;
+  });
+
+  if (!scopeStat) {
     return {
       warnings: [
         `Ignoring scope "${scope}" because it does not resolve to an existing repository path. Use files for explicit file review and scope only for repository paths.`
       ]
     };
   }
+
+  if (scopeStat.isFile()) {
+    const scopedFile = toRelativePath(rootDir, resolvedScope);
+
+    return {
+      effectiveScope: relative(rootDir, dirname(resolvedScope)).replaceAll("\\", "/") || ".",
+      implicitFiles: [scopedFile],
+      warnings: [
+        `Scope "${scope}" points to a file, so repository context will be limited to that file.`
+      ]
+    };
+  }
+
+  return {
+    effectiveScope: scope,
+    warnings: []
+  };
 };
 
 export const readScopedRepositoryFile = async (
@@ -263,19 +278,19 @@ export const selectRepositoryFiles = async ({
 }> => {
   const scopeResolution = await resolveSelectionScope(
     rootDir,
-    scope,
-    (files?.length ?? 0) > 0
+    scope
   );
   const effectiveScope = scopeResolution.effectiveScope;
   const scopedRoot = resolveRepositoryScope(rootDir, effectiveScope);
   const warnings: string[] = [...scopeResolution.warnings];
+  const effectiveFiles = files ?? scopeResolution.implicitFiles;
   const summaries: RepositoryFileSummary[] = [];
   const skippedFiles: string[] = [];
   const selectedFiles: RepositoryFileContent[] = [];
   let selectionReasons: SelectionReason[] = [];
 
   const selectedSet = new Set(
-    (files ?? []).map((file) =>
+    (effectiveFiles ?? []).map((file) =>
       toRelativePath(rootDir, ensureInsideScope(rootDir, file, effectiveScope))
     )
   );

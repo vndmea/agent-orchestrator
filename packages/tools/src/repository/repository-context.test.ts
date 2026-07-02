@@ -162,6 +162,45 @@ describe("repository context pack", () => {
     ).toBe(true);
   });
 
+  it("treats a file scope as the containing directory when explicit files are provided", async () => {
+    const rootDir = await createRootDir();
+
+    await writeText(rootDir, "packages/pkg/package.json", JSON.stringify({ name: "pkg" }));
+    await writeText(rootDir, "packages/pkg/src/index.ts", "export const value = 1;\n");
+
+    const result = await selectRepositoryFiles({
+      rootDir,
+      scope: "packages/pkg/package.json",
+      files: ["packages/pkg/src/index.ts"]
+    });
+
+    expect(result.effectiveScope).toBe("packages/pkg");
+    expect(
+      result.warnings.some((warning) => warning.includes("limited to that file"))
+    ).toBe(true);
+    expect(result.selectedFiles.map((file) => file.path)).toEqual([
+      "packages/pkg/src/index.ts"
+    ]);
+  });
+
+  it("treats a file scope as the containing directory for automatic selection", async () => {
+    const rootDir = await createRootDir();
+
+    await writeText(rootDir, "package.json", JSON.stringify({ name: "root" }));
+    await writeText(rootDir, "src/index.ts", "export const value = 1;\n");
+
+    const result = await selectRepositoryFiles({
+      rootDir,
+      scope: "package.json"
+    });
+
+    expect(result.effectiveScope).toBe(".");
+    expect(result.selectedFiles.map((file) => file.path)).toEqual(["package.json"]);
+    expect(
+      result.warnings.some((warning) => warning.includes("limited to that file"))
+    ).toBe(true);
+  });
+
   it("blocks explicit files outside the provided scope with a stable error code", async () => {
     const rootDir = await createRootDir();
 
