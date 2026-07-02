@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 
+import { loadCwConfig } from "../config/cw-config.js";
 import { AgentError } from "../errors/agent-error.js";
 import type { ExecutionContext } from "../runtime/execution-context.js";
 import {
@@ -150,6 +151,64 @@ const recordArtifactRefs = (
   }
 };
 
+const pruneWorkerTaskExecutions = async (
+  context: ExecutionContext,
+  record: WorkerTaskExecutionRecord
+): Promise<void> => {
+  const config = await loadCwConfig(context.rootDir);
+  const maxPerKind = config.config.storage.workerExecutions.maxPerKind;
+  const storageDir = resolveStorageDir(context.rootDir, context.cwStorageDir);
+  const db = await openSqliteWorkspaceStore(storageDir);
+  let inTransaction = false;
+
+  try {
+    const staleRows = db.prepare(
+      `SELECT id
+       FROM worker_task_executions
+       WHERE task_type = ?
+         AND COALESCE(worker_id, '') = COALESCE(?, '')
+         AND id NOT IN (
+           SELECT id
+           FROM worker_task_executions
+           WHERE task_type = ?
+             AND COALESCE(worker_id, '') = COALESCE(?, '')
+           ORDER BY created_at DESC, id DESC
+           LIMIT ?
+         )`
+    ).all(
+      record.taskEnvelope.taskType,
+      record.workerId ?? null,
+      record.taskEnvelope.taskType,
+      record.workerId ?? null,
+      maxPerKind
+    ) as Array<{ id: string }>;
+
+    if (staleRows.length === 0) {
+      return;
+    }
+
+    db.exec("BEGIN");
+    inTransaction = true;
+    for (const row of staleRows) {
+      db.prepare(
+        `DELETE FROM artifact_records
+         WHERE execution_id = ?
+           AND retention_class = ?`
+      ).run(row.id, "execution");
+      db.prepare("DELETE FROM worker_task_executions WHERE id = ?").run(row.id);
+    }
+    db.exec("COMMIT");
+    inTransaction = false;
+  } catch (error) {
+    if (inTransaction) {
+      db.exec("ROLLBACK");
+    }
+    throw error;
+  } finally {
+    db.close();
+  }
+};
+
 export const recordWorkerTaskExecution = async (
   context: ExecutionContext,
   input: RecordWorkerTaskExecutionInput,
@@ -231,6 +290,8 @@ export const recordWorkerTaskExecution = async (
   } finally {
     db.close();
   }
+
+  await pruneWorkerTaskExecutions(context, record);
 
   return {
     mode: "execute",

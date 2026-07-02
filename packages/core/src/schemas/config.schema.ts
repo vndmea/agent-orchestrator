@@ -55,6 +55,16 @@ export const CwStorageConfigSchema = z.object({
     maxPerType: z.number().int().min(1).max(5).default(3)
   }).default({
     maxPerType: 3
+  }),
+  workerExecutions: z.object({
+    maxPerKind: z.number().int().min(1).max(10).default(3)
+  }).default({
+    maxPerKind: 3
+  }),
+  patchProposals: z.object({
+    maxStored: z.number().int().min(1).max(10).default(3)
+  }).default({
+    maxStored: 3
   })
 });
 
@@ -102,6 +112,12 @@ export const CwConfigSchema = z.object({
     },
     audit: {
       maxPerType: 3
+    },
+    workerExecutions: {
+      maxPerKind: 3
+    },
+    patchProposals: {
+      maxStored: 3
     }
   }),
   validation: CwValidationConfigSchema.default({

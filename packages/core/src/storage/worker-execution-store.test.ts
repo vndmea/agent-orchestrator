@@ -16,9 +16,14 @@ import {
 } from "./worker-execution-store.js";
 import { openSqliteWorkspaceStore } from "./sqlite.js";
 
-const createTaskEnvelope = (): WorkerTaskEnvelope => ({
-  id: "task-envelope-1",
-  taskType: "review-lite",
+const createTaskEnvelope = (
+  input: {
+    id?: string;
+    taskType?: WorkerTaskEnvelope["taskType"];
+  } = {}
+): WorkerTaskEnvelope => ({
+  id: input.id ?? "task-envelope-1",
+  taskType: input.taskType ?? "review-lite",
   objective: "Review selected files",
   host: "codex",
   model: {
@@ -39,8 +44,10 @@ const createTaskEnvelope = (): WorkerTaskEnvelope => ({
   }
 });
 
-const createTrustProfile = (): WorkerTrustProfile => ({
-  workerId: "mock:worker-model",
+const createTrustProfile = (
+  workerId = "mock:worker-model"
+): WorkerTrustProfile => ({
+  workerId,
   trustLevel: "benchmarked",
   onboardingStatus: "passed",
   interviewStatus: "passed",
@@ -49,9 +56,14 @@ const createTrustProfile = (): WorkerTrustProfile => ({
   warnings: []
 });
 
-const createResultEnvelope = (): WorkerResultEnvelope => ({
-  taskEnvelopeId: "task-envelope-1",
-  taskType: "review-lite",
+const createResultEnvelope = (
+  input: {
+    taskEnvelopeId?: string;
+    taskType?: WorkerResultEnvelope["taskType"];
+  } = {}
+): WorkerResultEnvelope => ({
+  taskEnvelopeId: input.taskEnvelopeId ?? "task-envelope-1",
+  taskType: input.taskType ?? "review-lite",
   status: "ok",
   output: {
     answer: "ok"
@@ -131,6 +143,88 @@ describe("worker execution store", () => {
         "native-json-schema"
       );
       expect(artifactRow?.artifact_name).toBe("worker-debug.json");
+    } finally {
+      db.close();
+    }
+  });
+
+  it("retains only the latest three records per task and worker", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "cw-worker-exec-retain-"));
+    const context = createExecutionContextFromEnv(undefined, {
+      allowWrite: true,
+      dryRun: false,
+      rootDir
+    });
+
+    for (let index = 0; index < 4; index += 1) {
+      const taskEnvelope = createTaskEnvelope({
+        id: `task-envelope-retain-${index}`,
+        taskType: "review-lite"
+      });
+      await recordWorkerTaskExecution(context, {
+        artifactRefs: [`worker-debug-${index}.json`],
+        createdAt: `2026-01-01T00:00:0${index}.000Z`,
+        id: `worker-exec-retain-${index}`,
+        resultEnvelope: createResultEnvelope({
+          taskEnvelopeId: taskEnvelope.id,
+          taskType: taskEnvelope.taskType
+        }),
+        taskEnvelope,
+        workerId: "mock:worker-model",
+        workerTrustProfile: createTrustProfile("mock:worker-model")
+      });
+    }
+
+    const otherWorkerTaskEnvelope = createTaskEnvelope({
+      id: "task-envelope-other-worker",
+      taskType: "review-lite"
+    });
+    await recordWorkerTaskExecution(context, {
+      artifactRefs: ["worker-debug-other-worker.json"],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      id: "worker-exec-other-worker",
+      resultEnvelope: createResultEnvelope({
+        taskEnvelopeId: otherWorkerTaskEnvelope.id,
+        taskType: otherWorkerTaskEnvelope.taskType
+      }),
+      taskEnvelope: otherWorkerTaskEnvelope,
+      workerId: "mock:other-worker-model",
+      workerTrustProfile: createTrustProfile("mock:other-worker-model")
+    });
+
+    const records = await listWorkerTaskExecutionRecords(
+      rootDir,
+      10,
+      context.cwStorageDir
+    );
+    const retainedIds = records.map((record) => record.id);
+    const retainedPrimaryGroup = records.filter(
+      (record) =>
+        record.taskEnvelope.taskType === "review-lite" &&
+        record.workerId === "mock:worker-model"
+    );
+    const db = await openSqliteWorkspaceStore(context.cwStorageDir);
+
+    try {
+      const staleArtifactRow = db
+        .prepare("SELECT artifact_name FROM artifact_records WHERE execution_id = ?")
+        .get("worker-exec-retain-0") as { artifact_name: string } | undefined;
+      const otherWorkerArtifactRow = db
+        .prepare("SELECT artifact_name FROM artifact_records WHERE execution_id = ?")
+        .get("worker-exec-other-worker") as { artifact_name: string } | undefined;
+
+      expect(retainedPrimaryGroup.map((record) => record.id)).toEqual([
+        "worker-exec-retain-3",
+        "worker-exec-retain-2",
+        "worker-exec-retain-1"
+      ]);
+      expect(retainedPrimaryGroup).toHaveLength(3);
+      expect(retainedIds).toContain("worker-exec-other-worker");
+      expect(retainedIds).not.toContain("worker-exec-retain-0");
+      expect(staleArtifactRow).toBeUndefined();
+      expect(otherWorkerArtifactRow?.artifact_name).toBe(
+        "worker-debug-other-worker.json"
+      );
     } finally {
       db.close();
     }

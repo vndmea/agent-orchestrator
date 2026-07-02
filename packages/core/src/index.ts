@@ -13,6 +13,7 @@ export * from "./runtime/path-input.js";
 export * from "./runtime/workspace-binding.js";
 export * from "./runtime/workflow-runtime.js";
 export * from "./storage/cw-paths.js";
+export * from "./storage/patch-proposal-artifact-store.js";
 export * from "./storage/sqlite.js";
 export * from "./storage/sqlite-schema.js";
 export * from "./storage/worker-execution-store.js";

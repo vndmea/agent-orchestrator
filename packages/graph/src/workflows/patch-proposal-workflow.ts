@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
+
 import {
   PatchInspectionSchema,
+  buildPatchProposalRecordSummary,
   type ExecutionContext,
   type PatchInspection,
   type PatchProposal,
@@ -10,6 +13,7 @@ import {
   recordWorkerTaskExecution,
   type ValidationReport,
   resolveExecutionContext,
+  writePatchProposalArtifact,
   writeAuditEvent
 } from "@mcp-code-worker/core";
 import {
@@ -149,7 +153,10 @@ const buildPatchResultEnvelope = (input: {
   taskEnvelopeId: input.hostTaskId,
   taskType: "patch-generation",
   status: input.semanticValidation.resultStatus,
-  output: input.proposal,
+  output: buildPatchProposalRecordSummary({
+    inspection: input.inspection,
+    proposal: input.proposal
+  }),
   failure: input.semanticValidation.issues.length > 0 || !input.inspection.ok
     ? {
         kind: input.inspection.ok ? "semantic-validation" : "policy-blocked",
@@ -184,6 +191,7 @@ const recordAndAuditPatchProposalExecution = async (input: {
   workerId: string;
   workerTrustProfile: WorkerTrustProfile;
 }): Promise<void> => {
+  const executionId = `patch-exec-${randomUUID()}`;
   const resultEnvelope = buildPatchResultEnvelope({
     hostTaskId: input.taskEnvelope.id,
     inspection: input.inspection,
@@ -201,10 +209,16 @@ const recordAndAuditPatchProposalExecution = async (input: {
       semanticValidation: input.semanticValidation,
       workflow: "patch-proposal-workflow"
     },
+    id: executionId,
     resultEnvelope,
     taskEnvelope: input.taskEnvelope,
     workerId: input.workerId,
     workerTrustProfile: input.workerTrustProfile
+  });
+  const patchArtifact = await writePatchProposalArtifact(input.context, {
+    executionId,
+    inspection: input.inspection,
+    proposal: input.proposal
   });
 
   await writeAuditEvent(input.context, {
@@ -220,6 +234,8 @@ const recordAndAuditPatchProposalExecution = async (input: {
     metadata: {
       executionRecordId: executionRecord.record.id,
       executionRecordWritten: executionRecord.written,
+      patchArtifactPath: patchArtifact.path,
+      patchArtifactWritten: patchArtifact.written,
       patchId: input.proposal.id,
       semanticResultStatus: input.semanticValidation.resultStatus,
       scope: input.effectiveScope,

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createExecutionContextFromEnv,
   listWorkerTaskExecutionRecords,
+  openSqliteWorkspaceStore,
   type RepositoryContextPack,
   type ValidationReport,
   WorkerCapabilityProfileSchema
@@ -204,10 +205,76 @@ describe("patch proposal workflow", () => {
     expect(records).toHaveLength(1);
     expect(records[0]?.taskEnvelope.taskType).toBe("patch-generation");
     expect(records[0]?.artifactRefs).toEqual([result.proposal.id]);
+    expect(JSON.stringify(records[0]?.resultEnvelope?.output)).not.toContain(
+      "unifiedDiff"
+    );
     expect(records[0]?.resultEnvelope?.diagnostics.structuredOutputAttempts).toBe(
       1
     );
     expect(records[0]?.workerTrustProfile.trustLevel).toBe("benchmarked");
+
+    const db = await openSqliteWorkspaceStore(context.cwStorageDir);
+    try {
+      const artifactRow = db.prepare(
+        `SELECT path, artifact_kind, storage
+         FROM artifact_records
+         WHERE artifact_name = ?`
+      ).get(result.proposal.id) as
+        | {
+            artifact_kind: string;
+            path: string;
+            storage: string;
+          }
+        | undefined;
+
+      expect(artifactRow).toMatchObject({
+        artifact_kind: "patch-proposal",
+        storage: "filesystem"
+      });
+      expect(artifactRow?.path).toContain("patch-proposals");
+      const artifact = JSON.parse(
+        await readFile(artifactRow?.path ?? "", "utf8")
+      ) as { unifiedDiff?: string };
+      expect(artifact.unifiedDiff).toBe(result.proposal.unifiedDiff);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("retains only the latest configured patch proposal artifacts", async () => {
+    const rootDir = await createWorkspace();
+    await registerWorker(rootDir);
+    const context = createWriteContext(rootDir);
+
+    for (let index = 0; index < 4; index += 1) {
+      await runPatchProposalWorkflow({
+        context,
+        goal: `Fix the failing typecheck ${index}`,
+        scope: "packages/core",
+        errorLog: "TS2304: Cannot find name 'missingValue'.",
+        workerId
+      });
+    }
+
+    const db = await openSqliteWorkspaceStore(context.cwStorageDir);
+    try {
+      const rows = db.prepare(
+        `SELECT path
+         FROM artifact_records
+         WHERE artifact_kind = ?
+         ORDER BY created_at DESC`
+      ).all("patch-proposal") as Array<{ path: string }>;
+
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        const artifact = JSON.parse(await readFile(row.path, "utf8")) as {
+          unifiedDiff?: string;
+        };
+        expect(artifact.unifiedDiff).toContain("diff --git");
+      }
+    } finally {
+      db.close();
+    }
   });
 
   it("marks fallback proposals as denied when model output is invalid", async () => {
