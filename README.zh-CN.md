@@ -348,6 +348,63 @@ cw mcp config
 cw mcp list-tools
 ```
 
+### Host-worker 授权续跑
+
+当 worker 请求 host 执行一个需要用户确认的受限工具动作时，`cw_run_host_worker`
+会返回 `permission_required`，并在 `permissionRequest` 中带上一个短期
+`continuationToken`：
+
+```json
+{
+  "status": "permission_required",
+  "permissionRequest": {
+    "continuationToken": {
+      "taskId": "task-123",
+      "requestId": "tool-req-456",
+      "expiresAt": "2026-07-02T10:30:00.000Z"
+    },
+    "request": {
+      "id": "tool-req-456",
+      "action": "read_file_snippet",
+      "path": "package.json"
+    }
+  }
+}
+```
+
+用户同意或拒绝后，再次调用 `cw_run_host_worker`，带回同一个
+`continuationToken`，并提交匹配的 `userPermissionGrants`：
+
+```json
+{
+  "goal": "Review root scripts",
+  "taskType": "review-lite",
+  "scope": "packages/core",
+  "workerId": "default-worker",
+  "continuationToken": {
+    "taskId": "task-123",
+    "requestId": "tool-req-456",
+    "expiresAt": "2026-07-02T10:30:00.000Z"
+  },
+  "userPermissionGrants": [
+    {
+      "id": "grant-1",
+      "taskId": "task-123",
+      "requestId": "tool-req-456",
+      "action": "read_file_snippet",
+      "grantScope": "once",
+      "granted": true,
+      "status": "granted",
+      "decidedAt": "2026-07-02T10:20:00.000Z"
+    }
+  ]
+}
+```
+
+这个 token 只是这次等待用户授权的续跑窗口，不是长期权限。当前默认 15
+分钟过期。用户 grant 必须匹配 token 的 `taskId` 和 `requestId`，host
+还会检查 grant 的 action、status 和可选过期时间，全部通过后才会执行工具请求。
+
 ## 环境变量
 
 参见 [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.example)。
@@ -446,14 +503,31 @@ cw mcp list-tools
 - structured output 或可靠性不达标的 worker 会进入 `not-qualified` 状态；如果是环境或配置问题，则该 worker 在修复前应视为不可用。
 - 密钥应持久化在用户级 SQLite 存储中，且绝不能写入日志。
 
-## Dist smoke
+## 测试与发布检查
 
-在发布 CLI 相关改动前，建议同时运行两层 smoke：
+日常开发优先运行快速检查：
 
 ```bash
+pnpm typecheck
+pnpm test
 pnpm smoke
-pnpm smoke:dist
 ```
+
+`pnpm test` 会刻意排除 packed / dist smoke。它们耗时更长，保护的是 npm
+交付链路，而不是普通单元行为。
+
+发布前或修改 CLI/MCP 打包链路后，应运行完整发布门禁：
+
+```bash
+pnpm release:check
+```
+
+`release:check` 会执行 build，并运行两层包级 smoke：
+
+- `pnpm smoke:pack`：构建发布目录，通过 npm 打包并安装到临时 prefix，验证已安装的
+  `cw` bin、存储初始化和 MCP tool listing。
+- `pnpm smoke:dist`：验证构建后的 CLI entrypoint、仓库 bin shim、通过
+  `doctor --mcp` 启动真实 MCP 并发现工具，以及部分 source / dist 命令结果一致性。
 
 ## Roadmap
 

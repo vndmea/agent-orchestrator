@@ -351,6 +351,64 @@ List exposed tool names:
 cw mcp list-tools
 ```
 
+### Host-worker permission continuation
+
+`cw_run_host_worker` can return `permission_required` when a worker asks the
+host to run a scoped tool request that needs user approval. The response includes
+a short-lived `continuationToken`:
+
+```json
+{
+  "status": "permission_required",
+  "permissionRequest": {
+    "continuationToken": {
+      "taskId": "task-123",
+      "requestId": "tool-req-456",
+      "expiresAt": "2026-07-02T10:30:00.000Z"
+    },
+    "request": {
+      "id": "tool-req-456",
+      "action": "read_file_snippet",
+      "path": "package.json"
+    }
+  }
+}
+```
+
+After the user approves or denies the request, call `cw_run_host_worker` again
+with the same `continuationToken` and a matching `userPermissionGrants` entry:
+
+```json
+{
+  "goal": "Review root scripts",
+  "taskType": "review-lite",
+  "scope": "packages/core",
+  "workerId": "default-worker",
+  "continuationToken": {
+    "taskId": "task-123",
+    "requestId": "tool-req-456",
+    "expiresAt": "2026-07-02T10:30:00.000Z"
+  },
+  "userPermissionGrants": [
+    {
+      "id": "grant-1",
+      "taskId": "task-123",
+      "requestId": "tool-req-456",
+      "action": "read_file_snippet",
+      "grantScope": "once",
+      "granted": true,
+      "status": "granted",
+      "decidedAt": "2026-07-02T10:20:00.000Z"
+    }
+  ]
+}
+```
+
+The token is a continuation window for this specific pending request, not a
+long-term permission. It currently expires after 15 minutes. User grants must
+match the token's `taskId` and `requestId`, and the host also checks the grant
+action, status, and optional grant expiration before executing the tool request.
+
 ## Environment variables
 
 See [.env.example](https://github.com/vndmea/mcp-code-worker/blob/master/.env.example).
@@ -453,14 +511,32 @@ Persist the non-secret worker settings in `config.json`, for example:
 
 See [docs/permissions.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/permissions.md) for the concrete permission layers and write-gate examples.
 
-## Dist smoke
+## Test and release checks
 
-Use both smoke layers before shipping CLI changes:
+Use fast checks while developing:
 
 ```bash
+pnpm typecheck
+pnpm test
 pnpm smoke
-pnpm smoke:dist
 ```
+
+`pnpm test` intentionally excludes the packed and dist smoke tests. Those tests
+are slower and protect the npm delivery path rather than ordinary unit behavior.
+
+Before publishing or shipping CLI/MCP packaging changes, run the release gate:
+
+```bash
+pnpm release:check
+```
+
+`release:check` runs the build plus both package-level smoke layers:
+
+- `pnpm smoke:pack`: builds the publish directory, packs it with npm, installs
+  the tarball into a temporary prefix, and verifies the installed `cw` bin,
+  storage initialization, and MCP tool listing.
+- `pnpm smoke:dist`: verifies the built CLI entrypoint, repo bin shim, live MCP
+  launch through `doctor --mcp`, and source/dist parity for selected commands.
 
 ## Roadmap
 
