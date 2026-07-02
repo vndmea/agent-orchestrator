@@ -209,6 +209,35 @@ const withTempHome = async (
   }
 };
 
+const withTempEnv = async (
+  updates: Record<string, string | undefined>,
+  callback: () => Promise<void>
+): Promise<void> => {
+  const originals = new Map(
+    Object.keys(updates).map((key) => [key, process.env[key]])
+  );
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+
+  try {
+    await callback();
+  } finally {
+    for (const [key, value] of originals) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+};
+
 const parseLastJson = <T>(output: string[]): T =>
   JSON.parse(output.at(-1) ?? "{}") as T;
 
@@ -1408,7 +1437,9 @@ describe("cli parsing", () => {
         const { io, output } = createIo();
         const cli = buildCli(io);
 
-        await cli.parseAsync(["node", "cw", "doctor", "--mcp", "--host", "codex"]);
+        await withTempEnv({ PATH: "" }, async () => {
+          await cli.parseAsync(["node", "cw", "doctor", "--mcp", "--host", "codex"]);
+        });
 
         const result = parseLastJson<{
           checks?: Array<{ name: string; status: string }>;
@@ -1417,6 +1448,11 @@ describe("cli parsing", () => {
         expect(
           result.checks?.some(
             (check) => check.name === "host-config-valid" && check.status === "pass"
+          )
+        ).toBe(true);
+        expect(
+          result.checks?.some(
+            (check) => check.name === "mcp-server-launchable" && check.status === "fail"
           )
         ).toBe(true);
       });
