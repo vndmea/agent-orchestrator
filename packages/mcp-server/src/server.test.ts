@@ -711,6 +711,35 @@ describe("mcp tool registration", () => {
         .mockResolvedValueOnce({
           ok: true,
           data: {
+            status: "tool_request",
+            summary: "Need a file outside the initial scope.",
+            toolRequests: [
+              {
+                id: "tool-req-granted-outside-scope",
+                action: "read_file_snippet",
+                reason: "Need to inspect the root package scripts.",
+                scope: "packages/core",
+                path: "package.json",
+                selector: {
+                  kind: "line-range",
+                  startLine: 1,
+                  endLine: 20
+                },
+                expectedUse: "Use host-provided evidence in the final review."
+              }
+            ]
+          },
+          rawText: JSON.stringify({
+            status: "tool_request",
+            toolRequests: []
+          }),
+          attempts: 1,
+          structuredOutputMode: "native-json-schema",
+          errors: []
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
             answer: "Complete: packages/core/src/index.ts was reviewed with host-provided evidence.",
             findings: [
               "packages/core/src/index.ts remains the scoped file under review; host-provided package.json evidence was used only as supporting context."
@@ -728,16 +757,28 @@ describe("mcp tool registration", () => {
         });
       const now = new Date().toISOString();
 
+      const permission = await cwRunHostWorkerTool.execute({
+        goal: "Review root scripts with a user-approved host read",
+        taskType: "review-lite",
+        scope: "packages/core",
+        workerId: "default-worker"
+      });
+      const continuationToken = permission.permissionRequest?.continuationToken;
+
+      expect(permission.status).toBe("permission_required");
+      expect(continuationToken?.requestId).toBe("tool-req-granted-outside-scope");
+
       const result = await cwRunHostWorkerTool.execute({
         goal: "Review root scripts with a user-approved host read",
         taskType: "review-lite",
         scope: "packages/core",
+        continuationToken,
         workerId: "default-worker",
         userPermissionGrants: [
           {
             id: "grant-1",
             requestId: "tool-req-granted-outside-scope",
-            taskId: "mcp-test-task",
+            taskId: continuationToken?.taskId ?? "",
             action: "read_file_snippet",
             pathPrefix: "package.json",
             grantScope: "once",
@@ -751,7 +792,7 @@ describe("mcp tool registration", () => {
         ]
       });
 
-      expect(invokeStructuredSpy).toHaveBeenCalledTimes(2);
+      expect(invokeStructuredSpy).toHaveBeenCalledTimes(3);
       expect(result.status).toBe("completed");
       expect(result.permissionRequest).toBeUndefined();
       expect(result.toolResults).toEqual([
@@ -802,19 +843,60 @@ describe("mcp tool registration", () => {
           attempts: 1,
           structuredOutputMode: "native-json-schema",
           errors: []
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            status: "tool_request",
+            summary: "Need a file outside the initial scope.",
+            toolRequests: [
+              {
+                id: "tool-req-denied-outside-scope",
+                action: "read_file_snippet",
+                reason: "Need to inspect the root package scripts.",
+                scope: "packages/core",
+                path: "package.json",
+                selector: {
+                  kind: "line-range",
+                  startLine: 1,
+                  endLine: 20
+                },
+                expectedUse: "Use host-provided evidence in the final review."
+              }
+            ]
+          },
+          rawText: JSON.stringify({
+            status: "tool_request",
+            toolRequests: []
+          }),
+          attempts: 1,
+          structuredOutputMode: "native-json-schema",
+          errors: []
         });
       const now = new Date().toISOString();
+
+      const permission = await cwRunHostWorkerTool.execute({
+        goal: "Review root scripts only if the user permits it",
+        taskType: "review-lite",
+        scope: "packages/core",
+        workerId: "default-worker"
+      });
+      const continuationToken = permission.permissionRequest?.continuationToken;
+
+      expect(permission.status).toBe("permission_required");
+      expect(continuationToken?.requestId).toBe("tool-req-denied-outside-scope");
 
       const result = await cwRunHostWorkerTool.execute({
         goal: "Review root scripts only if the user permits it",
         taskType: "review-lite",
         scope: "packages/core",
+        continuationToken,
         workerId: "default-worker",
         userPermissionGrants: [
           {
             id: "grant-denied-1",
             requestId: "tool-req-denied-outside-scope",
-            taskId: "mcp-test-task",
+            taskId: continuationToken?.taskId ?? "",
             action: "read_file_snippet",
             pathPrefix: "package.json",
             grantScope: "once",
@@ -828,7 +910,7 @@ describe("mcp tool registration", () => {
         ]
       });
 
-      expect(invokeStructuredSpy).toHaveBeenCalledTimes(1);
+      expect(invokeStructuredSpy).toHaveBeenCalledTimes(2);
       expect(result.status).toBe("blocked");
       expect(result.permissionRequest).toBeUndefined();
       expect(result.toolResults).toEqual([

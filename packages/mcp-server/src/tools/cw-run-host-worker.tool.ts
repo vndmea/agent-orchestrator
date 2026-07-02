@@ -13,7 +13,16 @@ import {
 } from "./tool-runtime.js";
 import type { CwToolDefinition } from "./tool-types.js";
 
+const continuationTokenSchema = z
+  .object({
+    taskId: z.string().min(1),
+    requestId: z.string().min(1),
+    expiresAt: z.string().datetime()
+  })
+  .strict();
+
 const inputSchema = z.object({
+  continuationToken: continuationTokenSchema.optional(),
   files: z.array(z.string()).optional(),
   forceExecution: z.boolean().optional(),
   goal: z.string().min(1),
@@ -56,6 +65,7 @@ export const cwRunHostWorkerTool: CwToolDefinition<
       requireProfile: args.requireProfile,
       scope: args.scope,
       strictFiles: args.strictFiles,
+      taskId: args.continuationToken?.taskId,
       taskType: args.taskType,
       userPermissionGrants: args.userPermissionGrants,
       workerId: args.workerId
@@ -69,6 +79,8 @@ export const cwRunHostWorkerTool: CwToolDefinition<
       warnings: result.warnings,
       errors: result.errors,
       metadata: {
+        continuationRequestId: args.continuationToken?.requestId,
+        continuationTaskId: args.continuationToken?.taskId,
         files: args.files,
         forceExecution,
         requireProfile: args.requireProfile,

@@ -51,6 +51,7 @@ export interface HostWorkerWorkflowInput {
   requireProfile?: boolean;
   scope?: string;
   strictFiles?: boolean;
+  taskId?: string;
   taskType: WorkerTaskType;
   userPermissionGrants?: UserPermissionGrant[];
   workerCapabilityProfile?: WorkerCapabilityProfile | null;
@@ -491,10 +492,29 @@ const getWorkerToolRequests = (
 
 const findGrantForRequest = (
   grants: UserPermissionGrant[] | undefined,
-  request: WorkerToolRequest
+  request: WorkerToolRequest,
+  taskId: string
 ): UserPermissionGrant | undefined =>
   grants?.find(
-    (grant) => grant.requestId === request.id && grant.action === request.action
+    (grant) => {
+      if (
+        grant.taskId !== taskId ||
+        grant.requestId !== request.id ||
+        grant.action !== request.action
+      ) {
+        return false;
+      }
+
+      if (grant.status !== "granted" && grant.status !== "denied") {
+        return false;
+      }
+
+      if (!grant.expiresAt) {
+        return true;
+      }
+
+      return Date.parse(grant.expiresAt) > Date.now();
+    }
   );
 
 const withToolResults = (
@@ -562,7 +582,11 @@ const runWorkerWithToolLoop = async (input: {
     for (const request of requests) {
       const decision = evaluateWorkerToolRequest(input.context, request, {
         toolPolicy: input.hostTask.envelope.toolPolicy,
-        userGrant: findGrantForRequest(input.userPermissionGrants, request)
+        userGrant: findGrantForRequest(
+          input.userPermissionGrants,
+          request,
+          input.hostTask.envelope.id
+        )
       });
 
       if (!decision.allowed && decision.requiresUserApproval) {
@@ -874,6 +898,7 @@ export const runHostWorkerWorkflow = async (
     context: workerContext,
     goal: input.goal,
     repositoryContext,
+    taskId: input.taskId,
     taskType: input.taskType
   });
   const task = hostTask.task;
