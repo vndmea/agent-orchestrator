@@ -30,7 +30,6 @@ import {
   inspectLocalClientCommand,
   readPersistedWorkerProfiles,
   readWorkerRegistry,
-  saveWorkerSecret,
   saveWorkerRegistration
 } from "@mcp-code-worker/models";
 
@@ -56,7 +55,6 @@ export interface SetupStepResult {
 }
 
 export interface SetupWorkerPlan {
-  apiKey?: string;
   baseUrl?: string;
   benchmarkWorker: boolean;
   clientCommand?: string;
@@ -124,7 +122,6 @@ export interface SetupOptions {
   root?: string;
   registerWorker: boolean;
   testScript: string[];
-  workerApiKey?: string;
   typecheckScript: string[];
   workerBaseUrl?: string;
   workerClientCommand?: string;
@@ -353,7 +350,6 @@ const resolvePrimaryWorkerModel = (
   ...(options.workerProvider ? { provider: options.workerProvider } : {}),
   ...(options.workerModel ? { model: options.workerModel } : {}),
   ...(options.workerBaseUrl ? { baseURL: options.workerBaseUrl } : {}),
-  ...(options.workerApiKey ? { apiKey: options.workerApiKey } : {}),
   ...(options.workerClientCommand
     ? { clientCommand: options.workerClientCommand }
     : {})
@@ -371,7 +367,6 @@ const buildPrimaryWorkerPlan = (
     Boolean(options.workerProvider) ||
     Boolean(options.workerModel) ||
     Boolean(options.workerBaseUrl) ||
-    Boolean(options.workerApiKey) ||
     Boolean(options.workerClientCommand);
   const requiresNamedWorkerWorkflow =
     hasWorkerConfiguration ||
@@ -391,7 +386,6 @@ const buildPrimaryWorkerPlan = (
   }
 
   return {
-    apiKey: options.workerApiKey,
     baseUrl: options.workerBaseUrl,
     benchmarkWorker: options.benchmarkWorker,
     clientCommand: modelConfig.clientCommand,
@@ -447,8 +441,7 @@ const buildPlannedWorkerModel = (
   provider: plan.workerProvider,
   model: plan.workerModel,
   ...(plan.clientCommand ? { clientCommand: plan.clientCommand } : {}),
-  ...(plan.baseUrl ? { baseURL: plan.baseUrl } : {}),
-  ...(plan.apiKey ? { apiKey: plan.apiKey } : {})
+  ...(plan.baseUrl ? { baseURL: plan.baseUrl } : {})
 });
 
 const createWorkerSummary = (plan: SetupWorkerPlan): SetupWorkerSummary => ({
@@ -591,27 +584,6 @@ const runSetupWorkerPlan = async (input: {
         existingRegistration
           ? "cw worker registry list"
           : `cw worker register --worker ${input.plan.workerId} --provider <provider> --model <model> --allow-write`
-    });
-  }
-
-  if (input.plan.apiKey) {
-    const secretResult = await saveWorkerSecret(
-      input.context,
-      input.plan.workerId,
-      input.plan.apiKey,
-      true
-    );
-    steps.push({
-      id: buildWorkerStepId("persist-worker-secret", input.plan),
-      status: secretResult.mode === "execute" ? "completed" : "dry-run",
-      path: relativePath(input.context.rootDir, secretResult.path),
-      summary:
-        secretResult.mode === "execute"
-          ? `Persisted API key for worker ${input.plan.workerId} in SQLite.`
-          : `Would persist API key for worker ${input.plan.workerId} in SQLite.`,
-      details: {
-        workerId: input.plan.workerId
-      }
     });
   }
 
@@ -1132,7 +1104,7 @@ export const runSetup = async (options: SetupOptions): Promise<SetupResult> => {
         )
         .map(
           (worker) =>
-            `Persist API key for worker '${worker.workerId}' with setup or worker management before running it.`
+            `Run cw auth login --worker ${worker.workerId} before running this API worker.`
         )
     ]),
     minimalSuccessPath,

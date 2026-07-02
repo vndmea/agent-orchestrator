@@ -54,7 +54,7 @@ Default local command assumptions:
 
 Persisted config no longer chooses an implicit execution worker for task, patch, or host-worker flows. Those commands now require an explicit named `workerId` at runtime.
 
-Worker API keys are persisted in the user-scoped SQLite store, not in `config.json`. Keep them local to the machine, never commit them into repository files, and avoid pasting them into logs or shared transcripts.
+Worker API keys are persisted in the user-scoped SQLite store, not in `config.json`. Manage them with `cw auth login`, inspect only their presence with `cw auth list`, and remove them with `cw auth logout`. Keep them local to the machine, never commit them into repository files, and avoid pasting them into logs or shared transcripts.
 
 Path-like inputs such as `config.json.workers[][*].clientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
 

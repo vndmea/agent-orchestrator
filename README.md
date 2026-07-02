@@ -162,6 +162,7 @@ cw worker register \
   --base-url http://localhost:4000/v1 \
   --allow-write
 
+cw auth login --worker qwen-local
 cw worker interview --worker qwen-local --save
 cw worker list
 cw worker profile qwen-local
@@ -427,7 +428,7 @@ Runtime configuration resolves in this order:
 2. `~/.code-worker/<workspace-id>/config.json`
 3. built-in defaults
 
-Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults. Worker API keys are persisted in the workspace SQLite store, while local client commands remain on `config.json.workers[]`. Launch `cw` from the intended workspace root, and never commit real keys or include them in logs.
+Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults. Worker API keys are managed only through `cw auth login`, `cw auth list`, and `cw auth logout`, and are persisted in the workspace SQLite store. Local client commands remain on `config.json.workers[]`. Launch `cw` from the intended workspace root, and never commit real keys or include them in logs.
 
 Repository context settings in the user-scoped CW `config.json` control default `ignoredPaths` and `strictFiles` behavior for review, fix, patch, and task workflows.
 

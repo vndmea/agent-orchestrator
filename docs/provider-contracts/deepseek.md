@@ -96,7 +96,7 @@ curl https://api.deepseek.com/chat/completions \
 Expected static checks:
 
 - `worker-model`: `provider=openai-compatible`, `model=deepseek-v4-flash`, `baseURL=https://api.deepseek.com`
-- `worker-api-key`: `pass`
+- `worker-auth`: `pass`
 - `runtime-bootstrap`: confirms the active `config.json`, default CW storage path, and the resolved workspace root
 
 Expected probe behavior:

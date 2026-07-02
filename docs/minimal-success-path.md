@@ -24,7 +24,8 @@ cw init --preset=codex --allow-write
 
 - Confirm the active `rootDir` matches your repository.
 - Confirm the resolved worker model is the one you expect.
-- If a non-mock provider is configured, make sure the expected API key is persisted in the user-scoped `config.json`.
+- If a non-mock API provider is configured, run `cw auth login --worker=<workerId>` or, for scripts, `cw auth login --worker=<workerId> --api-key-env=<ENV_NAME> --allow-write`.
+- Use `cw auth list` to confirm a credential exists without printing the key.
 
 3. Start a dry-run task first.
 

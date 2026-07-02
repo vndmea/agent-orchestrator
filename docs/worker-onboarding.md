@@ -47,6 +47,7 @@ cw worker register \
   --base-url=<base-url-if-needed> \
   --allow-write
 
+cw auth login --worker=<workerId>
 cw doctor --probe
 cw worker interview --worker=<workerId> --save
 cw worker readiness --worker=<workerId>

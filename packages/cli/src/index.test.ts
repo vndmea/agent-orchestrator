@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
 import { buildCli } from "@mcp-code-worker/cli";
+import type { AuthPrompter } from "./commands/auth.js";
 import {
   bootstrapSqliteWorkspaceStore,
   createExecutionContextFromEnv,
@@ -88,6 +89,60 @@ const createInitPrompter = (answers: Array<boolean | string>): InitPrompter => {
 
       if (typeof answer !== "string") {
         throw new Error(`Expected string init answer but received ${typeof answer}.`);
+      }
+
+      return Promise.resolve(answer);
+    }
+  };
+};
+
+const createAuthPrompter = (answers: Array<boolean | string>): AuthPrompter => {
+  let index = 0;
+
+  const nextAnswer = (): boolean | string => {
+    const answer = answers[index];
+
+    if (answer === undefined) {
+      throw new Error("Ran out of scripted auth answers.");
+    }
+
+    index += 1;
+    return answer;
+  };
+
+  return {
+    confirm: () => {
+      const answer = nextAnswer();
+
+      if (typeof answer !== "boolean") {
+        throw new Error(`Expected boolean auth answer but received ${typeof answer}.`);
+      }
+
+      return Promise.resolve(answer);
+    },
+    secret: () => {
+      const answer = nextAnswer();
+
+      if (typeof answer !== "string") {
+        throw new Error(`Expected string auth answer but received ${typeof answer}.`);
+      }
+
+      return Promise.resolve(answer);
+    },
+    select: <T extends string>() => {
+      const answer = nextAnswer();
+
+      if (typeof answer !== "string") {
+        throw new Error(`Expected string auth answer but received ${typeof answer}.`);
+      }
+
+      return Promise.resolve(answer as T);
+    },
+    text: () => {
+      const answer = nextAnswer();
+
+      if (typeof answer !== "string") {
+        throw new Error(`Expected string auth answer but received ${typeof answer}.`);
       }
 
       return Promise.resolve(answer);
@@ -758,8 +813,6 @@ describe("cli parsing", () => {
         "setup-worker",
         "--worker-id",
         "primary-worker",
-        "--worker-api-key",
-        "setup-secret",
         "--worker-client-command",
         "node",
         "--register-worker",
@@ -818,14 +871,15 @@ describe("cli parsing", () => {
       };
       const savedRegistry = await listWorkerRegistrations(rootDir);
       const savedProfiles = await listWorkerProfiles(rootDir);
-      const savedSecret = await getWorkerSecret(rootDir, "primary-worker");
       const configuredWorker = savedConfig.workers?.find(
         (worker) => worker.workerId === "primary-worker"
       );
 
       expect(configuredWorker?.model).toBe("setup-worker");
       expect(configuredWorker?.clientCommand).toBe("node");
-      expect(savedSecret).toBe("setup-secret");
+      await expect(
+        getWorkerSecret(rootDir, "primary-worker")
+      ).resolves.toBeUndefined();
       expect(savedConfig.validation?.scripts?.typecheck).toContain("check-types");
       expect(savedConfig.validation?.scripts?.lint).toContain("lint:ci");
       expect(savedRegistry.some((worker) => worker.workerId === "primary-worker")).toBe(
@@ -834,6 +888,80 @@ describe("cli parsing", () => {
       expect(savedProfiles.some((profile) => profile.workerId === "primary-worker")).toBe(
         true
       );
+    });
+  });
+
+  it("stores worker credentials through auth login without embedding them in init", async () => {
+    await withTempCwd(async (rootDir) => {
+      const { io, output } = createIo();
+      const cli = buildCli(io, {
+        authPrompter: createAuthPrompter(["primary-worker"])
+      });
+      process.env.CW_TEST_WORKER_KEY = "setup-secret";
+
+      try {
+        await cli.parseAsync([
+          "node",
+          "cw",
+          "init",
+          "--worker-provider",
+          "openai-compatible",
+          "--worker-model",
+          "setup-worker",
+          "--worker-id",
+          "primary-worker",
+          "--worker-base-url",
+          "https://api.example.test/v1",
+          "--register-worker",
+          "--allow-write"
+        ]);
+        await cli.parseAsync([
+          "node",
+          "cw",
+          "auth",
+          "login",
+          "--api-key-env",
+          "CW_TEST_WORKER_KEY",
+          "--allow-write"
+        ]);
+
+        const savedSecret = await getWorkerSecret(rootDir, "primary-worker");
+        const result = parseLastJson<{
+          credential: { mode: string };
+          workerId: string;
+        }>(output);
+
+        expect(savedSecret).toBe("setup-secret");
+        expect(result.workerId).toBe("primary-worker");
+        expect(result.credential.mode).toBe("execute");
+
+        await cli.parseAsync(["node", "cw", "auth", "list"]);
+        const listed = parseLastJson<Array<{
+          hasCredential: boolean;
+          workerId: string;
+        }>>(output);
+        expect(
+          listed.some(
+            (entry) =>
+              entry.workerId === "primary-worker" && entry.hasCredential
+          )
+        ).toBe(true);
+
+        await cli.parseAsync([
+          "node",
+          "cw",
+          "auth",
+          "logout",
+          "--worker",
+          "primary-worker",
+          "--allow-write"
+        ]);
+        await expect(
+          getWorkerSecret(rootDir, "primary-worker")
+        ).resolves.toBeUndefined();
+      } finally {
+        delete process.env.CW_TEST_WORKER_KEY;
+      }
     });
   });
 

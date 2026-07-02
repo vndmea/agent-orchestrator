@@ -16,7 +16,6 @@ import {
 import {
   getWorkerRegistration,
   getWorkerProfile,
-  saveWorkerSecret,
   listWorkerRegistrations,
   listWorkerProfiles,
   removeWorkerRegistration,
@@ -378,7 +377,6 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
     .requiredOption("--provider <provider>", "Worker provider")
     .requiredOption("--model <model>", "Worker model")
     .option("--base-url <url>", "Worker base URL")
-    .option("--worker-api-key <key>", "Persist a per-worker API key in SQLite storage")
     .option(
       "--worker-client-command <command>",
       "Persist a per-worker local client bridge command in config.json"
@@ -397,7 +395,6 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
         notes?: string;
         provider: string;
         tag: string[];
-        workerApiKey?: string;
         workerClientCommand?: string;
         worker: string;
       }) => {
@@ -439,14 +436,6 @@ export const registerWorkerCommand = (program: Command, io: CliIo): void => {
               provider: options.provider
             }
           );
-          if (options.workerApiKey) {
-            await saveWorkerSecret(
-              context,
-              workerId,
-              options.workerApiKey,
-              true
-            );
-          }
         }
 
         writeOutput(

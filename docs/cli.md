@@ -28,6 +28,10 @@ cw patch inspect ./tmp/candidate.patch
 cw patch apply ./tmp/candidate.patch --dry-run
 cw models list
 cw worker register --worker=qwen-local --provider=litellm --model=qwen3-coder --base-url=http://localhost:4000/v1 --allow-write
+cw auth login --worker=qwen-local
+cw auth login
+cw auth list
+cw auth logout --worker=qwen-local --allow-write
 cw worker interview --worker=qwen-local --save
 cw worker readiness --worker=qwen-local
 cw worker benchmark --suite=coding-v1 --worker=qwen-local --save
@@ -59,6 +63,8 @@ Treat `cw mcp serve` as a stdio endpoint for a connected host session, not as a 
 Treat `config.json` as the primary runtime config surface for worker, validation, safety, and local client defaults. Treat the MCP host snippet as launch-only: command and args only.
 
 For generic local client providers, `sparkcode` is the default command. Persist a different compatible CLI name or path on the matching `config.json.workers[]` entry through `clientCommand` when needed.
+
+`cw init` and `cw worker register` configure which worker exists. `cw auth login` is the only CLI path that stores API credentials. If `cw auth login` is run without `--worker` in an interactive terminal, it asks you to choose from registered workers; scripts should use `--worker`, `--api-key-env`, and `--allow-write`.
 
 For the dedicated `opencode` adapter, use `cw init --preset=opencode --allow-write`. That preset keeps `provider=opencode` and defaults the command to `opencode`.
 

@@ -1,5 +1,9 @@
 import { Command } from "commander";
 
+import {
+  registerAuthCommand,
+  type AuthPrompter
+} from "./commands/auth.js";
 import { registerAuditCommand } from "./commands/audit.js";
 import { registerCleanupCommand } from "./commands/cleanup.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
@@ -23,6 +27,7 @@ export interface CliIo {
 }
 
 export interface CliDependencies {
+  authPrompter?: AuthPrompter;
   initPrompter?: InitPrompter;
   pathOpener?: (targetPath: string) => Promise<boolean>;
 }
@@ -58,6 +63,7 @@ export const buildCli = (
     dependencies.initPrompter,
     dependencies.pathOpener
   );
+  registerAuthCommand(program, io, dependencies.authPrompter);
   registerPatchCommand(program, io);
   registerReviewCommand(program, io);
   registerFixCommand(program, io);

@@ -47,7 +47,7 @@ cw doctor --probe
 Expected static checks:
 
 - `worker-model`: `provider=mock`
-- `worker-api-key`: `pass`
+- `worker-auth`: `pass`
 - `runtime-bootstrap`: points to the expected `config.json` and CW storage root
 
 Expected probe behavior:

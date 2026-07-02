@@ -97,7 +97,19 @@ cw init --preset=deepseek --allow-write
 }
 ```
 
-3. Verify the resolved runtime:
+3. Store the worker credential locally:
+
+```bash
+cw auth login --worker deepseek-flash
+```
+
+For scripts, use an environment variable instead of placing the key on the command line:
+
+```bash
+cw auth login --worker deepseek-flash --api-key-env DEEPSEEK_API_KEY --allow-write
+```
+
+4. Verify the resolved runtime:
 
 ```bash
 cw doctor
@@ -137,7 +149,19 @@ cw init --allow-write
 }
 ```
 
-3. Verify the resolved runtime:
+3. Store the worker credential locally:
+
+```bash
+cw auth login --worker claude-sonnet
+```
+
+For scripts, use an environment variable instead of placing the key on the command line:
+
+```bash
+cw auth login --worker claude-sonnet --api-key-env ANTHROPIC_API_KEY --allow-write
+```
+
+4. Verify the resolved runtime:
 
 ```bash
 cw doctor

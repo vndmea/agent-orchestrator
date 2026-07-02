@@ -92,7 +92,7 @@ describe("doctor", () => {
 
     expect(report.checks.find((check) => check.name === "cw-config")?.status).toBe("fail");
     expect(report.checks.find((check) => check.name === "task-sessions")?.status).toBe("warning");
-    expect(report.checks.find((check) => check.name === "worker-api-key")?.status).toBe("warning");
+    expect(report.checks.find((check) => check.name === "worker-auth")?.status).toBe("warning");
   });
 
   it("passes after init-like setup with retained directories", async () => {
@@ -172,7 +172,7 @@ describe("doctor", () => {
       report.checks.find((check) => check.name === "local-client-command")?.message
     ).toContain("worker-aware model layer");
     expect(
-      report.checks.find((check) => check.name === "worker-api-key")?.status
+      report.checks.find((check) => check.name === "worker-auth")?.status
     ).toBe("pass");
   });
 

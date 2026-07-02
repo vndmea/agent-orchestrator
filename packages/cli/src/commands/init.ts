@@ -20,6 +20,10 @@ import type { CliIo } from "../index.js";
 import { formatDisplayPath, writeOutput } from "../output.js";
 import { openPathInSystemApp, type PathOpener } from "../system/open-path.js";
 import {
+  persistWorkerCredential,
+  workerNeedsApiCredential
+} from "./auth.js";
+import {
   detectInitPreset,
   getInitPreset,
   INIT_PRESETS,
@@ -39,6 +43,7 @@ import {
 export interface InitPrompter {
   close?: () => Promise<void> | void;
   confirm: (message: string, defaultValue: boolean) => Promise<boolean>;
+  secret?: (message: string) => Promise<string>;
   select: <T extends string>(
     message: string,
     options: Array<{
@@ -75,6 +80,10 @@ interface CodexMcpConfigUpdateResult {
 interface InitResult {
   advanced: boolean;
   applied: boolean;
+  authLogins: Array<{
+    credentialMode: "execute" | "dry-run";
+    workerId: string;
+  }>;
   codexMcpConfig: CodexMcpConfigUpdateResult;
   enableMcp: boolean;
   mcpConfig?: ReturnType<typeof buildMcpConfigSnippet>;
@@ -298,6 +307,64 @@ const createReadlinePrompter = (): InitPrompter => {
 
         output.write("Please answer yes or no.\n");
       }
+    },
+    secret: async (message: string) => {
+      if (!input.isTTY || !output.isTTY) {
+        throw new Error("Interactive secret entry requires a TTY.");
+      }
+
+      return await new Promise<string>((resolveSecret, rejectSecret) => {
+        const previousRawMode = input.isRaw;
+        let value = "";
+
+        const cleanup = (): void => {
+          input.off("keypress", onKeypress);
+          input.setRawMode(previousRawMode ?? false);
+        };
+        const finish = (): void => {
+          output.write("\n");
+          cleanup();
+          resolveSecret(value);
+        };
+        const fail = (error: Error): void => {
+          output.write("\n");
+          cleanup();
+          rejectSecret(error);
+        };
+        const onKeypress = (
+          chunk: string,
+          key: { ctrl?: boolean; name?: string }
+        ) => {
+          if (key.ctrl && key.name === "c") {
+            fail(new Error("Prompt cancelled."));
+            return;
+          }
+
+          if (key.name === "return" || key.name === "enter") {
+            finish();
+            return;
+          }
+
+          if (key.name === "backspace") {
+            if (value.length > 0) {
+              value = value.slice(0, -1);
+              output.write("\b \b");
+            }
+            return;
+          }
+
+          if (chunk.length === 1 && chunk >= " " && chunk !== "\u007f") {
+            value += chunk;
+            output.write("*");
+          }
+        };
+
+        emitKeypressEvents(input);
+        input.on("keypress", onKeypress);
+        input.setRawMode(true);
+        input.resume();
+        output.write(`${message} `);
+      });
     },
     select,
     text: async (
@@ -579,6 +646,11 @@ const formatInitResult = (result: InitResult): string[] => {
     `repository writes: ${describeRepositoryWriteMode(result.repositoryWriteMode)}`,
     `mcp: ${result.enableMcp ? "snippet prepared" : "skipped"}`,
     `workers: ${formatWorkerSummary(result.worker)}`,
+    result.authLogins.length > 0
+      ? `auth: ${result.authLogins
+          .map((login) => `${login.workerId}=${login.credentialMode}`)
+          .join(", ")}`
+      : "auth: skipped",
     `setup: ${result.setup.status}`,
     `agents: project -> ${formatDisplayPath(result.rootDir, result.paths.projectAgentsPath)} | global -> ${formatDisplayPath(result.rootDir, result.paths.globalAgentsPath)}`,
     `codex host config: ${formatDisplayPath(result.rootDir, result.paths.codexConfigPath)} | ${codexHostConfigSummary}`,
@@ -615,7 +687,6 @@ const hasScriptedSetupInputs = (options: InitOptions): boolean =>
   options.lintScript.length > 0 ||
   options.testScript.length > 0 ||
   options.repositoryWriteMode !== undefined ||
-  Boolean(options.workerApiKey) ||
   Boolean(options.workerBaseUrl) ||
   Boolean(options.workerClientCommand) ||
   Boolean(options.workerId) ||
@@ -666,7 +737,6 @@ const collectInitSetupOptions = async (
     registerWorker: false,
     testScript: [],
     typecheckScript: [],
-    workerApiKey: undefined,
     workerBaseUrl: undefined,
     workerClientCommand: undefined,
     workerId: undefined,
@@ -708,7 +778,6 @@ const collectInitSetupOptions = async (
       selectedPreset?.workerModel ?? workerContext.workerModel.model;
 
     let baseUrl: string | undefined;
-    let apiKey: string | undefined;
 
     if (!selectedPreset) {
       workerMode = await prompter.select(
@@ -767,19 +836,6 @@ const collectInitSetupOptions = async (
     }
 
     if (
-      workerMode === "api" &&
-      !["mock", "client", "opencode", "claudecode", "codex"].includes(workerProvider)
-    ) {
-      const promptedApiKey = await prompter.text(
-        "Worker API key? Leave blank to skip.",
-        {
-          allowEmpty: true
-        }
-      );
-      apiKey = promptedApiKey.length > 0 ? promptedApiKey : undefined;
-    }
-
-    if (
       isDefault &&
       workerMode === "client" &&
       (options.advanced ||
@@ -835,7 +891,6 @@ const collectInitSetupOptions = async (
     const verificationDepth = await promptWorkerVerificationDepth(prompter);
 
     return {
-      apiKey,
       baseUrl,
       benchmarkWorker: verificationDepth === "full",
       interviewWorker: verificationDepth === "full",
@@ -851,7 +906,6 @@ const collectInitSetupOptions = async (
 
   if (configureWorker) {
     const defaultWorker = await promptWorkerPlan(true);
-    setup.workerApiKey = defaultWorker.apiKey;
     setup.workerBaseUrl = defaultWorker.baseUrl;
     setup.benchmarkWorker = defaultWorker.benchmarkWorker;
     setup.interviewWorker = defaultWorker.interviewWorker;
@@ -917,6 +971,71 @@ const collectInitSetupOptions = async (
   };
 };
 
+const collectAuthCandidates = (
+  setup: SetupOptions,
+  additionalWorkers: InitWorkerPlan[]
+): Array<{
+  workerId: string;
+  workerProvider: string;
+}> => {
+  const candidates = [
+    setup.workerId && setup.workerProvider
+      ? {
+          workerId: setup.workerId,
+          workerProvider: setup.workerProvider
+        }
+      : null,
+    ...additionalWorkers.map((worker) => ({
+      workerId: worker.workerId,
+      workerProvider: worker.workerProvider
+    }))
+  ].filter(
+    (candidate): candidate is { workerId: string; workerProvider: string } =>
+      candidate !== null && workerNeedsApiCredential(candidate.workerProvider)
+  );
+
+  return candidates;
+};
+
+const runInitAuthLogins = async (
+  rootDir: string,
+  candidates: Array<{
+    workerId: string;
+    workerProvider: string;
+  }>,
+  prompter: InitPrompter
+): Promise<Array<{ credentialMode: "execute" | "dry-run"; workerId: string }>> => {
+  const results: Array<{ credentialMode: "execute" | "dry-run"; workerId: string }> = [];
+
+  for (const candidate of candidates) {
+    const shouldLogin = await prompter.confirm(
+      `Worker ${candidate.workerId} uses API provider ${candidate.workerProvider}. Login now?`,
+      true
+    );
+
+    if (!shouldLogin) {
+      continue;
+    }
+
+    const apiKey = prompter.secret
+      ? await prompter.secret(`API key for ${candidate.workerId}:`)
+      : await prompter.text(`API key for ${candidate.workerId}:`);
+    const result = await persistWorkerCredential({
+      allowWrite: true,
+      apiKey,
+      rootDir,
+      workerId: candidate.workerId
+    });
+
+    results.push({
+      credentialMode: result.credential.mode,
+      workerId: result.workerId
+    });
+  }
+
+  return results;
+};
+
 export const registerInitCommand = (
   program: Command,
   io: CliIo,
@@ -931,7 +1050,6 @@ export const registerInitCommand = (
     .option("--worker-provider <provider>", "Worker provider")
     .option("--worker-model <model>", "Worker model")
     .option("--worker-base-url <url>", "Worker base URL")
-    .option("--worker-api-key <key>", "Persist a worker API key in the user-scoped SQLite store.")
     .option(
       "--worker-client-command <command>",
       "Persist a non-default local client bridge command in cw config."
@@ -1007,7 +1125,6 @@ export const registerInitCommand = (
           root: options.root,
           testScript: options.testScript,
           typecheckScript: options.typecheckScript,
-          workerApiKey: options.workerApiKey,
           workerBaseUrl: options.workerBaseUrl,
           workerClientCommand: options.workerClientCommand,
           workerId: options.workerId,
@@ -1036,6 +1153,16 @@ export const registerInitCommand = (
           "Apply this onboarding setup now?",
           true
         );
+        const authLogins = applyNow
+          ? await runInitAuthLogins(
+              collected.setup.root ?? process.cwd(),
+              collectAuthCandidates(
+                collected.setup,
+                collected.additionalWorkers
+              ),
+              prompter
+            )
+          : [];
         const setup = await runSetup({
           ...collected.setup,
           allowWrite: applyNow
@@ -1075,6 +1202,7 @@ export const registerInitCommand = (
         const result: InitResult = {
           advanced: options.advanced,
           applied: applyNow,
+          authLogins,
           codexMcpConfig,
           enableMcp: collected.enableMcp,
           mcpConfig: collected.enableMcp

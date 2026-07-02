@@ -90,7 +90,7 @@ const WHY_THIS_MATTERS: Record<string, string> = {
     "These are the only shell commands cw can run through its safe command layer.",
   "cw-config":
     "Local configuration controls safety defaults, model resolution, validation mappings, and session retention.",
-  "worker-api-key":
+  "worker-auth":
     "Without a persisted worker credential in SQLite for non-mock providers, worker-routed tasks can degrade or fail.",
   "runs-dir":
     "Persisted task sessions live in SQLite. If that store is unavailable, reports may be temporary and not resumable.",
@@ -392,7 +392,7 @@ export const runDoctor = async (
 
   const apiKeyChecks = [
     {
-      name: "worker-api-key",
+      name: "worker-auth",
       provider: context.workerModel.provider,
       hasKey: Boolean(context.workerModel.apiKey),
       source: context.workerModel.apiKey ? "runtime config" : undefined
@@ -419,7 +419,7 @@ export const runDoctor = async (
             ? `${entry.name} is using a local client provider and does not require an API key.`
           : entry.hasKey
             ? `${entry.name} resolved successfully from ${entry.source ?? "runtime config"}.`
-            : `${entry.name} is not set. Persist a worker secret into SQLite for provider ${entry.provider}.`,
+            : `${entry.name} is not set. Run cw auth login for a named ${entry.provider} worker before using it.`,
       metadata: {
         provider: entry.provider,
         source: entry.source
@@ -541,7 +541,7 @@ export const runDoctor = async (
         "local-client-command",
         "local-client-compatibility",
         "cw-config",
-        "worker-api-key",
+        "worker-auth",
         "worker-connectivity"
       ],
       readySummary: "You can start model-backed cw tasks from this workspace.",

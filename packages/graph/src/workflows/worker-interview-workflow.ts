@@ -1371,7 +1371,7 @@ const addDays = (isoDate: string, days: number): string => {
 
 const providerFailureRecoveryActions = [
   "Verify the worker base URL and model name.",
-  "Confirm workerModel.apiKey is persisted in config.json before retrying.",
+          "Run cw auth login for this worker before retrying.",
   "Run a direct provider health check before retrying the interview.",
   "Re-run `cw worker interview --save` after connectivity is stable."
 ];

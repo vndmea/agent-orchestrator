@@ -72,7 +72,7 @@ If the provider documents a `/models` endpoint, test it directly with the same k
 Expected static checks:
 
 - `worker-model`: shows `provider=openai-compatible`
-- `worker-api-key`: `pass`
+- `worker-auth`: `pass`
 - `runtime-bootstrap`: points to the expected `config.json` and CW storage root
 
 Expected probe behavior:

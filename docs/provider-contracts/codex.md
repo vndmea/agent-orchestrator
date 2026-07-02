@@ -64,7 +64,7 @@ The static local client checks matter before probe:
 Expected static checks:
 
 - `worker-model`: shows `provider=codex`
-- `worker-api-key`: `pass`
+- `worker-auth`: `pass`
 - `local-client-command`: `pass`
 - `local-client-compatibility`: `pass`
 

@@ -67,7 +67,7 @@ If you validate the upstream API directly, compare it against the same runtime t
 Expected static checks:
 
 - `worker-model`: `provider=claude-compatible`
-- `worker-api-key`: `pass`
+- `worker-auth`: `pass`
 - `runtime-bootstrap`: confirms the active `config.json`, CW storage root, and launch env
 
 Expected probe behavior:
