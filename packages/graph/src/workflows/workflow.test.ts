@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createExecutionContextFromEnv,
@@ -13,6 +13,7 @@ import {
   saveWorkerProfile,
   saveWorkerRegistration
 } from "@mcp-code-worker/models";
+import * as models from "@mcp-code-worker/models";
 import {
   runHostWorkerWorkflow,
   runWorkerInterviewWorkflow
@@ -419,6 +420,83 @@ describe("host worker workflow", () => {
     expect(result.qualityGate.execution.state).toBe("executed");
     expect(result.debug.worker?.metadata.taskType).toBe("patch-generation");
   }, 15_000);
+
+  it("executes scoped worker tool requests before accepting the final answer", async () => {
+    const rootDir = await createWorkspace();
+    await registerWorker(rootDir);
+    const invokeStructuredSpy = vi
+      .spyOn(models, "invokeStructured")
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          status: "tool_request",
+          summary: "Need exact evidence for generateId.",
+          toolRequests: [
+            {
+              id: "tool-req-search-generate-id",
+              action: "search_text",
+              reason: "Need direct evidence for the review finding.",
+              scope: "packages/core",
+              query: "generateId",
+              limits: {
+                maxResults: 5
+              },
+              expectedUse: "Find the implementation line before reviewing."
+            }
+          ]
+        },
+        rawText: JSON.stringify({
+          status: "tool_request",
+          toolRequests: []
+        }),
+        attempts: 1,
+        structuredOutputMode: "native-json-schema",
+        errors: []
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          answer: "Complete: packages/core/src/generateId.ts was checked.",
+          findings: [
+            "packages/core/src/generateId.ts defines generateId directly and should remain covered by id-generation review."
+          ],
+          referencedFiles: ["packages/core/src/generateId.ts"]
+        },
+        rawText: JSON.stringify({
+          answer: "Complete",
+          findings: [],
+          referencedFiles: []
+        }),
+        attempts: 1,
+        structuredOutputMode: "native-json-schema",
+        errors: []
+      });
+
+    const result = await runHostWorkerWorkflow({
+      context: createExecutionContextFromEnv(undefined, {
+        dryRun: true,
+        allowWrite: false,
+        rootDir
+      }),
+      goal: "Review generateId with host-mediated evidence lookup",
+      taskType: "review-lite",
+      workerId,
+      scope: "packages/core"
+    });
+
+    expect(invokeStructuredSpy).toHaveBeenCalledTimes(2);
+    expect(result.qualityGate.answerStatus).toBe("complete");
+    expect(result.finalResult.status).toBe("success");
+    expect(result.workerResult?.metadata.toolResults).toEqual([
+      expect.objectContaining({
+        requestId: "tool-req-search-generate-id",
+        action: "search_text",
+        ok: true
+      })
+    ]);
+
+    invokeStructuredSpy.mockRestore();
+  });
 });
 
 describe("worker interview workflow", () => {

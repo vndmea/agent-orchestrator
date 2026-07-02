@@ -11,7 +11,11 @@ import {
   readGitDiff
 } from "@mcp-code-worker/tools";
 
-import type { HostWorkerWorkflowOutput, HostWorkerWorkflowQualityGate } from "./host-worker-workflow.js";
+import type {
+  HostWorkerWorkflowOutput,
+  HostWorkerWorkflowQualityGate,
+  HostWorkerWorkflowStatus
+} from "./host-worker-workflow.js";
 import {
   prepareRepositoryWorkflowRuntime,
   runRepositoryScopedWorkerTask
@@ -43,7 +47,7 @@ export interface ReviewWorkflowOutput {
   repositoryContext: RepositoryContextPack;
   reviewSummary: ReviewSummary;
   validationReport: ValidationReport;
-  workflowStatus: "completed" | "needs_review";
+  workflowStatus: HostWorkerWorkflowStatus;
   warnings: string[];
   workerReviewResult: AgentResult | null;
   debug: HostWorkerWorkflowOutput["debug"];

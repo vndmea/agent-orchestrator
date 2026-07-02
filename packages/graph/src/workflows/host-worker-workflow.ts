@@ -1,8 +1,13 @@
 import type {
   AgentResult,
+  AgentTask,
   ExecutionContext,
   RepositoryContextPack,
   WorkerCapabilityProfile,
+  UserPermissionGrant,
+  WorkerToolPermissionDecision,
+  WorkerToolRequest,
+  WorkerToolResult,
   WorkerResultEnvelope,
   WorkerResultStatus,
   WorkerTaskType
@@ -16,7 +21,11 @@ import {
 import {
   assessWorkerTaskEligibility
 } from "@mcp-code-worker/models";
-import { buildRepositoryContextPack } from "@mcp-code-worker/tools";
+import {
+  buildRepositoryContextPack,
+  evaluateWorkerToolRequest,
+  executeWorkerToolRequest
+} from "@mcp-code-worker/tools";
 
 import { CodexHostAdapter } from "../host/codex-host-adapter.js";
 import {
@@ -43,6 +52,7 @@ export interface HostWorkerWorkflowInput {
   scope?: string;
   strictFiles?: boolean;
   taskType: WorkerTaskType;
+  userPermissionGrants?: UserPermissionGrant[];
   workerCapabilityProfile?: WorkerCapabilityProfile | null;
   workerId?: string;
 }
@@ -65,6 +75,14 @@ export type StructuredOutputStatus =
   | "not-attempted"
   | "valid"
   | "invalid";
+
+export type HostWorkerWorkflowStatus =
+  | "completed"
+  | "needs_review"
+  | "permission_required"
+  | "blocked"
+  | "invalid_output"
+  | "host_takeover";
 
 export interface HostWorkerExecutionInfo {
   allowedByPolicy: boolean;
@@ -97,7 +115,7 @@ export interface HostWorkerWorkflowQualityGate {
   structuredOutputOk: boolean;
   structuredOutputStatus: StructuredOutputStatus;
   templateFallbackDetected: boolean;
-  workflowStatus: "completed" | "needs_review";
+  workflowStatus: HostWorkerWorkflowStatus;
 }
 
 export interface HostWorkerWorkflowOutput {
@@ -117,7 +135,7 @@ export interface HostWorkerWorkflowOutput {
       structuredOutputAttempts: number;
       structuredOutputOk: boolean;
       structuredOutputStatus: StructuredOutputStatus;
-      workflowStatus: "completed" | "needs_review";
+      workflowStatus: HostWorkerWorkflowStatus;
     };
     promptTransparency: {
       hostPrompt: string;
@@ -166,6 +184,31 @@ const asFailureKind = (
 
 const asNumber = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const asWorkerToolInterruption = (
+  value: unknown
+):
+  | {
+      decision: WorkerToolPermissionDecision;
+      request: WorkerToolRequest;
+    }
+  | undefined => {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  const candidate = value as {
+    decision?: unknown;
+    request?: unknown;
+  };
+
+  return candidate.decision && candidate.request
+    ? candidate as {
+        decision: WorkerToolPermissionDecision;
+        request: WorkerToolRequest;
+      }
+    : undefined;
+};
 
 const getValidationReportFromInput = (input: HostWorkerWorkflowInput) => {
   const parsed = ValidationReportSchema.safeParse(
@@ -229,6 +272,14 @@ const buildQualityGate = (
     structuredOutputOk,
     workerResult
   });
+  const permissionRequest = asWorkerToolInterruption(
+    workerResult?.metadata.permissionRequest
+  );
+  const deniedToolRequest = asWorkerToolInterruption(
+    workerResult?.metadata.deniedToolRequest
+  );
+  const maxToolRoundsExceeded =
+    workerResult?.metadata.maxToolRoundsExceeded === true;
   const reasons: string[] = [];
   const failureStages = new Set<HostWorkerFailureStage>();
 
@@ -258,6 +309,20 @@ const buildQualityGate = (
     failureStages.add(issue.stage);
   }
 
+  if (permissionRequest) {
+    reasons.push(permissionRequest.decision.reason);
+  }
+
+  if (deniedToolRequest) {
+    reasons.push(`Tool request was denied: ${deniedToolRequest.decision.reason}`);
+    failureStages.add("unknown");
+  }
+
+  if (maxToolRoundsExceeded) {
+    reasons.push("Worker exceeded the maximum host-mediated tool request rounds.");
+    failureStages.add("unknown");
+  }
+
   if (
     failureStages.size === 0 &&
     execution.state === "executed" &&
@@ -267,11 +332,30 @@ const buildQualityGate = (
   }
 
   const answered = reasons.length === 0;
+  const resolvedResultStatus: WorkerResultStatus = permissionRequest
+    ? "tool_request"
+    : deniedToolRequest
+      ? "blocked"
+      : maxToolRoundsExceeded
+        ? "host_takeover"
+        : resultStatus;
+  const workflowStatus: HostWorkerWorkflowStatus = permissionRequest
+    ? "permission_required"
+    : maxToolRoundsExceeded || resolvedResultStatus === "host_takeover"
+      ? "host_takeover"
+      : resolvedResultStatus === "blocked"
+        ? "blocked"
+        : resolvedResultStatus === "invalid_output"
+          ? "invalid_output"
+          : execution.state === "executed"
+            ? "completed"
+            : "needs_review";
   const requiresHostReview =
     execution.requiresHostReview ||
     execution.state !== "executed" ||
     workerResult?.status !== "success" ||
-    !answered;
+    !answered ||
+    workflowStatus !== "completed";
 
   return {
     answered,
@@ -283,7 +367,7 @@ const buildQualityGate = (
     mentionedFiles: semanticValidation.mentionedFiles,
     missingRequestedFiles: semanticValidation.missingRequestedFiles,
     requiresHostReview,
-    resultStatus,
+    resultStatus: resolvedResultStatus,
     skippedFiles: semanticValidation.skippedFiles,
     reasons,
     structuredFailureKind,
@@ -291,7 +375,7 @@ const buildQualityGate = (
     structuredOutputOk,
     structuredOutputStatus,
     templateFallbackDetected: semanticValidation.templateFallbackDetected,
-    workflowStatus: execution.state === "executed" ? "completed" : "needs_review"
+    workflowStatus
   };
 };
 
@@ -383,7 +467,194 @@ const buildWorkerResultEnvelope = (input: {
       structuredOutputMode:
         input.qualityGate.structuredOutputStatus === "not-attempted"
           ? "none"
-          : asStructuredOutputMode(input.workerResult?.metadata.structuredOutputMode)
+          : asStructuredOutputMode(input.workerResult?.metadata.structuredOutputMode),
+      toolRounds:
+        typeof input.workerResult?.metadata.toolRounds === "number"
+          ? input.workerResult.metadata.toolRounds
+          : undefined
+    },
+    toolRequests: Array.isArray(input.workerResult?.metadata.toolRequests)
+      ? input.workerResult.metadata.toolRequests as WorkerToolRequest[]
+      : undefined,
+    toolResults: Array.isArray(input.workerResult?.metadata.toolResults)
+      ? input.workerResult.metadata.toolResults as WorkerToolResult[]
+      : undefined
+  };
+};
+
+const getWorkerToolRequests = (
+  workerResult: AgentResult | null
+): WorkerToolRequest[] =>
+  Array.isArray(workerResult?.metadata.toolRequests)
+    ? workerResult.metadata.toolRequests as WorkerToolRequest[]
+    : [];
+
+const findGrantForRequest = (
+  grants: UserPermissionGrant[] | undefined,
+  request: WorkerToolRequest
+): UserPermissionGrant | undefined =>
+  grants?.find(
+    (grant) => grant.requestId === request.id && grant.action === request.action
+  );
+
+const withToolResults = (
+  task: AgentTask,
+  workerToolResults: WorkerToolResult[]
+): AgentTask => ({
+  ...task,
+  input: {
+    ...(task.input && typeof task.input === "object" ? task.input : {}),
+    workerToolResults
+  }
+});
+
+const buildDeniedToolResult = (
+  request: WorkerToolRequest,
+  decision: WorkerToolPermissionDecision
+): WorkerToolResult => ({
+  requestId: request.id,
+  action: request.action,
+  ok: false,
+  summary: decision.reason,
+  evidence: [],
+  truncated: false,
+  warnings: [decision.reason]
+});
+
+const runWorkerWithToolLoop = async (input: {
+  baseTask: AgentTask;
+  context: ExecutionContext;
+  hostTask: ReturnType<CodexHostAdapter["buildWorkerTask"]>;
+  notes: string[];
+  plannedTask: ReturnType<CodexHostAdapter["buildWorkerTask"]>["plannedTask"];
+  repositoryContext: RepositoryContextPack;
+  scope?: string;
+  userPermissionGrants?: UserPermissionGrant[];
+  worker: ReturnType<typeof resolveWorkerAgent>;
+  workerProfile: WorkerCapabilityProfile;
+  allowUnqualifiedExecution: boolean;
+}): Promise<{
+  permissionRequest?: {
+    decision: WorkerToolPermissionDecision;
+    request: WorkerToolRequest;
+  };
+  toolResults: WorkerToolResult[];
+  workerResult: AgentResult;
+}> => {
+  const toolResults: WorkerToolResult[] = [];
+  const maxToolRounds = input.hostTask.envelope.toolPolicy?.maxToolRounds ?? 0;
+  let completedToolRounds = 0;
+  let workerResult = await input.worker.execute({
+    allowUnqualifiedExecution: input.allowUnqualifiedExecution,
+    task: input.baseTask,
+    plannedTask: input.plannedTask,
+    scope: input.repositoryContext.scope,
+    workerProfile: input.workerProfile,
+    notes: input.notes
+  });
+
+  for (let round = 0; round < maxToolRounds; round += 1) {
+    const requests = getWorkerToolRequests(workerResult);
+    if (requests.length === 0) {
+      break;
+    }
+
+    for (const request of requests) {
+      const decision = evaluateWorkerToolRequest(input.context, request, {
+        toolPolicy: input.hostTask.envelope.toolPolicy,
+        userGrant: findGrantForRequest(input.userPermissionGrants, request)
+      });
+
+      if (!decision.allowed && decision.requiresUserApproval) {
+        return {
+          permissionRequest: {
+            decision,
+            request
+          },
+          toolResults,
+          workerResult: {
+            ...workerResult,
+            metadata: {
+              ...workerResult.metadata,
+              permissionRequest: {
+                decision,
+                request
+              },
+              toolRounds: round,
+              toolResults
+            }
+          }
+        };
+      }
+
+      if (!decision.allowed) {
+        const deniedResult = buildDeniedToolResult(request, decision);
+        toolResults.push(deniedResult);
+
+        return {
+          toolResults,
+          workerResult: {
+            ...workerResult,
+            metadata: {
+              ...workerResult.metadata,
+              deniedToolRequest: {
+                decision,
+                request
+              },
+              toolRounds: completedToolRounds,
+              toolResults
+            }
+          }
+        };
+      }
+
+      const result = await executeWorkerToolRequest(
+        input.context,
+        request,
+        decision
+      );
+      toolResults.push(result);
+    }
+
+    completedToolRounds = round + 1;
+    workerResult = await input.worker.execute({
+      allowUnqualifiedExecution: input.allowUnqualifiedExecution,
+      task: withToolResults(input.baseTask, toolResults),
+      plannedTask: input.plannedTask,
+      scope: input.repositoryContext.scope,
+      workerProfile: input.workerProfile,
+      notes: [
+        ...input.notes,
+        `Host tool rounds completed: ${round + 1}`
+      ]
+    });
+  }
+
+  const pendingRequests = getWorkerToolRequests(workerResult);
+  if (pendingRequests.length > 0) {
+    return {
+      toolResults,
+      workerResult: {
+        ...workerResult,
+        metadata: {
+          ...workerResult.metadata,
+          maxToolRoundsExceeded: true,
+          toolRounds: completedToolRounds,
+          toolResults
+        }
+      }
+    };
+  }
+
+  return {
+    toolResults,
+    workerResult: {
+      ...workerResult,
+      metadata: {
+        ...workerResult.metadata,
+        toolRounds: completedToolRounds,
+        toolResults
+      }
     }
   };
 };
@@ -654,6 +925,12 @@ export const runHostWorkerWorkflow = async (
   });
 
   let workerResult: AgentResult | null = null;
+  let permissionRequest:
+    | {
+        decision: WorkerToolPermissionDecision;
+        request: WorkerToolRequest;
+      }
+    | undefined;
   const warnings = [
     ...repositoryContext.warnings,
     ...profileWarnings
@@ -669,18 +946,24 @@ export const runHostWorkerWorkflow = async (
       );
     }
     const worker = resolveWorkerAgent(input.taskType, workerContext);
-    workerResult = await worker.execute({
+    const toolLoop = await runWorkerWithToolLoop({
       allowUnqualifiedExecution: overrideApplied,
-      task,
-      plannedTask,
-      scope: repositoryContext.scope,
-      workerProfile: profile,
+      baseTask: task,
+      context,
+      hostTask,
       notes: [
         `Task type: ${input.taskType}`,
         `Requested files: ${(input.files ?? []).join(", ") || "none"}`,
         `Selected files: ${repositoryContext.selectedFiles.map((file) => file.path).join(", ") || "none"}`
-      ]
+      ],
+      plannedTask,
+      repositoryContext,
+      userPermissionGrants: input.userPermissionGrants,
+      worker,
+      workerProfile: profile
     });
+    workerResult = toolLoop.workerResult;
+    permissionRequest = toolLoop.permissionRequest;
   }
 
   const qualityGate = buildQualityGate(
@@ -711,9 +994,13 @@ export const runHostWorkerWorkflow = async (
   if (!qualityGate.answered) {
     warnings.push(...qualityGate.reasons);
   }
+  if (permissionRequest) {
+    warnings.push(permissionRequest.decision.reason);
+  }
 
   const runSucceeded =
     execution.state === "executed" &&
+    qualityGate.workflowStatus === "completed" &&
     qualityGate.answered &&
     !qualityGate.requiresHostReview &&
     workerResult?.status === "success";
@@ -733,7 +1020,8 @@ export const runHostWorkerWorkflow = async (
         selectedFiles: repositoryContext.selectedFiles.map((file) => file.path),
         strictFiles: repositoryContext.strictFiles
       },
-      worker: workerResult?.output ?? null
+      worker: workerResult?.output ?? null,
+      permissionRequest
     },
     confidence:
       runSucceeded && workerResult
@@ -751,7 +1039,8 @@ export const runHostWorkerWorkflow = async (
       taskType: input.taskType,
       workerExecutionRecordId: executionRecord.record.id,
       workerId: profile.workerId,
-      workerTrustProfile
+      workerTrustProfile,
+      permissionRequest
     }
   };
 

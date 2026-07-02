@@ -108,6 +108,28 @@ const matchesGrant = (
   );
 };
 
+const matchesDeniedGrant = (
+  request: WorkerToolRequest,
+  normalizedPaths: string[],
+  grant: UserPermissionGrant | undefined
+): boolean => {
+  if (!grant || grant.granted || grant.status !== "denied") {
+    return false;
+  }
+
+  if (grant.requestId !== request.id || grant.action !== request.action) {
+    return false;
+  }
+
+  if (!grant.pathPrefix) {
+    return true;
+  }
+
+  return normalizedPaths.every(
+    (path) => path === grant.pathPrefix || path.startsWith(`${grant.pathPrefix}/`)
+  );
+};
+
 const hasScopeEscape = (
   context: ExecutionContext,
   scope: string | undefined,
@@ -127,6 +149,14 @@ export const evaluateWorkerToolRequest = (
     options.toolPolicy?.allowedRequests ?? DEFAULT_ALLOWED_ACTIONS
   );
   const normalizedPaths = requestedPaths(context, request);
+
+  if (matchesDeniedGrant(request, normalizedPaths, options.userGrant)) {
+    return block(
+      request,
+      "User denied this tool request.",
+      normalizedPaths
+    );
+  }
 
   if (deniedRequests.has(request.action) || !allowedRequests.has(request.action)) {
     return block(

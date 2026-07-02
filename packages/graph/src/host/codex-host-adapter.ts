@@ -69,7 +69,9 @@ export class CodexHostAdapter {
       constraints: [
         "Answer the user request directly.",
         "Use only the provided repository context.",
-        "Reference concrete repository paths from the selected files."
+        "Reference concrete repository paths from the selected files.",
+        "If required evidence is missing, return a structured tool_request instead of guessing.",
+        "Never request direct file writes, patch apply, or free-form shell execution."
       ],
       context: {
         repository: input.repositoryContext,
@@ -78,6 +80,19 @@ export class CodexHostAdapter {
       outputContract: {
         contractId: contract.capability.name,
         schemaVersion: contract.schemaVersion
+      },
+      toolPolicy: {
+        allowedRequests: [
+          "search_files",
+          "search_text",
+          "read_file_snippet",
+          "read_git_diff",
+          "inspect_patch",
+          "run_validation_command"
+        ],
+        defaultPermissionMode: "auto-allow",
+        deniedRequests: [],
+        maxToolRounds: 2
       },
       trace: {
         createdAt: new Date().toISOString(),

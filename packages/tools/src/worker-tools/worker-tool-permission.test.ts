@@ -127,4 +127,43 @@ describe("evaluateWorkerToolRequest", () => {
       requiresUserApproval: false
     });
   });
+
+  it("honors explicit user denials without asking again", async () => {
+    const rootDir = await createWorkspace();
+    const context = createExecutionContextFromEnv(undefined, { rootDir });
+    const request = {
+      id: "req-5",
+      action: "read_file_snippet" as const,
+      reason: "Need adjacent CLI context.",
+      scope: "packages/core",
+      path: "packages/cli/src/index.ts",
+      selector: {
+        kind: "line-range" as const,
+        startLine: 1,
+        endLine: 1
+      },
+      limits: {},
+      expectedUse: "Check caller behavior."
+    };
+    const decision = evaluateWorkerToolRequest(context, request, {
+      userGrant: {
+        id: "grant-2",
+        requestId: "req-5",
+        taskId: "task-1",
+        action: "read_file_snippet",
+        pathPrefix: "packages/cli",
+        grantScope: "once",
+        granted: false,
+        status: "denied",
+        decidedAt: new Date().toISOString()
+      }
+    });
+
+    expect(decision).toMatchObject({
+      allowed: false,
+      mode: "always-deny",
+      requiresUserApproval: false,
+      reason: "User denied this tool request."
+    });
+  });
 });

@@ -1,7 +1,12 @@
 import { z } from "zod";
 
+import { UserPermissionGrantSchema } from "@mcp-code-worker/core";
 import { runHostWorkerWorkflow } from "@mcp-code-worker/graph";
 
+import {
+  CodexHostSurfaceAdapter,
+  type CwMcpWorkflowResponse
+} from "./host-surface-adapter.js";
 import {
   resolveToolContext,
   writeToolAuditEvent
@@ -26,13 +31,14 @@ const inputSchema = z.object({
     "json-extraction",
     "doc-generation"
   ]),
+  userPermissionGrants: z.array(UserPermissionGrantSchema).optional(),
   workerId: z.string().min(1),
   requireProfile: z.boolean().optional()
 });
 
 export const cwRunHostWorkerTool: CwToolDefinition<
   typeof inputSchema.shape,
-  Awaited<ReturnType<typeof runHostWorkerWorkflow>>
+  CwMcpWorkflowResponse
 > = {
   name: "cw_run_host_worker",
   description:
@@ -51,13 +57,15 @@ export const cwRunHostWorkerTool: CwToolDefinition<
       scope: args.scope,
       strictFiles: args.strictFiles,
       taskType: args.taskType,
+      userPermissionGrants: args.userPermissionGrants,
       workerId: args.workerId
     });
+    const response = CodexHostSurfaceAdapter.renderWorkflowResult(result);
     await writeToolAuditEvent({
       context,
       tool: "cw_run_host_worker",
       inputSummary: args.goal,
-      outputSummary: "Host-managed worker MCP workflow completed.",
+      outputSummary: `Host-managed worker MCP workflow completed with status ${response.status}.`,
       warnings: result.warnings,
       errors: result.errors,
       metadata: {
@@ -67,9 +75,10 @@ export const cwRunHostWorkerTool: CwToolDefinition<
         scope: args.scope,
         strictFiles: args.strictFiles,
         taskType: args.taskType,
+        userPermissionGrantCount: args.userPermissionGrants?.length ?? 0,
         workerId: args.workerId
       }
     });
-    return result;
+    return response;
   }
 };

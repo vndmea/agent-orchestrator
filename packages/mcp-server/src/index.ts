@@ -24,6 +24,7 @@ export * from "./tools/cw-review-files.tool.js";
 export * from "./tools/cw-review-repository.tool.js";
 export * from "./tools/cw-resume-task.tool.js";
 export * from "./tools/cw-run-host-worker.tool.js";
+export * from "./tools/host-surface-adapter.js";
 export * from "./tools/cw-start-task.tool.js";
 export * from "./tools/cw-unregister-worker.tool.js";
 export * from "./tools/cw-validate-repository.tool.js";
