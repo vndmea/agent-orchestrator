@@ -6,6 +6,11 @@ import {
   WorkerTaskTypeSchema,
   WorkerTrustProfileSchema
 } from "./worker-capability.schema.js";
+import {
+  WorkerToolPolicySchema,
+  WorkerToolRequestSchema,
+  WorkerToolResultSchema
+} from "./worker-tool-request.schema.js";
 
 export const WorkerHostSchema = z.enum(["codex"]);
 
@@ -30,6 +35,7 @@ export const WorkerTaskEnvelopeSchema = z
         schemaVersion: z.string().min(1)
       })
       .strict(),
+    toolPolicy: WorkerToolPolicySchema.optional(),
     trace: z
       .object({
         createdAt: z.string().datetime(),
@@ -44,7 +50,8 @@ export const WorkerResultStatusSchema = z.enum([
   "needs_more_context",
   "blocked",
   "invalid_output",
-  "host_takeover"
+  "host_takeover",
+  "tool_request"
 ]);
 
 export const WorkerResultEnvelopeSchema = z
@@ -53,6 +60,8 @@ export const WorkerResultEnvelopeSchema = z
     taskType: WorkerTaskTypeSchema,
     status: WorkerResultStatusSchema,
     output: z.unknown().optional(),
+    toolRequests: z.array(WorkerToolRequestSchema).optional(),
+    toolResults: z.array(WorkerToolResultSchema).optional(),
     failure: z
       .object({
         kind: z.enum([
@@ -75,7 +84,8 @@ export const WorkerResultEnvelopeSchema = z
           "none",
           "native-json-schema",
           "prompt-only-json"
-        ])
+        ]),
+        toolRounds: z.number().int().nonnegative().optional()
       })
       .strict()
   })

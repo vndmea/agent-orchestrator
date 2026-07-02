@@ -31,6 +31,7 @@ export * from "./schemas/validation.schema.js";
 export * from "./schemas/worker-availability.schema.js";
 export * from "./schemas/worker-registry.schema.js";
 export * from "./schemas/worker-task-envelope.schema.js";
+export * from "./schemas/worker-tool-request.schema.js";
 export * from "./schemas/worker-capability.schema.js";
 export * from "./schemas/workflow-state.schema.js";
 export * from "./types/agent.js";

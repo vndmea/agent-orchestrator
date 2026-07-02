@@ -27,6 +27,12 @@ describe("worker task envelopes", () => {
           contractId: "review-worker",
           schemaVersion: "1.0.0"
         },
+        toolPolicy: {
+          allowedRequests: ["search_text", "read_file_snippet"],
+          defaultPermissionMode: "auto-allow",
+          deniedRequests: ["run_validation_command"],
+          maxToolRounds: 2
+        },
         trace: {
           createdAt: new Date().toISOString(),
           sourceWorkflow: "host-worker-workflow"
@@ -40,15 +46,24 @@ describe("worker task envelopes", () => {
       WorkerResultEnvelopeSchema.safeParse({
         taskEnvelopeId: "task-envelope-1",
         taskType: "review-lite",
-        status: "invalid_output",
-        failure: {
-          kind: "schema-validation",
-          reasons: ["findings must be an array"]
-        },
+        status: "tool_request",
+        toolRequests: [
+          {
+            id: "tool-req-1",
+            action: "search_text",
+            reason: "Need direct evidence for the finding.",
+            query: "generateId",
+            limits: {
+              maxResults: 5
+            },
+            expectedUse: "Find the implementation file."
+          }
+        ],
         diagnostics: {
           modelBehaviorProfile: "deepseek-openai-compatible-prompt-json",
           structuredOutputAttempts: 2,
-          structuredOutputMode: "prompt-only-json"
+          structuredOutputMode: "prompt-only-json",
+          toolRounds: 1
         }
       }).success
     ).toBe(true);
