@@ -51,6 +51,7 @@ import {
   cwStartTaskTool,
   cwToolDefinitions,
   formatUserFacingToolErrorMessage,
+  toStructuredToolError,
   toStructuredContent,
   cwUnregisterWorkerTool,
   cwValidateRepositoryTool,
@@ -569,6 +570,17 @@ describe("mcp tool registration", () => {
       }
       expect(result.persistence.path).toContain("data.db#worker_profiles");
     });
+  });
+
+  it("returns machine-readable MCP error metadata", () => {
+    const error = toStructuredToolError(
+      new Error("Worker deepseek-flash requires a persisted API key before it can run.")
+    );
+
+    expect(error.error.code).toBe("MODEL_CREDENTIALS_UNAVAILABLE");
+    expect(error.error.reason).toBe("model_credentials");
+    expect(error.error.retryable).toBe(true);
+    expect(error.error.nextSteps[0]).toContain("deepseek-flash");
   });
 
   it("keeps the worker interview alias wired to the same MCP behavior", async () => {

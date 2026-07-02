@@ -71,8 +71,126 @@ export const formatUserFacingToolErrorMessage = (error: unknown): string => {
   return `cw reached the tool, but it failed unexpectedly. Technical details: ${message}`;
 };
 
-const toUserFacingToolError = (error: unknown): Error => {
-  return new Error(formatUserFacingToolErrorMessage(error));
+export interface StructuredToolErrorContent extends Record<string, unknown> {
+  error: {
+    code: string;
+    details?: unknown;
+    message: string;
+    nextSteps: string[];
+    reason:
+      | "configuration"
+      | "model_credentials"
+      | "not_found"
+      | "schema"
+      | "safety_policy"
+      | "unexpected";
+    retryable: boolean;
+    technicalMessage: string;
+  };
+}
+
+const extractWorkerIdFromMessage = (message: string): string | undefined =>
+  message.match(/\bWorker\s+([^\s]+)\s+/u)?.[1];
+
+export const toStructuredToolError = (
+  error: unknown
+): StructuredToolErrorContent => {
+  const technicalMessage = error instanceof Error ? error.message : String(error);
+  const normalizedMessage = technicalMessage.toLowerCase();
+  const userMessage = formatUserFacingToolErrorMessage(error);
+
+  if (error instanceof AgentError) {
+    const reason =
+      error.code === "TASK_SESSION_NOT_FOUND" ||
+      error.code === "TASK_ARTIFACT_NOT_FOUND"
+        ? "not_found"
+        : error.code === "WRITE_BLOCKED"
+          ? "safety_policy"
+          : "configuration";
+
+    return {
+      error: {
+        code: error.code,
+        details: error.details,
+        message: userMessage,
+        nextSteps:
+          reason === "not_found"
+            ? ["Confirm the task id or artifact name belongs to this workspace."]
+            : reason === "safety_policy"
+              ? ["Retry with the required explicit write gate only after reviewing the proposed change."]
+              : ["Run cw doctor with the same worker and options to inspect the failing prerequisite."],
+        reason,
+        retryable: reason !== "not_found",
+        technicalMessage
+      }
+    };
+  }
+
+  if (error instanceof ZodError) {
+    return {
+      error: {
+        code: "MCP_SCHEMA_VALIDATION_FAILED",
+        details: error.issues,
+        message: userMessage,
+        nextSteps: ["Check the tool input schema and retry with the required fields."],
+        reason: "schema",
+        retryable: false,
+        technicalMessage
+      }
+    };
+  }
+
+  if (
+    normalizedMessage.includes("api key") ||
+    normalizedMessage.includes("401") ||
+    normalizedMessage.includes("unauthorized") ||
+    normalizedMessage.includes("forbidden")
+  ) {
+    const workerId = extractWorkerIdFromMessage(technicalMessage);
+
+    return {
+      error: {
+        code: "MODEL_CREDENTIALS_UNAVAILABLE",
+        message: userMessage,
+        nextSteps: [
+          workerId
+            ? `Fix credentials for worker ${workerId}, then rerun cw worker readiness --worker ${workerId} --probe.`
+            : "Fix the configured model credentials, then rerun cw doctor --probe."
+        ],
+        reason: "model_credentials",
+        retryable: true,
+        technicalMessage
+      }
+    };
+  }
+
+  if (
+    normalizedMessage.includes("config.json") ||
+    normalizedMessage.includes("workspaces") ||
+    normalizedMessage.includes("configuration")
+  ) {
+    return {
+      error: {
+        code: "CW_CONFIGURATION_ERROR",
+        message: userMessage,
+        nextSteps: ["Run cw doctor to inspect workspace and user-scoped configuration."],
+        reason: "configuration",
+        retryable: true,
+        technicalMessage
+      }
+    };
+  }
+
+  return {
+    error: {
+      code: "CW_TOOL_UNEXPECTED_ERROR",
+      message: userMessage,
+      nextSteps: ["Retry after checking cw doctor; report the technical message if it persists."],
+      reason: "unexpected",
+      retryable: true,
+      technicalMessage
+    }
+  };
 };
 
 export interface CwMcpServerOptions {
@@ -113,7 +231,18 @@ export const createCwMcpServer = async (
             structuredContent
           };
         } catch (error) {
-          throw toUserFacingToolError(error);
+          const structuredContent = toStructuredToolError(error);
+
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: structuredContent.error.message
+              }
+            ],
+            isError: true,
+            structuredContent
+          };
         }
       }
     );
