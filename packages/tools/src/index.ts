@@ -18,3 +18,5 @@ export * from "./testing/run-tests.js";
 export * from "./testing/run-typecheck.js";
 export * from "./validation/validate-json.js";
 export * from "./validation/validate-zod.js";
+export * from "./worker-tools/worker-tool-executor.js";
+export * from "./worker-tools/worker-tool-permission.js";
