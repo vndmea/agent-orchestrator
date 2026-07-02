@@ -60,7 +60,7 @@ describe("worker registry store", () => {
     expect((await readWorkerRegistry(rootDir)).error).toBeDefined();
 
     await writeRegistry(rootDir, {
-      version: 2,
+      version: 1,
       workers: [
         {
           workerId: "broken-worker"

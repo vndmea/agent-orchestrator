@@ -30,6 +30,8 @@ import {
 } from "@mcp-code-worker/models";
 import type { InitPrompter } from "./commands/init.js";
 
+// Local-client assertions in this file cover retained experimental adapter
+// compatibility only; the current release-supported worker path is API-first.
 const execFile = promisify(execFileCallback);
 
 const createIo = (outputMode?: "human" | "json") => {
@@ -317,7 +319,7 @@ const writeCwConfig = async (rootDir: string, config: Record<string, unknown>): 
     JSON.stringify(
       {
         ...existing,
-        version: 2,
+        version: 1,
         ...config,
         ...(Array.isArray(config.workers)
           ? {
@@ -2413,7 +2415,7 @@ describe("cli parsing", () => {
       );
       await writeFile(
         getCwWorkspaceFilePath(rootDir, "config.json"),
-        JSON.stringify({ version: 2, workers: [] }, null, 2),
+        JSON.stringify({ version: 1, workers: [] }, null, 2),
         "utf8"
       );
       await utimes(join(runsDir, "task-old"), oldTime, oldTime);

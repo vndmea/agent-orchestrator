@@ -207,7 +207,7 @@ const buildDesiredConfig = (
 ): CwConfig =>
   CwConfigSchema.parse({
     ...existing,
-    version: 2,
+    version: 1,
     workers: mergeWorkerConfigs(existing.workers, workerPlans),
     safety:
       options.repositoryWriteMode === "allow-write"

@@ -217,6 +217,8 @@ const runClaudeCode = async (
   });
 
 export class ClaudeCodeProvider implements ModelProvider {
+  // Experimental compatibility provider retained for future local Claude Code use.
+  // Current release-grade worker support is API-model first.
   public readonly name = "claudecode";
 
   public async invoke(

@@ -39,11 +39,11 @@ Supported shape:
 
 ## Required Secret Configuration
 
-Persist the provider key in the workspace SQLite store. The worker definition in `config.json` stays non-secret:
+Persist the provider key with `cw auth login`; the worker definition in `config.json` stays non-secret:
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "workers": [
     {
       "workerId": "deepseek-flash",
@@ -125,9 +125,10 @@ cw worker register \
 
 Qualification sequence:
 
-1. Run `cw worker interview --worker=deepseek-flash --save`.
-2. Run `cw worker benchmark --suite=coding-v1 --worker=deepseek-flash --save` when coding qualification matters.
-3. Only use `--update-profile-capabilities` after the benchmark result is explicitly reviewed.
+1. Run `cw auth login --worker=deepseek-flash`.
+2. Run `cw worker interview --worker=deepseek-flash --save`.
+3. Run `cw worker benchmark --suite=coding-v1 --worker=deepseek-flash --save` when coding qualification matters.
+4. Only use `--update-profile-capabilities` after the benchmark result is explicitly reviewed.
 
 ## Common Failure Signatures
 
@@ -135,7 +136,7 @@ Qualification sequence:
   - test both documented base URLs
   - confirm the exact model name
 - auth failures
-  - verify the selected worker secret was persisted into SQLite
+  - verify the selected worker secret was persisted with `cw auth login`
 - provider invocation failures during interview
   - do not treat the unavailable result as a completed qualification
   - fix connectivity or auth first, then rerun

@@ -353,7 +353,7 @@ describe("core schemas", () => {
 
     expect(() =>
       CwConfigSchema.parse({
-        version: 2,
+        version: 1,
         safety: {},
         context: {},
         storage: {}
@@ -362,7 +362,7 @@ describe("core schemas", () => {
 
     expect(() =>
       CwConfigSchema.parse({
-        version: 2,
+        version: 1,
         workers: [
           {
             workerId: "litellm-qwen",

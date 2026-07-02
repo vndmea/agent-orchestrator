@@ -29,11 +29,11 @@ Persist the non-secret defaults in `config.json`:
 
 Then provide the gateway URL:
 
-Persist the LiteLLM gateway settings in `config.json`, and persist any gateway secret in the workspace SQLite store:
+Persist the LiteLLM gateway settings in `config.json`, and store any gateway secret with `cw auth login`:
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "workers": [
     {
       "workerId": "<workerId>",
@@ -52,7 +52,7 @@ Persist the LiteLLM gateway settings in `config.json`, and persist any gateway s
 ## Required Config Fields
 
 - `baseURL` on the selected `config.json.workers[]` entry
-- any gateway-side secret persisted for that worker in the workspace SQLite store
+- any gateway-side secret stored for that worker with `cw auth login`
 
 ## Minimal Health Checks
 
@@ -86,6 +86,7 @@ If probe fails, read:
 
 ```bash
 cw worker register --worker=<workerId> --provider=litellm --model=<gateway-model-name> --allow-write
+cw auth login --worker=<workerId>
 cw worker interview --worker=<workerId> --save
 ```
 

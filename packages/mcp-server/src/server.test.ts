@@ -216,7 +216,7 @@ const writeCwConfig = async (rootDir: string, config: Record<string, unknown>): 
     JSON.stringify(
       {
         ...existing,
-        version: 2,
+        version: 1,
         ...config,
         ...(Array.isArray(config.workers)
           ? {

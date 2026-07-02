@@ -173,7 +173,7 @@ export const registerDoctorCommand = (program: Command, io: CliIo): void => {
     )
     .option(
       "--host <name>",
-      `Target host preset for --mcp checks: ${MCP_HOSTS.join(", ")}`,
+      `Target host preset for --mcp checks. Codex is release-validated; others are manual-only: ${MCP_HOSTS.join(", ")}`,
       "codex"
     )
     .option("--worker <workerId>", "Worker id to include in readiness and probe checks")

@@ -108,7 +108,7 @@ const writeCwConfig = async (
     configPath,
     JSON.stringify(
       {
-        version: 2,
+        version: 1,
         ...config
       },
       null,

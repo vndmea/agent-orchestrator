@@ -35,7 +35,7 @@ describe("cw config", () => {
   it("loads valid config and resolves persisted per-worker model settings", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 2,
+      version: 1,
       workers: [
         {
           workerId: "deepseek-flash",
@@ -74,7 +74,7 @@ describe("cw config", () => {
     const linkRootDir = await mkdtemp(join(tmpdir(), "cw-config-link-"));
     const aliasRootDir = join(linkRootDir, "workspace");
     await writeConfig(rootDir, {
-      version: 2,
+      version: 1,
       safety: {
         dryRun: false,
         allowWrite: true,
@@ -100,7 +100,7 @@ describe("cw config", () => {
   it("returns clear errors for invalid config and falls back to defaults", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 2,
+      version: 1,
       workers: [
         {
           workerId: "bad-worker",
@@ -121,7 +121,7 @@ describe("cw config", () => {
   it("applies precedence cli overrides > defaults for active runtime settings", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 2,
+      version: 1,
       workers: [
         {
           workerId: "config-worker",
@@ -209,7 +209,7 @@ describe("cw config", () => {
   it("resolves context selection settings from config", async () => {
     const rootDir = await createWorkspace();
     await writeConfig(rootDir, {
-      version: 2,
+      version: 1,
       context: {
         ignoredPaths: ["generated", "tmp/cache"],
         strictFiles: true
@@ -226,7 +226,7 @@ describe("cw config", () => {
     const rootDir = await createWorkspace();
     const now = new Date().toISOString();
     await writeConfig(rootDir, {
-      version: 2,
+      version: 1,
       workers: [
         {
           workerId: "opencode-local",

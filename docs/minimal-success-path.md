@@ -9,16 +9,14 @@ cw init
 cw doctor
 ```
 
-If you already know the worker shape you want, the shortest scripted paths are:
+If you already know the worker shape you want, use explicit scripted worker fields:
 
 ```bash
-cw init --preset=mock --allow-write
-cw init --preset=deepseek --allow-write
-cw init --preset=client --allow-write
-cw init --preset=opencode --allow-write
-cw init --preset=claudecode --allow-write
-cw init --preset=codex --allow-write
+cw init --worker-id=mock-local --worker-provider=mock --worker-model=gpt-5.4-mini --register-worker --allow-write
+cw init --worker-id=deepseek-flash --worker-provider=openai-compatible --worker-model=deepseek-v4-flash --worker-base-url=https://api.deepseek.com --register-worker --allow-write
 ```
+
+Local adapter configurations such as `provider=opencode`, `provider=claudecode`, `provider=codex`, and generic `provider=client` are experimental compatibility paths, not the current minimal success path.
 
 2. Verify model access and credentials.
 

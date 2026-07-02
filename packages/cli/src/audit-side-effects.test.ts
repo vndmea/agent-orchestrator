@@ -38,7 +38,7 @@ const withWritableAuditWorkspace = async (
       configPath,
       JSON.stringify(
         {
-          version: 2,
+          version: 1,
           safety: {
             dryRun: false,
             allowWrite: true,

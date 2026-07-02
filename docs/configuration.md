@@ -43,9 +43,9 @@ The persisted config is intended for workspace-local runtime defaults such as:
 Provider families currently split into two broad groups:
 
 - hosted API providers such as `openai-compatible`, `claude-compatible`, and `litellm`
-- local CLI adapter providers such as `client`, `opencode`, `claudecode`, and `codex`
+- experimental local CLI adapter providers such as `client`, `opencode`, `claudecode`, and `codex`
 
-Default local command assumptions:
+Default local command assumptions for experimental local adapters:
 
 - `client` -> `sparkcode`
 - `opencode` -> `opencode`
@@ -56,7 +56,7 @@ Persisted config no longer chooses an implicit execution worker for task, patch,
 
 Worker API keys are persisted in the user-scoped SQLite store, not in `config.json`. Manage them with `cw auth login`, inspect only their presence with `cw auth list`, and remove them with `cw auth logout`. Keep them local to the machine, never commit them into repository files, and avoid pasting them into logs or shared transcripts.
 
-Path-like inputs such as `config.json.workers[][*].clientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform.
+Path-like inputs such as `config.json.workers[][*].clientCommand` are normalized before use so mixed slash styles like `C:/Users/me//tool.exe` and `.\bin\client` do not crash the runtime on the current platform. These fields are retained for future local-adapter compatibility; the current release-grade worker path is API-model first.
 
 ## Repository Context Defaults
 

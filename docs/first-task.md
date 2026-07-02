@@ -17,13 +17,13 @@ cw doctor
 cw mcp config
 ```
 
-If you already know you want a local adapter instead of the interactive flow, the shortest setup presets are:
+If you are experimenting with a local adapter instead of the release-supported API-worker path, pass the worker fields explicitly:
 
 ```bash
-cw init --preset=client --allow-write
-cw init --preset=opencode --allow-write
-cw init --preset=claudecode --allow-write
-cw init --preset=codex --allow-write
+cw init --worker-id=client-local --worker-provider=client --worker-model=qwen3-coder --worker-client-command=sparkcode --register-worker --allow-write
+cw init --worker-id=opencode-local --worker-provider=opencode --worker-model=deepseek/deepseek-v4-flash --worker-client-command=opencode --register-worker --allow-write
+cw init --worker-id=claudecode-local --worker-provider=claudecode --worker-model=sonnet --worker-client-command=claude --register-worker --allow-write
+cw init --worker-id=codex-local --worker-provider=codex --worker-model=gpt-5.4 --worker-client-command=codex --register-worker --allow-write
 ```
 
 If you are using a repository checkout, read the commands below as `pnpm exec cw ...` from the repository root.

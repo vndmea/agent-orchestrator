@@ -24,11 +24,11 @@ Runtime configuration resolves in this order:
 2. `~/.code-worker/<workspace-id>/config.json`
 3. Built-in defaults
 
-Treat `config.json` as the primary source for persisted non-secret worker settings used by both CLI and MCP flows. Persist local client commands in `config.json.workers[]`, persist provider API keys in the workspace SQLite store, and never commit real keys into repository files or logs.
+Treat `config.json` as the primary source for persisted non-secret worker settings used by both CLI and MCP flows. Persist local client commands in `config.json.workers[]`; manage provider API keys with `cw auth login`, `cw auth list`, and `cw auth logout`; and never commit real keys into repository files or logs.
 
 ## 3-Minute Quickstarts
 
-These are the fastest supported paths for getting one worker configuration running without reading the entire document first.
+These are the fastest paths for getting one worker configuration running without reading the entire document first. API-worker paths are release-supported; local client adapter paths below are explicitly marked experimental.
 
 ### Quickstart: mock provider
 
@@ -38,7 +38,7 @@ Use this when you want to verify local CLI and MCP wiring first.
 
 ```bash
 npm i -g mcp-code-worker
-cw init --preset=mock --allow-write
+cw init --worker-id=mock-local --worker-provider=mock --worker-model=gpt-5.4-mini --register-worker --allow-write
 ```
 
 2. Confirm the stored config points at `mock`:
@@ -74,7 +74,7 @@ Use this when you want a real hosted model quickly.
 
 ```bash
 npm i -g mcp-code-worker
-cw init --preset=deepseek --allow-write
+cw init --worker-id=deepseek-flash --worker-provider=openai-compatible --worker-model=deepseek-v4-flash --worker-base-url=https://api.deepseek.com --register-worker --allow-write
 ```
 
 2. Persist the worker entry in `config.json`:
@@ -170,9 +170,9 @@ cw doctor --probe
 
 If `cw doctor --probe` fails, check the reported `root-dir`, `runtime-bootstrap`, `worker-model`, and `worker-connectivity` diagnostics before changing anything else.
 
-### Quickstart: local client provider
+### Experimental: local client provider
 
-Use this when a compatible local CLI should proxy the model call.
+This path is retained for future compatibility when a compatible local CLI should proxy the model call. It is not part of the current release-grade worker path; prefer an API worker for npm/e2e use.
 
 1. Install and initialize:
 
@@ -210,15 +210,15 @@ cw doctor --probe
 
 If this path fails, inspect the `local-client-command`, `local-client-compatibility`, `runtime-bootstrap`, and `worker-connectivity` checks first.
 
-### Quickstart: Claude Code adapter
+### Experimental: Claude Code adapter
 
-Use this when a local Claude Code CLI should proxy the worker call.
+This path is retained for future compatibility when a local Claude Code CLI should proxy the worker call. It is not part of the current release-grade worker path.
 
 1. Install and initialize:
 
 ```bash
 npm i -g mcp-code-worker
-cw init --preset=claudecode --allow-write
+cw init --worker-id=claudecode-local --worker-provider=claudecode --worker-model=sonnet --worker-client-command=claude --register-worker --allow-write
 ```
 
 2. Persist the worker entry in `config.json`:
@@ -250,15 +250,15 @@ cw doctor --probe
 
 If this path fails, inspect the `local-client-command`, `local-client-compatibility`, `runtime-bootstrap`, and `worker-connectivity` checks first.
 
-### Quickstart: Codex adapter
+### Experimental: Codex adapter
 
-Use this when a local Codex CLI should proxy the worker call.
+This path is retained for future compatibility when a local Codex CLI should proxy the worker call. It is not part of the current release-grade worker path.
 
 1. Install and initialize:
 
 ```bash
 npm i -g mcp-code-worker
-cw init --preset=codex --allow-write
+cw init --worker-id=codex-local --worker-provider=codex --worker-model=gpt-5.4 --worker-client-command=codex --register-worker --allow-write
 ```
 
 2. Persist the worker entry in `config.json`:
@@ -368,7 +368,7 @@ Typical settings:
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "workers": [
     {
       "workerId": "<workerId>",
@@ -390,7 +390,7 @@ Contract:
 
 ### `client`
 
-Use a local client provider when a compatible local CLI bridges the model calls.
+Use a local client provider only as experimental compatibility scaffolding when a compatible local CLI bridges the model calls.
 
 - `sparkcode` is the default compatible command.
 - Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default local client command differs from `sparkcode`.
@@ -417,7 +417,7 @@ Contract:
 
 ### `opencode`
 
-Use `opencode` when worker traffic should go through the dedicated OpenCode adapter instead of the generic local client protocol.
+Use `opencode` only as experimental compatibility scaffolding when worker traffic should go through the dedicated OpenCode adapter instead of the generic local client protocol.
 
 - `opencode` uses `opencode run --format json` and parses the event stream directly.
 - Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default command differs from `opencode`.
@@ -448,7 +448,7 @@ Contract:
 
 ### `claudecode`
 
-Use `claudecode` when worker traffic should go through the dedicated Claude Code CLI adapter instead of the generic local client protocol or a hosted Anthropic-compatible API.
+Use `claudecode` only as experimental compatibility scaffolding when worker traffic should go through the dedicated Claude Code CLI adapter instead of the generic local client protocol or a hosted Anthropic-compatible API.
 
 - `claudecode` uses `claude --print --output-format json` and reads Claude Code's structured JSON result.
 - Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default command differs from `claude`.
@@ -475,7 +475,7 @@ Contract:
 
 ### `codex`
 
-Use `codex` when worker traffic should go through the dedicated local Codex CLI adapter instead of the generic local client protocol or a hosted OpenAI-compatible API.
+Use `codex` only as experimental compatibility scaffolding when worker traffic should go through the dedicated local Codex CLI adapter instead of the generic local client protocol or a hosted OpenAI-compatible API.
 
 - `codex` uses `codex exec --json` and parses the event stream directly.
 - Persist `clientCommand` on the matching `config.json.workers[]` entry whenever the default command differs from `codex`.

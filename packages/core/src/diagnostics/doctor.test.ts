@@ -15,6 +15,8 @@ import {
 } from "@mcp-code-worker/core";
 import { updateTaskSession } from "../session/task-session-store.js";
 
+// Local-client checks are retained as experimental compatibility coverage.
+// They do not imply release support for local adapter worker execution.
 const createWorkspace = async (): Promise<string> =>
   mkdtemp(join(tmpdir(), "cw-doctor-"));
 
@@ -103,7 +105,7 @@ describe("doctor", () => {
       getCwConfigPath(rootDir),
       JSON.stringify(
         {
-          version: 2,
+          version: 1,
           workers: [
             {
               workerId: "mock-local",

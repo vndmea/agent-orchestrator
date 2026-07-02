@@ -1,6 +1,8 @@
 # Cursor MCP Setup
 
-Use this guide when configuring `mcp-code-worker` inside Cursor.
+Use this guide only as untested launch-snippet scaffolding when configuring `mcp-code-worker` inside Cursor.
+
+Status: snippet-only / untested for the current release. Codex is the only release-validated MCP host path right now.
 
 ## Recommended Server Snippet
 
@@ -9,6 +11,8 @@ Generate the snippet with:
 ```bash
 cw mcp config --host=cursor
 ```
+
+This command only prints the generic stdio snippet shape. It does not prove Cursor has loaded the server, launched it from the intended repository root, or completed a host-side tool round trip.
 
 ```json
 {

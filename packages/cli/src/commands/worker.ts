@@ -86,7 +86,7 @@ const persistWorkerConfigEntry = async (
 ): Promise<void> => {
   const configPath = getCwConfigPath(rootDir);
   let existing: Record<string, unknown> = {
-    version: 2
+    version: 1
   };
 
   try {

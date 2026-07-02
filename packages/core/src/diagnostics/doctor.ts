@@ -79,7 +79,7 @@ const WHY_THIS_MATTERS: Record<string, string> = {
   "worker-model":
     "The worker model handles scoped execution steps such as review, validation guidance, and patch generation.",
   "local-client-command":
-    "When cw uses a local client provider, this command is the bridge to the real model backend.",
+    "Local client providers are experimental compatibility paths; when configured, this command is the bridge to the real model backend.",
   "local-client-compatibility":
     "A discovered executable still needs to look like the compatible local client bridge that cw expects.",
   "cw-dir":
@@ -301,7 +301,7 @@ export const runDoctor = async (
       name: "local-client-command",
       status: "warning",
       message:
-        "Local client command checks were not resolved through the worker-aware model layer.",
+        "Local client adapters are experimental and not part of the current release-supported worker path; command checks were not resolved through the worker-aware model layer.",
       metadata: {
         command:
           context.workerModel.clientCommand?.trim() ||
@@ -312,6 +312,7 @@ export const runDoctor = async (
               : context.workerModel.provider === "codex"
                 ? "codex"
               : "sparkcode"),
+        releaseSupported: false,
         source: context.workerModel.clientCommand?.trim() ? "configured" : "default"
       }
     });
@@ -416,12 +417,13 @@ export const runDoctor = async (
         entry.provider === "mock"
           ? `${entry.name} is using a mock provider and does not require a key.`
           : isLocalClientProvider
-            ? `${entry.name} is using a local client provider and does not require an API key.`
+            ? `${entry.name} is using an experimental local client provider and does not require an API key; this does not imply release support.`
           : entry.hasKey
             ? `${entry.name} resolved successfully from ${entry.source ?? "runtime config"}.`
             : `${entry.name} is not set. Run cw auth login for a named ${entry.provider} worker before using it.`,
       metadata: {
         provider: entry.provider,
+        ...(isLocalClientProvider ? { releaseSupported: false } : {}),
         source: entry.source
       }
     });

@@ -161,7 +161,9 @@ cw worker register \
 cw worker interview --worker=qwen-local --save
 ```
 
-## Example: Claude Code Local Adapter
+## Experimental Example: Claude Code Local Adapter
+
+This adapter is retained as compatibility scaffolding and is not part of the current release-supported worker path.
 
 ```bash
 cw worker register \
@@ -174,7 +176,9 @@ cw worker interview --worker=claudecode-local --save
 cw worker readiness --worker=claudecode-local --probe
 ```
 
-## Example: Codex Local Adapter
+## Experimental Example: Codex Local Adapter
+
+This adapter is retained as compatibility scaffolding and is not part of the current release-supported worker path.
 
 ```bash
 cw worker register \
@@ -192,7 +196,7 @@ cw worker readiness --worker=codex-local --probe
 Stop and fix the environment before retrying when:
 
 - provider invocation fails during interview
-- API key wiring is missing from the actual runtime
+- API key wiring is missing from the actual runtime; run `cw auth login --worker=<workerId>` for API providers
 - the base URL or model name is wrong
 - a local client provider or dedicated local adapter points to the wrong executable
 

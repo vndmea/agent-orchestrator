@@ -11,6 +11,10 @@ export type McpHost = (typeof MCP_HOSTS)[number];
 
 const MCP_SERVER_KEY = "mcp-code-worker";
 
+// Only the Codex host path is release-validated right now. The other host
+// names are retained as snippet scaffolding so future host work can reuse the
+// same config surface without implying current support.
+
 export const isMcpHost = (value: string): value is McpHost =>
   MCP_HOSTS.includes(value as McpHost);
 

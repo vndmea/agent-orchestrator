@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ModelConfig } from "@mcp-code-worker/core";
 
+// These tests protect the experimental local OpenCode compatibility layer.
+// Passing them does not make the adapter part of the release-supported path.
 interface MockChildProcess extends EventEmitter {
   stderr: PassThrough;
   stdout: PassThrough;

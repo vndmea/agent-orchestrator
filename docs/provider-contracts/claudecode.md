@@ -2,6 +2,8 @@
 
 Use this document when `cw` should proxy worker calls through the dedicated Claude Code CLI adapter instead of a hosted HTTP API or the generic local client contract.
 
+Status: experimental compatibility scaffolding. The Claude Code worker adapter is retained for future compatibility but is not part of the current release-supported npm/e2e worker path.
+
 Use this path when:
 
 - provider is `claudecode`

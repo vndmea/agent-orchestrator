@@ -1,6 +1,8 @@
 # Claude Desktop MCP Setup
 
-Use this guide when connecting `mcp-code-worker` to Claude Desktop through the client's MCP configuration surface.
+Use this guide only as untested launch-snippet scaffolding when connecting `mcp-code-worker` to Claude Desktop through the client's MCP configuration surface.
+
+Status: snippet-only / untested for the current release. Codex is the only release-validated MCP host path right now. Claude Code MCP host integration is not currently supported.
 
 ## Recommended Server Snippet
 
@@ -9,6 +11,8 @@ Generate the snippet with:
 ```bash
 cw mcp config --host=claude-desktop
 ```
+
+This command only prints the generic stdio snippet shape. It does not prove Claude Desktop has loaded the server, launched it from the intended repository root, or completed a host-side tool round trip.
 
 ```json
 {

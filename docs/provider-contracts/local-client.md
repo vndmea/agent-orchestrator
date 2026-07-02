@@ -2,6 +2,8 @@
 
 Use this document when `cw` should proxy worker calls through a compatible local CLI instead of a hosted HTTP API.
 
+Status: experimental compatibility scaffolding. The generic local client provider is not part of the current release-supported npm/e2e worker path.
+
 ## When To Use It
 
 Use this contract when:

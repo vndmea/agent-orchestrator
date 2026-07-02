@@ -115,7 +115,7 @@ describe("worker profile doctor checks", () => {
   it("fails for invalid worker registry schema", async () => {
     const rootDir = await createRootDir();
     await writeRegistry(rootDir, {
-      version: 2,
+      version: 1,
       workers: [
         {
           workerId: "broken-worker"

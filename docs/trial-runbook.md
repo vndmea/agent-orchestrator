@@ -141,7 +141,7 @@ curl https://api.deepseek.com/chat/completions \
   }'
 ```
 
-If you get `Not Found`, test both base URLs, verify the model name, and confirm that the selected worker secret was persisted into SQLite.
+If you get `Not Found`, test both base URLs, verify the model name, and confirm that the selected worker secret was persisted with `cw auth login`.
 
 If interview output reports provider invocation failures, do not treat the resulting unavailable status as a completed onboarding result. `cw worker interview --worker=<workerId> --save` now skips persistence in that case and returns recovery actions instead.
 

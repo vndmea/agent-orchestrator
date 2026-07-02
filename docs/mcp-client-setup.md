@@ -2,7 +2,7 @@
 
 This document explains how to connect `mcp-code-worker` to MCP-capable hosts and editor clients.
 
-See [docs/supported-matrix.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/supported-matrix.md) for which MCP host categories are currently supported versus documented best-effort.
+See [docs/supported-matrix.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/supported-matrix.md) for which MCP host categories are currently supported versus snippet-only / untested.
 
 `cw` is the MCP server entrypoint. The same runtime can be launched from:
 
@@ -26,26 +26,31 @@ For most clients, the recommended command shape is:
 
 Use `cw mcp config` as the copy source for this snippet. The host snippet should only define how to launch `cw`; worker/provider/base URL/local client defaults should live in `config.json`.
 
-When a host has a first-party preset, prefer the host-specific form:
+Codex is the only release-validated host integration in the current support matrix:
 
 ```bash
 cw mcp config --host=codex
+```
+
+Other host snippet forms are retained only as untested launch-snippet scaffolding:
+
+```bash
 cw mcp config --host=cursor
 cw mcp config --host=vscode
 cw mcp config --host=claude-desktop
 cw mcp config --host=opencode
 ```
 
-Current built-in host presets:
+Current built-in host snippet forms:
 
-| Host | Built-in behavior |
-| ---- | ----------------- |
-| `generic` | Minimal stdio snippet |
-| `codex` | TOML snippet for `~/.codex/config.toml` |
-| `cursor` | Minimal stdio snippet |
-| `vscode` | Minimal stdio snippet |
-| `claude-desktop` | Minimal stdio snippet |
-| `opencode` | Minimal stdio snippet |
+| Host | Built-in behavior | Release status |
+| ---- | ----------------- | -------------- |
+| `generic` | Minimal stdio snippet | protocol contract only |
+| `codex` | TOML snippet for `~/.codex/config.toml` | supported |
+| `cursor` | Minimal stdio snippet | snippet-only / untested |
+| `vscode` | Minimal stdio snippet | snippet-only / untested |
+| `claude-desktop` | Minimal stdio snippet | snippet-only / untested |
+| `opencode` | Minimal stdio snippet | snippet-only / untested |
 
 For Codex specifically, paste the output of `cw mcp config --host=codex` into
 `~/.codex/config.toml`. Example:
@@ -88,13 +93,13 @@ A bare `cw mcp serve` run is also not the best health check. It is a stdio serve
 
 ## Local Client Provider Note
 
-If the worker model uses the generic local client provider, `sparkcode` is the default bridge command. Persist a different command on the matching `config.json.workers[]` entry through `clientCommand`.
+If the worker model uses the generic local client provider, treat that path as experimental compatibility scaffolding. `sparkcode` is the default bridge command. Persist a different command on the matching `config.json.workers[]` entry through `clientCommand`.
 
-If the worker model uses the dedicated OpenCode adapter, keep `provider=opencode` and use `opencode` as the default command unless you need a custom executable path.
+If the worker model uses the dedicated OpenCode adapter, treat that path as experimental compatibility scaffolding. Keep `provider=opencode` and use `opencode` as the default command unless you need a custom executable path.
 
-If the worker model uses the dedicated Claude Code adapter, keep `provider=claudecode` and use `claude` as the default command unless you need a custom executable path.
+If the worker model uses the dedicated Claude Code adapter, treat that path as experimental compatibility scaffolding. Keep `provider=claudecode` and use `claude` as the default command unless you need a custom executable path.
 
-If the worker model uses the dedicated Codex adapter, keep `provider=codex` and use `codex` as the default command unless you need a custom executable path.
+If the worker model uses the dedicated Codex adapter, treat that path as experimental compatibility scaffolding. Keep `provider=codex` and use `codex` as the default command unless you need a custom executable path.
 
 Example:
 
@@ -146,4 +151,4 @@ Use the guide that matches your host or editor:
 - [Cursor](https://github.com/vndmea/mcp-code-worker/blob/master/docs/mcp-clients/cursor.md)
 - [VS Code](https://github.com/vndmea/mcp-code-worker/blob/master/docs/mcp-clients/vscode.md)
 
-Each guide uses the same `cw mcp serve` runtime and explains the minimum configuration and verification loop. Prefer `cw mcp config --host=<name>` as the snippet source so the docs and CLI stay aligned.
+Each guide uses the same `cw mcp serve` runtime and states its current support level. Prefer `cw mcp config --host=<name>` as the snippet source so the docs and CLI stay aligned, but do not treat snippet-only guides as release validation.

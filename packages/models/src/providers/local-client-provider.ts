@@ -197,6 +197,8 @@ const runClient = async (
   });
 
 export class LocalClientProvider implements ModelProvider {
+  // Experimental compatibility provider retained for future local CLI adapters.
+  // Current release-grade worker support is API-model first.
   public readonly name = "client";
 
   public async invoke(

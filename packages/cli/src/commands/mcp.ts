@@ -54,12 +54,14 @@ export const registerMcpCommand = (program: Command, io: CliIo): void => {
 
   mcp
     .command("config")
-    .description("Print a host-aware local MCP stdio server config snippet. Worker, validation, and safety settings should live in cw config.json.")
+    .description(
+      "Print a host-aware local MCP stdio server config snippet. Codex is release-validated; other host presets are snippet-only."
+    )
     .option("--command <command>", "Command to launch the server", "cw")
     .option("--args <args...>", "Arguments passed to the command")
     .option(
       "--host <name>",
-      `Target host preset: ${MCP_HOSTS.join(", ")}`,
+      `Target host preset. Codex is release-validated; others are snippet-only: ${MCP_HOSTS.join(", ")}`,
       "generic"
     )
     .action((options: {

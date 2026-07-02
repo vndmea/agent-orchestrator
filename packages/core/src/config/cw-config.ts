@@ -36,7 +36,7 @@ export const getCwConfigPath = (
 
 const buildDefaultConfig = (): CwConfig =>
   CwConfigSchema.parse({
-    version: 2
+    version: 1
   });
 
 const resolveRootDir = (options: ResolveExecutionContextOptions): string => {

@@ -36,11 +36,11 @@ Expected shape:
 
 ## Required Config Fields
 
-Persist the provider key in the workspace SQLite store. The worker definition in `config.json` stays non-secret:
+Persist the provider key with `cw auth login`; the worker definition in `config.json` stays non-secret:
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "workers": [
     {
       "workerId": "<workerId>",
@@ -92,19 +92,20 @@ Use the generic flow:
 
 ```bash
 cw worker register --worker=<workerId> --provider=openai-compatible --model=<model-name> --allow-write
+cw auth login --worker=<workerId>
 cw worker interview --worker=<workerId> --save
 ```
 
 If coding qualification matters:
 
 ```bash
-cw worker benchmark --suite=coding-v1 --worker=openai-compatible:<model-name> --save
+cw worker benchmark --suite=coding-v1 --worker=<workerId> --save
 ```
 
 ## Common Failure Signatures
 
 - `401` / `403`
-  - invalid or missing worker secret in the workspace SQLite store
+  - invalid or missing worker secret; run `cw auth login --worker=<workerId>`
 - `404` / `Not Found`
   - wrong base URL or wrong model name
 - probe fails but direct shell API call works

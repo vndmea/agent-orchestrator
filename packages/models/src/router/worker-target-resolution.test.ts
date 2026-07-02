@@ -45,7 +45,7 @@ const writeConfig = async (
     configPath,
     JSON.stringify(
       {
-        version: 2,
+        version: 1,
         ...value
       },
       null,

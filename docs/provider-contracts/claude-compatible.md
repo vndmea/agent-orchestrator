@@ -29,11 +29,11 @@ Persist the non-secret defaults in `config.json`:
 
 ## Required Secret Configuration
 
-Persist the provider key in the workspace SQLite store. The worker definition in `config.json` stays non-secret:
+Persist the provider key with `cw auth login`; the worker definition in `config.json` stays non-secret:
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "workers": [
     {
       "workerId": "claude-sonnet",
@@ -49,7 +49,7 @@ Persist the provider key in the workspace SQLite store. The worker definition in
 }
 ```
 
-`cw` stores the Anthropic-compatible key in SQLite even though upstream tooling may document `ANTHROPIC_API_KEY`.
+`cw` stores the Anthropic-compatible key in SQLite through `cw auth login`, even though upstream tooling may document `ANTHROPIC_API_KEY`.
 
 ## Minimal Health Checks
 
@@ -85,19 +85,20 @@ If probe fails, read:
 
 ```bash
 cw worker register --worker=claude-sonnet --provider=claude-compatible --model=claude-3-5-sonnet-latest --allow-write
+cw auth login --worker=claude-sonnet
 cw worker interview --worker=claude-sonnet --save
 ```
 
 If coding qualification matters:
 
 ```bash
-cw worker benchmark --suite=coding-v1 --worker=claude-compatible:claude-3-5-sonnet-latest --save
+cw worker benchmark --suite=coding-v1 --worker=claude-sonnet --save
 ```
 
 ## Common Failure Signatures
 
 - `401` / `403`
-  - the API key is wrong or missing in the runtime that launches `cw`
+  - the API key is wrong or missing; run `cw auth login --worker=claude-sonnet`
 - `404`
   - wrong base URL or model name
 - probe fails while shell tests work

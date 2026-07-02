@@ -86,7 +86,7 @@ export const CwValidationConfigSchema = z.object({
 });
 
 export const CwConfigSchema = z.object({
-  version: z.literal(2),
+  version: z.literal(1),
   workers: z.array(CwWorkerConfigSchema).default([]),
   safety: CwSafetyConfigSchema.default({
     dryRun: true,

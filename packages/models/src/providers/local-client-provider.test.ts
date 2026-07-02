@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import type { ModelConfig } from "@mcp-code-worker/core";
 
+// These tests protect the experimental local CLI compatibility layer. Passing
+// them does not make local client providers part of the release-supported path.
 interface MockChildProcess extends EventEmitter {
   stderr: PassThrough;
   stdin: PassThrough;

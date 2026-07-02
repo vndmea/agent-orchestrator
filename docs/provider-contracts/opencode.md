@@ -2,6 +2,8 @@
 
 Use this document when `cw` should proxy worker calls through the dedicated OpenCode adapter instead of a hosted HTTP API or the generic local client contract.
 
+Status: experimental compatibility scaffolding. The OpenCode worker adapter is retained for future compatibility but is not part of the current release-supported npm/e2e worker path.
+
 ## When To Use It
 
 Use this contract when:

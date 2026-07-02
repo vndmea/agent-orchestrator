@@ -1,6 +1,8 @@
 # VS Code MCP Setup
 
-Use this guide when connecting `mcp-code-worker` to a VS Code MCP-capable extension or integration.
+Use this guide only as untested launch-snippet scaffolding when connecting `mcp-code-worker` to a VS Code MCP-capable extension or integration.
+
+Status: snippet-only / untested for the current release. Codex is the only release-validated MCP host path right now.
 
 ## Recommended Server Snippet
 
@@ -9,6 +11,8 @@ Generate the snippet with:
 ```bash
 cw mcp config --host=vscode
 ```
+
+This command only prints the generic stdio snippet shape. It does not prove VS Code has loaded the server, launched it from the intended repository root, or completed a host-side tool round trip.
 
 ```json
 {

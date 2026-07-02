@@ -9,12 +9,8 @@ For write gates and local artifact boundaries, see `docs/permissions.md`.
 
 ```bash
 cw init
-cw init --preset=mock --allow-write
-cw init --preset=deepseek --allow-write
-cw init --preset=client --allow-write
-cw init --preset=opencode --allow-write
-cw init --preset=claudecode --allow-write
-cw init --preset=codex --allow-write
+cw init --worker-id=mock-local --worker-provider=mock --worker-model=gpt-5.4-mini --register-worker --allow-write
+cw init --worker-id=deepseek-flash --worker-provider=openai-compatible --worker-model=deepseek-v4-flash --worker-base-url=https://api.deepseek.com --register-worker --allow-write
 cw review repo --worker=qwen-local --scope=packages/graph
 cw review diff --worker=qwen-local --base=main --head=HEAD
 cw review files --worker=qwen-local --file=packages/graph/src/index.ts
@@ -62,15 +58,15 @@ Treat `cw mcp serve` as a stdio endpoint for a connected host session, not as a 
 
 Treat `config.json` as the primary runtime config surface for worker, validation, safety, and local client defaults. Treat the MCP host snippet as launch-only: command and args only.
 
-For generic local client providers, `sparkcode` is the default command. Persist a different compatible CLI name or path on the matching `config.json.workers[]` entry through `clientCommand` when needed.
+Generic local client providers and dedicated local adapters are experimental compatibility paths in this release. `sparkcode`, `opencode`, `claude`, and `codex` command defaults are retained in config handling, but the current release-grade worker path is API-model first.
 
 `cw init` and `cw worker register` configure which worker exists. `cw auth login` is the only CLI path that stores API credentials. If `cw auth login` is run without `--worker` in an interactive terminal, it asks you to choose from registered workers; scripts should use `--worker`, `--api-key-env`, and `--allow-write`.
 
-For the dedicated `opencode` adapter, use `cw init --preset=opencode --allow-write`. That preset keeps `provider=opencode` and defaults the command to `opencode`.
+For the dedicated `opencode` adapter, treat `cw init --worker-id=opencode-local --worker-provider=opencode --worker-model=deepseek/deepseek-v4-flash --worker-client-command=opencode --register-worker --allow-write` as an experimental compatibility setup, not a release-supported worker path.
 
-For the dedicated `claudecode` adapter, use `cw init --preset=claudecode --allow-write`. That preset keeps `provider=claudecode` and defaults the command to `claude`.
+For the dedicated `claudecode` adapter, treat `cw init --worker-id=claudecode-local --worker-provider=claudecode --worker-model=sonnet --worker-client-command=claude --register-worker --allow-write` as an experimental compatibility setup, not a release-supported worker path.
 
-For the dedicated `codex` adapter, use `cw init --preset=codex --allow-write`. That preset keeps `provider=codex` and defaults the command to `codex`.
+For the dedicated `codex` adapter, treat `cw init --worker-id=codex-local --worker-provider=codex --worker-model=gpt-5.4 --worker-client-command=codex --register-worker --allow-write` as an experimental compatibility setup, not a release-supported worker path.
 
 `cw init` prints the resolved CW storage paths, including the user-scoped config file at `~/.code-worker/<workspace-id>/config.json`, and can open that directory for you at the end of onboarding.
 
@@ -146,7 +142,7 @@ Use `cw worker benchmark`, `cw worker profile`, or the returned persistence refs
 
 ## DeepSeek / OpenAI-Compatible Notes
 
-Persist worker API keys in the user-scoped CW SQLite store. Never commit real keys into repository files or include them in logs.
+Persist worker API keys with `cw auth login`; `cw auth list` reports only whether a credential exists. Never commit real keys into repository files or include them in logs.
 
 For DeepSeek-compatible workers:
 
@@ -190,4 +186,4 @@ curl https://api.deepseek.com/chat/completions \
   }'
 ```
 
-If `Not Found` occurs, test both `https://api.deepseek.com` and `https://api.deepseek.com/v1` and confirm the model name, network access, and that the selected worker's API key was persisted into SQLite.
+If `Not Found` occurs, test both `https://api.deepseek.com` and `https://api.deepseek.com/v1` and confirm the model name, network access, and that the selected worker's API key was persisted with `cw auth login`.

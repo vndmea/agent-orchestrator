@@ -72,6 +72,10 @@ docs/
 
 明确的 OS、Node.js 和 MCP host 支持边界见 [docs/supported-matrix.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/supported-matrix.md)。
 
+MCP host 侧当前完成发布级验证的是 Codex。OpenCode、Claude Code /
+Claude Desktop、Cursor、VS Code 相关 snippet 仍属于未测试预留，除非
+supported matrix 明确提升支持级别。
+
 ## 安装
 
 全局 npm 安装：
@@ -108,7 +112,7 @@ cw mcp config
 
 除非特别说明，下面所有 `cw ...` 示例都按公开 npm 安装后的 CLI 理解；如果你在仓库 checkout 中开发，则等价于在仓库根目录执行 `pnpm exec cw ...`。
 
-默认建议使用 `cw init` 完成初始化；你可以直接交互式运行，也可以通过 `cw init --preset mock --allow-write`、`cw init --preset deepseek --allow-write`、`cw init --preset opencode --allow-write` 这类 preset 先快速落地，再按需调整更底层的 flags。
+默认建议使用 `cw init` 完成初始化；你可以直接交互式运行。脚本化配置时请显式传入 worker 字段，例如 `cw init --worker-id deepseek-flash --worker-provider openai-compatible --worker-model deepseek-v4-flash --worker-base-url https://api.deepseek.com --register-worker --allow-write`，然后再通过 `cw auth login` 保存凭据。
 
 当前版本不会读取仓库内旧 `.cw/` 目录；旧路径不受支持，也不会被兼容处理。
 
@@ -122,6 +126,10 @@ cw mcp config
 最新一条 benchmark 结果、worker execution record、task session、task artifact
 和 audit event。
 
+当前正式交付级 worker 支持以 API 模型为主。`client`、`opencode`、
+`claudecode`、`codex` 这类本地 client adapter 仍保留在代码中，作为未来兼容
+MCP / host / 本地 CLI 的实验性预留，但不属于当前 npm/e2e 支持的 worker 路径。
+
 ## CLI 用法
 
 ```bash
@@ -133,6 +141,9 @@ cw validate --all --stop-on-failure --execute
 cw fix error --worker qwen-local --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
 cw task start --goal "Fix failing typecheck" --scope packages/core --worker qwen-local --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
 cw task report <taskId>
+cw auth login --worker qwen-local
+cw auth list
+cw auth logout --worker qwen-local --allow-write
 cw cleanup runs
 cw cleanup audit
 cw models list
@@ -239,6 +250,8 @@ cw worker register \
   --allow-write
 
 cw worker interview --worker qwen-local --save
+
+cw auth login --worker qwen-local
 
 cw task start \
   --goal "Review this repository" \
@@ -421,7 +434,7 @@ cw mcp list-tools
 2. `~/.code-worker/<workspace-id>/config.json`
 3. 内置默认值
 
-`config.json` 应作为 worker、validation、安全策略和 MCP 相关运行时默认值的主配置面。provider API key 会持久化到用户级 SQLite 存储，本地 client command 则保留在 `config.json.workers[]`。请从目标仓库根目录启动 `cw`，不要再依赖环境变量覆盖 root/storage；真实密钥不应提交或写入日志。
+`config.json` 应作为 worker、validation、安全策略和 MCP 相关运行时默认值的主配置面。provider API key 只通过 `cw auth login`、`cw auth list` 和 `cw auth logout` 管理，并持久化到用户级 SQLite 存储；本地 client command 字段仅作为未来本地 adapter 支持的实验性兼容配置保留在 `config.json.workers[]`。请从目标仓库根目录启动 `cw`，不要再依赖环境变量覆盖 root/storage；真实密钥不应提交或写入日志。
 
 用户级 CW `config.json` 里的 repository context 配置用于控制 review、fix、patch 和 task workflow 的默认 `ignoredPaths` 与 `strictFiles` 行为。
 
@@ -467,7 +480,7 @@ cw mcp list-tools
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "workers": [
     {
       "workerId": "litellm-main",
@@ -481,6 +494,12 @@ cw mcp list-tools
     }
   ]
 }
+```
+
+对应凭据单独保存：
+
+```bash
+cw auth login --worker litellm-main
 ```
 
 ## 安全模型
@@ -501,7 +520,7 @@ cw mcp list-tools
 - 宿主驱动场景里，worker 输出在宿主接受前都不能视为最终结果。
 - 高风险生产任务应先具备已审查的 onboarding 或 benchmark 证据；证据缺失时应降低 trust，并要求 dry-run 或 host review。
 - structured output 或可靠性不达标的 worker 会进入 `not-qualified` 状态；如果是环境或配置问题，则该 worker 在修复前应视为不可用。
-- 密钥应持久化在用户级 SQLite 存储中，且绝不能写入日志。
+- 密钥只能通过 `cw auth login` 持久化到用户级 SQLite 存储中，且绝不能写入日志。
 
 ## 测试与发布检查
 

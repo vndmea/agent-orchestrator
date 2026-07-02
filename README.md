@@ -72,6 +72,10 @@ This repository targets actively maintained Node.js LTS releases only. CI curren
 
 See [docs/supported-matrix.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/supported-matrix.md) for the explicit OS, Node.js, and MCP host support boundary.
 
+For MCP hosts, the current release-validated integration is Codex. OpenCode,
+Claude Code / Claude Desktop, Cursor, and VS Code snippets are untested
+scaffolding unless the supported matrix says otherwise.
+
 ## Install
 
 Global npm install:
@@ -104,7 +108,7 @@ cw doctor --probe
 cw mcp config
 ```
 
-Use `cw init` as the onboarding path. Run it interactively by default, or use presets such as `cw init --preset mock --allow-write`, `cw init --preset deepseek --allow-write`, or `cw init --preset opencode --allow-write` when you want a faster scripted path before tweaking lower-level details.
+Use `cw init` as the onboarding path. Run it interactively by default. For scripted setup, pass the worker fields explicitly, for example `cw init --worker-id deepseek-flash --worker-provider openai-compatible --worker-model deepseek-v4-flash --worker-base-url https://api.deepseek.com --register-worker --allow-write`, then store credentials with `cw auth login`.
 
 Public installation and MCP launch guidance lives in [docs/install.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/install.md).
 The current official internal distribution shape is documented in [docs/distribution.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/distribution.md).
@@ -123,6 +127,11 @@ is the SQLite store for worker secrets, worker profiles, latest benchmark
 records per worker and suite, worker execution records, task sessions, task
 artifacts, and audit events.
 
+Current release-grade worker support is API-model first. Local client adapters
+such as `client`, `opencode`, `claudecode`, and `codex` remain in the codebase
+as experimental compatibility scaffolding, but they are not part of the current
+npm/e2e-supported worker path.
+
 ## CLI usage
 
 ```bash
@@ -134,6 +143,9 @@ cw validate --all --stop-on-failure --execute
 cw fix error --worker qwen-local --error-log-file ./tmp/tsc-error.log --scope packages/schema-codegen
 cw task start --goal "Fix failing typecheck" --scope packages/core --worker qwen-local --typecheck --error-log-file ./tmp/tsc-error.log --run-fix --allow-write-session
 cw task report <taskId>
+cw auth login --worker qwen-local
+cw auth list
+cw auth logout --worker qwen-local --allow-write
 cw cleanup runs
 cw cleanup audit
 cw models list
@@ -241,6 +253,8 @@ cw worker register \
   --allow-write
 
 cw worker interview --worker qwen-local --save
+
+cw auth login --worker qwen-local
 
 cw task start \
   --goal "Review this repository" \
@@ -428,7 +442,7 @@ Runtime configuration resolves in this order:
 2. `~/.code-worker/<workspace-id>/config.json`
 3. built-in defaults
 
-Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults. Worker API keys are managed only through `cw auth login`, `cw auth list`, and `cw auth logout`, and are persisted in the workspace SQLite store. Local client commands remain on `config.json.workers[]`. Launch `cw` from the intended workspace root, and never commit real keys or include them in logs.
+Use `config.json` as the primary home for persisted worker, validation, safety, and MCP-adjacent runtime defaults. Worker API keys are managed only through `cw auth login`, `cw auth list`, and `cw auth logout`, and are persisted in the workspace SQLite store. Local client command fields remain in `config.json.workers[]` only as experimental compatibility settings for future local-adapter support. Launch `cw` from the intended workspace root, and never commit real keys or include them in logs.
 
 Repository context settings in the user-scoped CW `config.json` control default `ignoredPaths` and `strictFiles` behavior for review, fix, patch, and task workflows.
 
@@ -474,7 +488,7 @@ Persist the non-secret worker settings in `config.json`, for example:
 
 ```json
 {
-  "version": 2,
+  "version": 1,
   "workers": [
     {
       "workerId": "litellm-main",
@@ -488,6 +502,12 @@ Persist the non-secret worker settings in `config.json`, for example:
     }
   ]
 }
+```
+
+Store the matching credential separately:
+
+```bash
+cw auth login --worker litellm-main
 ```
 
 ## Safety model
@@ -508,7 +528,7 @@ Persist the non-secret worker settings in `config.json`, for example:
 - In host-driven flows, worker outputs are not final until the host accepts them.
 - Workers should have reviewed onboarding or benchmark evidence before higher-risk production tasks; missing evidence lowers trust and should require dry-run or host review.
 - Workers that fail structured output or reliability checks become `not-qualified`. Environment or configuration failures keep the worker unavailable for formal tasks until the runtime issue is fixed.
-- Worker secrets should be persisted in the user-scoped CW SQLite store and should never be logged.
+- Worker secrets should be persisted only through `cw auth login` into the user-scoped CW SQLite store and should never be logged.
 
 See [docs/permissions.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/permissions.md) for the concrete permission layers and write-gate examples.
 

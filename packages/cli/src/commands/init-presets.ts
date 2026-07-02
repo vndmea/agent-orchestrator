@@ -11,6 +11,8 @@ export interface InitPresetDefinition {
   workerProvider: string;
 }
 
+// Local-client presets are intentionally retained as experimental compatibility
+// scaffolding. Current release-grade worker onboarding is API-model first.
 export const INIT_PRESETS: InitPresetDefinition[] = [
   {
     id: "mock",
@@ -27,25 +29,25 @@ export const INIT_PRESETS: InitPresetDefinition[] = [
   },
   {
     id: "client",
-    label: "Local Client",
+    label: "Local Client (experimental)",
     workerModel: "qwen3-coder",
     workerProvider: "client"
   },
   {
     id: "opencode",
-    label: "OpenCode Adapter",
+    label: "OpenCode Adapter (experimental)",
     workerModel: "deepseek/deepseek-v4-flash",
     workerProvider: "opencode"
   },
   {
     id: "claudecode",
-    label: "Claude Code Adapter",
+    label: "Claude Code Adapter (experimental)",
     workerModel: "sonnet",
     workerProvider: "claudecode"
   },
   {
     id: "codex",
-    label: "Codex Adapter",
+    label: "Codex Adapter (experimental)",
     workerModel: "gpt-5.4",
     workerProvider: "codex"
   }

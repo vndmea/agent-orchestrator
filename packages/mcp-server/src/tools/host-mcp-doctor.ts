@@ -436,7 +436,7 @@ export const createHostMcpDoctorChecks = async (
     checks.push({
       name: "host-config-present",
       status: "warning",
-      message: `Automatic host config file discovery is not implemented for '${host}' yet.`,
+      message: `Automatic host config file discovery is not implemented for snippet-only host '${host}' yet.`,
       metadata: {
         host,
         found: "Automatic host config path discovery is unavailable.",
@@ -448,7 +448,7 @@ export const createHostMcpDoctorChecks = async (
     checks.push({
       name: "host-config-valid",
       status: "warning",
-      message: `Host config validation for '${host}' is currently manual-only.`,
+      message: `Host config validation for snippet-only host '${host}' is currently manual-only and not release-validated.`,
       metadata: {
         host,
         found: "No host config file was auto-loaded.",

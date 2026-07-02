@@ -65,7 +65,7 @@ Different absolute repository roots produce different workspace ids, so a root m
 ### Checks
 
 - Confirm the selected worker definition exists in `config.json.workers[]`
-- Confirm the worker secret was persisted into the workspace SQLite store
+- Confirm the worker secret was persisted with `cw auth login --worker=<workerId>`
 - Confirm the provider name, model name, and base URL are correct
 - For DeepSeek-compatible workers, test both documented base URLs if needed
 - Re-run the health checks in [docs/provider-contracts/deepseek.md](https://github.com/vndmea/mcp-code-worker/blob/master/docs/provider-contracts/deepseek.md)
@@ -81,7 +81,7 @@ Do not treat a provider-failure interview as a completed onboarding result.
 
 ### Checks
 
-- If you use the generic local client provider, remember that `sparkcode` is the default compatible command
+- If you experiment with the generic local client provider, remember that `sparkcode` is the default compatible command and that local adapters are not part of the current release-supported worker path
 - Prefer persisting `clientCommand` on the selected `config.json.workers[]` entry or via `cw worker register --worker=<workerId> ... --worker-client-command=<command> --allow-write`
 - Persist `clientCommand` when the default local client executable differs from the relevant default (`sparkcode` for `client`, `opencode` for `opencode`, `claude` for `claudecode`, `codex` for `codex`)
 - Re-run `cw doctor`

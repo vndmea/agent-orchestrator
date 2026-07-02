@@ -193,6 +193,8 @@ const withResponseSchemaFile = async <T>(
 };
 
 export class CodexProvider implements ModelProvider {
+  // Experimental compatibility provider retained for future local Codex CLI use.
+  // Current release-grade worker support is API-model first.
   public readonly name = "codex";
 
   public async invoke(

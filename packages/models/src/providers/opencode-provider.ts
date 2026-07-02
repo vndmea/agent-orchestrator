@@ -162,6 +162,8 @@ const buildExitError = (
 };
 
 export class OpencodeProvider implements ModelProvider {
+  // Experimental compatibility provider retained for future local OpenCode use.
+  // Current release-grade worker support is API-model first.
   public readonly name = "opencode";
 
   public async invoke(

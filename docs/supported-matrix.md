@@ -7,7 +7,7 @@ If a platform, runtime, or MCP host is not listed here as supported, do not impl
 ## Support Levels
 
 - `supported`: part of the intended public support surface for the current release
-- `documented best-effort`: documented guidance exists, but the target is not yet part of the release-grade validation matrix
+- `snippet-only / untested`: snippet guidance or code scaffolding exists, but the target has not been validated for this release
 - `unsupported`: not part of the promised public support surface
 
 ## Installation Path
@@ -50,18 +50,19 @@ The MCP runtime contract is stdio-based. A host must be able to:
 
 | Host / surface | Level | Notes |
 | -------------- | ----- | ----- |
-| Generic stdio MCP host that can launch `cw` and pass env | supported | This is the core MCP contract |
-| Codex | supported | First-class host-driven use case, documented setup path, and first-party snippet preset via `cw mcp config --host=codex` |
-| VS Code MCP-capable integrations | documented best-effort | Docs exist and `cw mcp config --host=vscode` provides a first-party snippet, but no host-specific automation yet |
-| Cursor | documented best-effort | Docs exist and `cw mcp config --host=cursor` provides a first-party snippet, but no host-specific automation yet |
-| Claude Desktop | documented best-effort | Docs exist and `cw mcp config --host=claude-desktop` provides a first-party snippet, but no host-specific automation yet |
-| OpenCode | documented best-effort | Docs exist and `cw mcp config --host=opencode` provides a first-party snippet, but no host-specific automation yet |
+| Generic stdio MCP host that can launch `cw` and pass env | supported protocol contract | The stdio server contract is supported, but host-specific behavior is only release-validated for Codex right now |
+| Codex | supported | First-class host-driven use case, documented setup path, host-side doctor support, and release validation via `cw mcp config --host=codex` / `cw doctor --mcp --host=codex` |
+| VS Code MCP-capable integrations | snippet-only / untested | `cw mcp config --host=vscode` can print a generic snippet, but this host is not validated for the current release |
+| Cursor | snippet-only / untested | `cw mcp config --host=cursor` can print a generic snippet, but this host is not validated for the current release |
+| Claude Desktop | snippet-only / untested | `cw mcp config --host=claude-desktop` can print a generic snippet, but this host is not validated for the current release |
+| Claude Code | unsupported / untested | No release-validated Claude Code MCP host path exists yet |
+| OpenCode | snippet-only / untested | `cw mcp config --host=opencode` can print a generic snippet, but this host is not validated for the current release |
 
 ## Worker Provider Configuration
 
 | Surface | Level | Notes |
 | ------- | ----- | ----- |
-| `config.json` for persisted runtime defaults | supported | Primary config surface for `workers[]`, validation, safety, local client defaults, and optional user-scoped provider API keys |
+| `config.json` for persisted runtime defaults | supported | Primary config surface for `workers[]`, validation, safety, and local client defaults; provider credentials are managed separately through `cw auth` |
 | Environment variables for launch bootstrap and safety defaults | unsupported | Launch from the correct cwd and persist runtime settings in `config.json` instead |
 | Host MCP config as the place for worker/provider defaults | unsupported | Host snippets should stay launch-focused, not become the main runtime config surface |
 
@@ -73,10 +74,10 @@ The MCP runtime contract is stdio-based. A host must be able to:
 | `openai-compatible` | supported | Preferred path for OpenAI-compatible hosted APIs, including provider-specific configs such as DeepSeek |
 | `claude-compatible` | supported | Preferred path for Anthropic-compatible hosted APIs |
 | `litellm` | supported | Supported gateway path when the runtime is intentionally fronted by LiteLLM |
-| `client` | supported | Generic local CLI bridge contract; `sparkcode` is the default command |
-| `opencode` | documented best-effort | Dedicated local OpenCode adapter with first-party docs, but not yet in the release-grade host/runtime matrix |
-| `claudecode` | documented best-effort | Dedicated local Claude Code adapter with first-party docs, but not yet in the release-grade host/runtime matrix |
-| `codex` | documented best-effort | Dedicated local Codex adapter with first-party docs, but not yet in the release-grade host/runtime matrix |
+| `client` | experimental / not release-supported | Generic local CLI bridge code is retained for future compatibility, but current npm/e2e support is API-worker first |
+| `opencode` | experimental / not release-supported | Dedicated local OpenCode adapter code and docs are retained for future compatibility, but it is not part of the current release-grade worker matrix |
+| `claudecode` | experimental / not release-supported | Dedicated local Claude Code adapter code and docs are retained for future compatibility, but it is not part of the current release-grade worker matrix |
+| `codex` | experimental / not release-supported | Dedicated local Codex adapter code and docs are retained for future compatibility, but it is not part of the current release-grade worker matrix |
 
 ## Release Rule
 
