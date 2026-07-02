@@ -926,6 +926,108 @@ describe("mcp tool registration", () => {
     });
   });
 
+  it("rejects expired host-worker MCP permission continuations before execution", async () => {
+    const invokeStructuredSpy = vi.spyOn(models, "invokeStructured");
+
+    try {
+      await expect(
+        cwRunHostWorkerTool.execute({
+          goal: "Continue with an expired permission token",
+          taskType: "review-lite",
+          scope: "packages/core",
+          continuationToken: {
+            taskId: "expired-task",
+            requestId: "expired-request",
+            expiresAt: new Date(Date.now() - 1000).toISOString()
+          },
+          workerId: "default-worker"
+        })
+      ).rejects.toMatchObject({
+        code: "MCP_PERMISSION_CONTINUATION_EXPIRED"
+      });
+      expect(invokeStructuredSpy).not.toHaveBeenCalled();
+    } finally {
+      invokeStructuredSpy.mockRestore();
+    }
+  });
+
+  it("rejects user permission grants without a continuation token", async () => {
+    const invokeStructuredSpy = vi.spyOn(models, "invokeStructured");
+
+    try {
+      await expect(
+        cwRunHostWorkerTool.execute({
+          goal: "Continue with an unbound permission grant",
+          taskType: "review-lite",
+          scope: "packages/core",
+          workerId: "default-worker",
+          userPermissionGrants: [
+            {
+              id: "unbound-grant",
+              requestId: "tool-req-unbound",
+              taskId: "task-unbound",
+              action: "read_file_snippet",
+              pathPrefix: "package.json",
+              grantScope: "once",
+              granted: true,
+              status: "granted",
+              decidedAt: new Date().toISOString(),
+              decidedBy: {
+                surface: "mcp-test"
+              }
+            }
+          ]
+        })
+      ).rejects.toMatchObject({
+        code: "MCP_PERMISSION_CONTINUATION_REQUIRED"
+      });
+      expect(invokeStructuredSpy).not.toHaveBeenCalled();
+    } finally {
+      invokeStructuredSpy.mockRestore();
+    }
+  });
+
+  it("rejects user permission grants that do not match the continuation request", async () => {
+    const invokeStructuredSpy = vi.spyOn(models, "invokeStructured");
+
+    try {
+      await expect(
+        cwRunHostWorkerTool.execute({
+          goal: "Continue with a mismatched permission grant",
+          taskType: "review-lite",
+          scope: "packages/core",
+          continuationToken: {
+            taskId: "task-bound",
+            requestId: "tool-req-bound",
+            expiresAt: new Date(Date.now() + 60_000).toISOString()
+          },
+          workerId: "default-worker",
+          userPermissionGrants: [
+            {
+              id: "mismatched-grant",
+              requestId: "tool-req-other",
+              taskId: "task-bound",
+              action: "read_file_snippet",
+              pathPrefix: "package.json",
+              grantScope: "once",
+              granted: true,
+              status: "granted",
+              decidedAt: new Date().toISOString(),
+              decidedBy: {
+                surface: "mcp-test"
+              }
+            }
+          ]
+        })
+      ).rejects.toMatchObject({
+        code: "MCP_PERMISSION_GRANT_MISMATCH"
+      });
+      expect(invokeStructuredSpy).not.toHaveBeenCalled();
+    } finally {
+      invokeStructuredSpy.mockRestore();
+    }
+  });
+
   it("executes doctor and returns a structured report", async () => {
     await withTempCwd(async (rootDir) => {
       await writeProfiles(rootDir, [createProfile()]);

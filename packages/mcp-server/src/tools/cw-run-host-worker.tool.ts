@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { UserPermissionGrantSchema } from "@mcp-code-worker/core";
+import {
+  AgentError,
+  UserPermissionGrantSchema,
+  type UserPermissionGrant
+} from "@mcp-code-worker/core";
 import { runHostWorkerWorkflow } from "@mcp-code-worker/graph";
 
 import {
@@ -20,6 +24,8 @@ const continuationTokenSchema = z
     expiresAt: z.string().datetime()
   })
   .strict();
+
+type ContinuationToken = z.infer<typeof continuationTokenSchema>;
 
 const inputSchema = z.object({
   continuationToken: continuationTokenSchema.optional(),
@@ -45,6 +51,62 @@ const inputSchema = z.object({
   requireProfile: z.boolean().optional()
 });
 
+const assertContinuationTokenFresh = (token: ContinuationToken): void => {
+  if (Date.parse(token.expiresAt) <= Date.now()) {
+    throw new AgentError(
+      "MCP_PERMISSION_CONTINUATION_EXPIRED",
+      "Host-worker permission continuation token has expired.",
+      {
+        requestId: token.requestId,
+        taskId: token.taskId
+      }
+    );
+  }
+};
+
+const resolveUserPermissionGrants = (input: {
+  continuationToken?: ContinuationToken;
+  userPermissionGrants?: UserPermissionGrant[];
+}): UserPermissionGrant[] | undefined => {
+  if (input.continuationToken) {
+    assertContinuationTokenFresh(input.continuationToken);
+  }
+
+  if (!input.userPermissionGrants) {
+    return undefined;
+  }
+
+  if (!input.continuationToken) {
+    throw new AgentError(
+      "MCP_PERMISSION_CONTINUATION_REQUIRED",
+      "User permission grants require a matching host-worker continuation token."
+    );
+  }
+
+  const continuationToken = input.continuationToken;
+  const mismatchedGrant = input.userPermissionGrants.find(
+    (grant) =>
+      grant.taskId !== continuationToken.taskId ||
+      grant.requestId !== continuationToken.requestId
+  );
+
+  if (mismatchedGrant) {
+    throw new AgentError(
+      "MCP_PERMISSION_GRANT_MISMATCH",
+      "User permission grant does not match the host-worker continuation token.",
+      {
+        grantId: mismatchedGrant.id,
+        grantRequestId: mismatchedGrant.requestId,
+        grantTaskId: mismatchedGrant.taskId,
+        requestId: continuationToken.requestId,
+        taskId: continuationToken.taskId
+      }
+    );
+  }
+
+  return input.userPermissionGrants;
+};
+
 export const cwRunHostWorkerTool: CwToolDefinition<
   typeof inputSchema.shape,
   CwMcpWorkflowResponse
@@ -54,6 +116,10 @@ export const cwRunHostWorkerTool: CwToolDefinition<
     "Run one explicit worker task under host control without introducing another decision-making surface.",
   inputSchema,
   execute: async (args) => {
+    const userPermissionGrants = resolveUserPermissionGrants({
+      continuationToken: args.continuationToken,
+      userPermissionGrants: args.userPermissionGrants
+    });
     const context = await resolveToolContext();
     const forceExecution =
       args.forceExecution ?? (args.requireProfile !== true && context.dryRun);
@@ -67,7 +133,7 @@ export const cwRunHostWorkerTool: CwToolDefinition<
       strictFiles: args.strictFiles,
       taskId: args.continuationToken?.taskId,
       taskType: args.taskType,
-      userPermissionGrants: args.userPermissionGrants,
+      userPermissionGrants,
       workerId: args.workerId
     });
     const response = CodexHostSurfaceAdapter.renderWorkflowResult(result);
@@ -87,7 +153,7 @@ export const cwRunHostWorkerTool: CwToolDefinition<
         scope: args.scope,
         strictFiles: args.strictFiles,
         taskType: args.taskType,
-        userPermissionGrantCount: args.userPermissionGrants?.length ?? 0,
+        userPermissionGrantCount: userPermissionGrants?.length ?? 0,
         workerId: args.workerId
       }
     });
