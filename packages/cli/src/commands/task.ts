@@ -21,6 +21,7 @@ import {
   writeJson
 } from "../output.js";
 import { resolveCommandContext } from "./command-runtime.js";
+import { AgentError } from "@mcp-code-worker/core";
 
 const formatTaskSessionSummaryText = (summary: Record<string, unknown>): string[] => {
   const taskId = typeof summary["taskId"] === "string" ? summary["taskId"] : "unknown-task";
@@ -236,28 +237,40 @@ export const registerTaskCommand = (program: Command, io: CliIo): void => {
         const context = await resolveCommandContext({
           allowWrite: options.allowWrite
         });
-        const result = await runTaskSessionWorkflow({
-          context,
-          errorLog: options.errorLog,
-          errorLogFile: options.errorLogFile,
-          goal: options.goal,
-          scope: options.scope,
-          workerId: options.worker,
-          requireProfile: options.requireProfile,
-          runFix: options.runFix,
-          validate: {
-            typecheck: options.typecheck,
-            lint: options.lint,
-            test: options.test
-          },
-          proposePatch: options.proposePatch,
-          inspectPatch: options.inspectPatch,
-          applyPatch: options.applyPatch,
-          allowWrite: options.allowWrite,
-          allowDirtyWorktree: options.allowDirtyWorktree,
-          confirmApply: options.confirmApply,
-          allowWriteSession: options.allowWriteSession
-        });
+        let result;
+
+        try {
+          result = await runTaskSessionWorkflow({
+            context,
+            errorLog: options.errorLog,
+            errorLogFile: options.errorLogFile,
+            goal: options.goal,
+            scope: options.scope,
+            workerId: options.worker,
+            requireProfile: options.requireProfile,
+            runFix: options.runFix,
+            validate: {
+              typecheck: options.typecheck,
+              lint: options.lint,
+              test: options.test
+            },
+            proposePatch: options.proposePatch,
+            inspectPatch: options.inspectPatch,
+            applyPatch: options.applyPatch,
+            allowWrite: options.allowWrite,
+            allowDirtyWorktree: options.allowDirtyWorktree,
+            confirmApply: options.confirmApply,
+            allowWriteSession: options.allowWriteSession
+          });
+        } catch (error) {
+          if (error instanceof AgentError && error.code === "REPOSITORY_PATH_BLOCKED") {
+            throw new Error(
+              `${error.message} Task scope and file inputs must stay inside the repository root.`
+            );
+          }
+
+          throw error;
+        }
 
         const workflowOutputOptions = resolveWorkflowOutputOptions(options);
         const formatted = formatTaskSessionWorkflowOutput(

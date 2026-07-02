@@ -104,10 +104,10 @@ const WHY_THIS_MATTERS: Record<string, string> = {
     "Persisted worker profiles let cw reuse capability interviews instead of rediscovering routing quality every time.",
   "worker-registry":
     "The worker registry stores the named workers that formal task execution and readiness checks can target explicitly.",
-  "registered-worker":
-    "Disabled workers stay on record but are not eligible for routing.",
   "registered-worker-profile":
     "Registered worker profiles determine whether cw can route specialized tasks confidently.",
+  "registered-worker":
+    "Registered workers determine whether cw can resolve the requested worker configuration.",
   "worker-connectivity":
     "A real connectivity probe confirms the resolved worker can answer with the current runtime wiring."
 };
@@ -578,6 +578,7 @@ export const runDoctor = async (
       relatedChecks: [
         "worker-profile-store",
         "worker-registry",
+        "registered-worker",
         "registered-worker-profile"
       ],
       readySummary:

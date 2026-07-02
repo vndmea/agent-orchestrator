@@ -207,4 +207,39 @@ describe("buildWorkerAvailabilitySnapshot", () => {
     expect(snapshot.nextSteps.some((step) => step.includes("--update-profile-capabilities"))).toBe(true);
     expect(snapshot.summary).toContain("formal non-patch tasks");
   });
+
+  it("skips probe fallback when worker resolution fails", async () => {
+    const rootDir = await createRootDir();
+    const context = createExecutionContextFromEnv(undefined, {
+      rootDir,
+      dryRun: true,
+      allowWrite: false
+    });
+
+    await saveWorkerRegistration(
+      context,
+      {
+        workerId: "deepseek-flash",
+        provider: "openai-compatible",
+        model: "deepseek-v4-flash",
+        baseURL: "https://api.deepseek.com",
+        enabled: true,
+        tags: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      true
+    );
+
+    const snapshot = await buildWorkerAvailabilitySnapshot({
+      context,
+      workerId: "deepseek-flash",
+      probe: true
+    });
+
+    expect(snapshot.checks.probe.status).toBe("failed");
+    expect(snapshot.checks.probe.detail).toContain("skipped because worker resolution failed");
+    expect(snapshot.checks.probe.detail).not.toContain("provider mock");
+    expect(snapshot.summary).toContain("worker resolution failed");
+  });
 });

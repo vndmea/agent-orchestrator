@@ -103,8 +103,16 @@ const readProbeCheck = async (
   const probe = checks[0];
 
   return probe?.status === "pass"
-    ? defaultCheck("passed", probe.message)
-    : defaultCheck("failed", probe?.message ?? "Worker connectivity probe failed.");
+    ? defaultCheck(
+        "passed",
+        workerId
+          ? `Worker ${workerId} responded to the connectivity probe.`
+          : probe.message
+      )
+    : defaultCheck(
+        "failed",
+        probe?.message ?? "Worker connectivity probe failed."
+      );
 };
 
 const deriveUnavailableReasonType = (
@@ -388,11 +396,16 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
     );
   }
 
-  checks.probe = await readProbeCheck(
-    resolvedContext,
-    resolvedWorkerId,
-    input.probe ?? false
-  );
+  checks.probe = resolvedWorkerModelError
+    ? defaultCheck(
+        "failed",
+        `Worker connectivity probe skipped because worker resolution failed: ${resolvedWorkerModelError}`
+      )
+    : await readProbeCheck(
+        resolvedContext,
+        resolvedWorkerId,
+        input.probe ?? false
+      );
   checks.benchmark = await readBenchmarkCheck(resolvedContext, resolvedWorkerId);
 
   if (profileResolution?.profile) {
@@ -410,6 +423,15 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
   const canRunFormalTasks = status === "ready";
   const canRunPatchGeneration =
     canRunFormalTasks && checks.patchGeneration.status === "allowed";
+  const workerAvailabilitySummary =
+    checks.registry.status === "registered" && checks.probe.status === "passed"
+      ? `Worker ${resolvedWorkerId} is ready for formal tasks.`
+      : buildSummary({
+          workerId: resolvedWorkerId,
+          status,
+          unavailableReasonType,
+          canRunPatchGeneration
+        });
 
   return WorkerAvailabilitySnapshotSchema.parse({
     workerId: resolvedWorkerId,
@@ -418,12 +440,7 @@ export const buildWorkerAvailabilitySnapshot = async (input: {
     canRunFormalTasks,
     canRunPatchGeneration,
     checks,
-    summary: buildSummary({
-      workerId: resolvedWorkerId,
-      status,
-      unavailableReasonType,
-      canRunPatchGeneration
-    }),
+    summary: workerAvailabilitySummary,
     nextSteps: buildNextSteps({
       workerId: resolvedWorkerId,
       status,
