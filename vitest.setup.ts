@@ -1,8 +1,11 @@
 import { webcrypto } from "node:crypto";
 import { mkdirSync, readdirSync, rmSync, rmdirSync } from "node:fs";
 import { createRequire, syncBuiltinESMExports } from "node:module";
-import { homedir } from "node:os";
 import { join } from "node:path";
+
+import { afterAll } from "vitest";
+
+import { getCwWorkspaceTempDir } from "./packages/core/src/storage/cw-paths.js";
 
 type MutableOsModule = {
   tmpdir: () => string;
@@ -17,9 +20,33 @@ if (!globalThis.crypto) {
 
 const require = createRequire(import.meta.url);
 const nodeOs = require("node:os") as MutableOsModule;
-const originalHomeDir = process.env.USERPROFILE ?? process.env.HOME ?? homedir();
-const testTempRootDir = join(originalHomeDir, ".code-worker", "temp");
-const testSessionDir = join(testTempRootDir, `vitest-${process.pid}`);
+const formatTimestampForPath = (date: Date): string =>
+  [
+    `${date.getUTCMonth() + 1}`.padStart(2, "0"),
+    `${date.getUTCDate()}`.padStart(2, "0"),
+    `${date.getUTCHours()}`.padStart(2, "0"),
+    `${date.getUTCMinutes()}`.padStart(2, "0"),
+    `${date.getUTCSeconds()}`.padStart(2, "0")
+  ].join("");
+
+const sanitizePathSegment = (value: string): string => {
+  const sanitized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .slice(0, 48);
+
+  return sanitized.length > 0 ? sanitized : "test-run";
+};
+
+const testTaskType = sanitizePathSegment(
+  process.env.CW_TEST_TASK_TYPE ?? "unit-test-run"
+);
+const testTempRootDir = getCwWorkspaceTempDir(process.cwd());
+const testSessionDir = join(
+  testTempRootDir,
+  `${testTaskType}-${formatTimestampForPath(new Date())}-p${process.pid}`
+);
 const testHomeDir = join(testSessionDir, "home");
 const testSystemTempDir = join(testSessionDir, "tmp");
 
@@ -57,6 +84,8 @@ const cleanupStorageDir = () => {
     // Best-effort cleanup for the shared temp root.
   }
 };
+
+afterAll(cleanupStorageDir);
 
 process.once("exit", cleanupStorageDir);
 process.once("SIGINT", () => {

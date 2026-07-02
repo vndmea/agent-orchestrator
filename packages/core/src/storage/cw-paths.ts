@@ -79,3 +79,11 @@ export const getCwWorkspaceAuditDirFromStorageDir = (
 export const getCwWorkspaceAuditDir = (
   rootDir: string
 ): string => getCwWorkspaceAuditDirFromStorageDir(getCwWorkspaceDir(rootDir));
+
+export const getCwWorkspaceTempDirFromStorageDir = (
+  cwStorageDir: string
+): string => join(resolve(cwStorageDir), "temp");
+
+export const getCwWorkspaceTempDir = (
+  rootDir: string
+): string => getCwWorkspaceTempDirFromStorageDir(getCwWorkspaceDir(rootDir));

@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createExecutionContextFromEnv } from "./execution-context.js";
-import { getCwWorkspaceId } from "../storage/cw-paths.js";
+import {
+  getCwWorkspaceId,
+  getCwWorkspaceTempDir
+} from "../storage/cw-paths.js";
 
 describe("createExecutionContextFromEnv", () => {
   it("does not set a worker maxTokens limit by default", () => {
@@ -30,5 +33,13 @@ describe("createExecutionContextFromEnv", () => {
       join(homedir(), ".code-worker", getCwWorkspaceId(rootDir))
     );
     expect(context.cwStorageDir).not.toContain("cw-ignored-storage-root");
+  });
+
+  it("resolves workspace temp under the workspace storage directory", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "cw-execution-context-"));
+
+    expect(getCwWorkspaceTempDir(rootDir)).toBe(
+      join(homedir(), ".code-worker", getCwWorkspaceId(rootDir), "temp")
+    );
   });
 });
